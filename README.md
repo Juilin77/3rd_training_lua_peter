@@ -97,11 +97,11 @@ Thank you for your support in this matter and please enjoy!
 
 ## Changelog
 ### v0.11 (22/04/2026)
-- [Feature] Mission recording/replay system (Alt+5 to start/stop recording, auto-replay on menu close)
-- [Feature] Mission slots management (clear slot, clear all slots)
-- [Improvement] Gray out irrelevant menu tabs when Recording Mission Mode is ON
-- [Improvement] Hotkey hints moved from screen overlay to console
-- [Improvement] Startup load speed optimized (mission inputs lazy-loaded)
+- [Feature] Mission recording/replay system (Alt+5 to start/stop recording, auto-replay on menu close) (contribution of @Juilin77)
+- [Feature] Mission slots management (clear slot, clear all slots) (contribution of @Juilin77)
+- [Improvement] Gray out irrelevant menu tabs when Recording Mission Mode is ON (contribution of @Juilin77)
+- [Improvement] Hotkey hints moved from screen overlay to console (contribution of @Juilin77)
+- [Improvement] Startup load speed optimized (mission inputs lazy-loaded) (contribution of @Juilin77)
 
 ### v0.10 (29/05/2022)
 - [Feature] Charge special training (contribution of @ProfessorAnon)
