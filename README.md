@@ -96,6 +96,13 @@ Thank you for your support in this matter and please enjoy!
 [Trello board](https://trello.com/b/UQ8ey2rQ/3rdtraining)
 
 ## Changelog
+### v0.11 (22/04/2026)
+- [Feature] Mission recording/replay system (Alt+5 to start/stop recording, auto-replay on menu close)
+- [Feature] Mission slots management (clear slot, clear all slots)
+- [Improvement] Gray out irrelevant menu tabs when Recording Mission Mode is ON
+- [Improvement] Hotkey hints moved from screen overlay to console
+- [Improvement] Startup load speed optimized (mission inputs lazy-loaded)
+
 ### v0.10 (29/05/2022)
 - [Feature] Charge special training (contribution of @ProfessorAnon)
 - [Feature] Hyakuretsu Kyaku special training (contribution of @ProfessorAnon)
