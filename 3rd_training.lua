@@ -1,5 +1,7 @@
 require("src/startup")
 
+-- v0.11 dev
+
 print("-----------------------------")
 print("  3rd_training.lua - "..script_version.."")
 print("  Training mode for "..game_name.."")
