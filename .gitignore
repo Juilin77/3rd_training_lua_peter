@@ -5,3 +5,4 @@ saved/recording_missions/
 !saved/recordings/A_Guard_Jump_Forward.json
 !saved/recordings/A_Guard_Jump_Neutral.json
 *.sublime-*
+*.fs
