@@ -96,6 +96,16 @@ Thank you for your support in this matter and please enjoy!
 [Trello board](https://trello.com/b/UQ8ey2rQ/3rdtraining)
 
 ## Changelog
+### v0.12 (23/04/2026)
+- [Feature] Replay Mission ON/OFF toggle in Missions tab — replay starts on menu close, pauses on menu open (contribution of @Juilin77)
+- [Feature] Mission recording now captures both P1 and P2 inputs simultaneously; Play Side setting determines which side the dummy replays (contribution of @Juilin77)
+- [Feature] Replay Slot list now includes a "None" option; Replay Mission toggle is grayed out when no recording exists in the selected slot (contribution of @Juilin77)
+- [Feature] After stopping recording (Alt+5), automatically advances to the next empty Mission Slot to prevent overwriting (contribution of @Juilin77)
+- [Improvement] Dummy tab is grayed out when Replay Mission is ON (contribution of @Juilin77)
+- [Improvement] FightCade spectator mode: training script no longer interferes with match inputs (contribution of @Juilin77)
+- [Fix] Character select: 2P can now be controlled using 1P controls again (contribution of @Juilin77)
+- [Fix] Play Side = 2P: player can now move freely during mission replay (contribution of @Juilin77)
+
 ### v0.11 (22/04/2026)
 - [Feature] Mission recording/replay system (Alt+5 to start/stop recording, auto-replay on menu close) (contribution of @Juilin77)
 - [Feature] Mission slots management (clear slot, clear all slots) (contribution of @Juilin77)

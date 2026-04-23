@@ -80,10 +80,6 @@ end
 
 function update_character_select(_input, _do_fast_forward)
 
-  if not character_select_sequence_state == 0 then
-    return
-  end
-
   -- Infinite select time
   --memory.writebyte(adresses.global.character_select_timer, 0x30)
 

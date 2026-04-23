@@ -1,6 +1,6 @@
 require("src/startup")
 
--- v0.11 dev
+-- v0.12
 
 print("-----------------------------")
 print("  3rd_training.lua - "..script_version.."")
@@ -569,15 +569,17 @@ for _i = 1, #recording_slots do
   table.insert(recording_slots_names, "slot ".._i)
 end
 
-mission_recording_slots_names = {}
+mission_recording_slots_names = {"none"}
 for _i = 1, 5 do
   table.insert(mission_recording_slots_names, "slot ".._i)
 end
 
+mission_play_side_names = { "1P", "2P" }
+
 mission_slot_count = 5
 
 function make_mission_slot()
-  return { name = "none", inputs = {}, savestate_path = nil }
+  return { name = "none", inputs = {p1 = {}, p2 = {}}, savestate_path = nil }
 end
 
 mission_slots = {}
@@ -1619,11 +1621,14 @@ load_recording_slot_popup = make_menu(71, 61, 312, 122, -- screen size 383,223
 -- MISSION RECORDING
 
 mission_recording_active = false
-mission_recording_inputs = {}
+mission_recording_inputs = {p1 = {}, p2 = {}}
 mission_recording_start_frame = 0
 mission_recording_savestate_path = nil
 mission_replay_active = false
 mission_replay_pending = false
+mission_replay_trigger = false
+mission_dummy_id = 2
+saved_missions_dir_ready = false
 
 function get_mission_slot_paths(_slot_index)
   return {
@@ -1636,9 +1641,8 @@ end
 function save_mission_to_file(_slot_index)
   local _slot = mission_slots[_slot_index]
   if _slot.name == "none" then return end
-  os.execute("mkdir "..string.gsub(saved_missions_path, "/", "\\").." 2>nul")
   local _paths = get_mission_slot_paths(_slot_index)
-  local _meta = { name = _slot.name, savestate_path = _slot.savestate_path }
+  local _meta = { name = _slot.name, savestate_path = _slot.savestate_path, dummy_id = _slot.dummy_id }
   if not write_object_to_json_file(_meta, _paths.meta) then
     print(string.format("Error: Failed to save mission metadata to \"%s\"", _paths.meta))
   end
@@ -1657,6 +1661,7 @@ function load_missions_from_files()
     if _meta then
       mission_slots[_i].name = _meta.name or "none"
       mission_slots[_i].savestate_path = _meta.savestate_path
+      mission_slots[_i].dummy_id = _meta.dummy_id or 2
     end
   end
 end
@@ -1682,28 +1687,36 @@ function clear_all_mission_slots()
 end
 
 function mission_replay_queue_inputs()
-  local _slot_index = training_settings.current_replay_mission_slot
+  local _slot_index = training_settings.current_replay_mission_slot - 1
   local _slot = mission_slots[_slot_index]
-  if #_slot.inputs == 0 then return end
-  queue_input_sequence(player_objects[2], _slot.inputs)
+  if not _slot then return end
+  mission_dummy_id = 3 - training_settings.mission_play_side
+  local _side = mission_dummy_id == 1 and "p1" or "p2"
+  local _inputs = _slot.inputs[_side]
+  if not _inputs or #_inputs == 0 then return end
+  queue_input_sequence(player_objects[mission_dummy_id], _inputs)
 end
 
 function replay_current_mission()
-  local _slot_index = training_settings.current_replay_mission_slot
+  local _slot_index = training_settings.current_replay_mission_slot - 1
+  if _slot_index < 1 then return end
   local _slot = mission_slots[_slot_index]
   if _slot.name == "none" then return end
-  if #_slot.inputs == 0 then
+  mission_dummy_id = 3 - training_settings.mission_play_side
+  local _side = mission_dummy_id == 1 and "p1" or "p2"
+  if not _slot.inputs[_side] or #_slot.inputs[_side] == 0 then
     local _paths = get_mission_slot_paths(_slot_index)
     local _inputs = read_object_from_json_file(_paths.inputs)
     if _inputs then _slot.inputs = _inputs end
   end
-  if #_slot.inputs == 0 then return end
+  local _dummy_inputs = _slot.inputs[_side]
+  if not _dummy_inputs or #_dummy_inputs == 0 then return end
   if _slot.savestate_path then
     mission_replay_pending = true
     mission_replay_active = true
     savestate.load(savestate.create(_slot.savestate_path))
   else
-    queue_input_sequence(player_objects[2], _slot.inputs)
+    queue_input_sequence(player_objects[mission_dummy_id], _dummy_inputs)
     mission_replay_active = true
   end
 end
@@ -1712,20 +1725,22 @@ function update_mission_recording(_input)
   if not is_in_match or is_menu_open then return end
   if not mission_recording_active then return end
 
-  local _frame = {}
-  for _key, _value in pairs(_input) do
-    local _prefix = _key:sub(1, #player.prefix)
-    if _prefix == player.prefix then
-      local _input_name = _key:sub(1 + #player.prefix + 1)
-      if _input_name ~= "Coin" and _input_name ~= "Start" then
-        if _value then
-          local _seq_input = stick_input_to_sequence_input(player, _input_name)
-          table.insert(_frame, _seq_input)
+  for _, _player_obj in ipairs(player_objects) do
+    local _frame = {}
+    for _key, _value in pairs(_input) do
+      local _prefix = _key:sub(1, #_player_obj.prefix)
+      if _prefix == _player_obj.prefix then
+        local _input_name = _key:sub(1 + #_player_obj.prefix + 1)
+        if _input_name ~= "Coin" and _input_name ~= "Start" then
+          if _value then
+            table.insert(_frame, stick_input_to_sequence_input(_player_obj, _input_name))
+          end
         end
       end
     end
+    local _side = _player_obj.id == 1 and "p1" or "p2"
+    table.insert(mission_recording_inputs[_side], _frame)
   end
-  table.insert(mission_recording_inputs, _frame)
 end
 
 -- GUI DECLARATION
@@ -1752,7 +1767,7 @@ training_settings = {
   display_input = true,
   display_gauges = false,
   display_p1_input_history = false,
-  display_p1_input_history_dyanamic = false,
+  display_p1_input_history_dynamic = false,
   display_p2_input_history = false,
   display_attack_data = false,
   display_frame_advantage = false,
@@ -1772,6 +1787,8 @@ training_settings = {
   meter_refill_delay = 20,
   fast_forward_intro = true,
   recording_mission_mode = false,
+  mission_play_side = 1,
+  mission_replay_on = false,
 
   -- special training
   special_training_current_mode = 1,
@@ -1843,10 +1860,14 @@ display_p2_input_history_item = checkbox_menu_item("Display P2 Input History", t
 display_p2_input_history_item.is_disabled = function() return training_settings.display_p1_input_history_dynamic end
 
 replay_slot_item = list_menu_item("Replay Slot", training_settings, "current_replay_mission_slot", mission_recording_slots_names)
-local _orig_replay_slot_left = replay_slot_item.left
-local _orig_replay_slot_right = replay_slot_item.right
-replay_slot_item.left = function(self) _orig_replay_slot_left(self); if not training_settings.recording_mission_mode then replay_current_mission() end end
-replay_slot_item.right = function(self) _orig_replay_slot_right(self); if not training_settings.recording_mission_mode then replay_current_mission() end end
+
+replay_mission_item = checkbox_menu_item("Replay Mission", training_settings, "mission_replay_on")
+replay_mission_item.is_disabled = function()
+  if training_settings.recording_mission_mode then return true end
+  if training_settings.current_replay_mission_slot == 1 then return true end
+  local _slot = mission_slots[training_settings.current_replay_mission_slot - 1]
+  return _slot == nil or _slot.name == "none"
+end
 
 change_characters_item = button_menu_item("Select Characters", start_character_select_sequence)
 change_characters_item.is_disabled = function()
@@ -1906,6 +1927,8 @@ main_menu = make_multitab_menu(
         checkbox_menu_item("Recording Mission Mode", training_settings, "recording_mission_mode"),
         list_menu_item("Mission Slot", training_settings, "current_mission_slot", mission_slot_names),
         replay_slot_item,
+        replay_mission_item,
+        list_menu_item("Play Side", training_settings, "mission_play_side", mission_play_side_names),
         button_menu_item("Clear Mission Slot", clear_mission_slot),
         button_menu_item("Clear All Mission Slots", clear_all_mission_slots),
       }
@@ -1990,8 +2013,18 @@ for _, _tab_index in ipairs({1, 2, 5, 6}) do
   end
 end
 
--- Gray out Replay Slot (3), Clear Mission Slot (4), Clear All Mission Slots (5) in Missions tab (3)
-for _entry_index = 3, 5 do
+-- Gray out Dummy (1) when mission_replay_on is ON
+for _, _entry in ipairs(main_menu.content[1].entries) do
+  local _orig = _entry.is_disabled
+  if _orig then
+    _entry.is_disabled = function() return training_settings.mission_replay_on or _orig() end
+  else
+    _entry.is_disabled = function() return training_settings.mission_replay_on end
+  end
+end
+
+-- Gray out Replay Slot (3), Replay Mission (4), Play Side (5), Clear Mission Slot (6), Clear All Mission Slots (7) in Missions tab (3)
+for _entry_index = 3, 7 do
   local _entry = main_menu.content[3].entries[_entry_index]
   if _entry then
     local _orig = _entry.is_disabled
@@ -2415,7 +2448,19 @@ function write_player_vars(_player_obj)
 end
 
 function on_load_state()
+  local _saved_inputs = {}
+  for i = 1, 2 do
+    if player_objects[i] then
+      _saved_inputs[i] = { down = player_objects[i].input.down, state_time = player_objects[i].input.state_time }
+    end
+  end
   reset_player_objects()
+  for i = 1, 2 do
+    if _saved_inputs[i] then
+      player_objects[i].input.down = _saved_inputs[i].down
+      player_objects[i].input.state_time = _saved_inputs[i].state_time
+    end
+  end
   attack_data_reset()
   frame_advantage_reset()
 
@@ -2472,11 +2517,14 @@ end
 function hotkey5()
   if not mission_recording_active then
     mission_recording_active = true
-    mission_recording_inputs = {}
+    mission_recording_inputs = {p1 = {}, p2 = {}}
     mission_recording_start_frame = frame_number
     local _slot_index = training_settings.current_mission_slot
     mission_recording_savestate_path = string.format("%smission_slot_%d.fs", saved_missions_path, _slot_index)
-    os.execute("mkdir "..string.gsub(saved_missions_path, "/", "\\").." 2>nul")
+    if not saved_missions_dir_ready then
+      os.execute("mkdir "..string.gsub(saved_missions_path, "/", "\\").." 2>nul")
+      saved_missions_dir_ready = true
+    end
     savestate.save(savestate.create(mission_recording_savestate_path))
   else
     mission_recording_active = false
@@ -2487,6 +2535,13 @@ function hotkey5()
     mission_slots[_slot_index].inputs = mission_recording_inputs
     mission_slots[_slot_index].savestate_path = mission_recording_savestate_path
     save_mission_to_file(_slot_index)
+    for _i = 1, mission_slot_count do
+      local _next = (_slot_index - 1 + _i) % mission_slot_count + 1
+      if mission_slots[_next].name == "none" then
+        training_settings.current_mission_slot = _next
+        break
+      end
+    end
   end
 end
 
@@ -2498,6 +2553,8 @@ end
 input.registerhotkey(5, hotkey5)
 
 function before_frame()
+
+  is_fightcade_replay = emu.isreplay and emu.isreplay() or false
 
   -- update debug menu
   if debug_settings.debug_character ~= debug_move_menu_item.map_property then
@@ -2550,7 +2607,8 @@ function before_frame()
 
   -- input
   local _input = joypad.get()
-  if is_in_match and not is_menu_open and swap_characters then
+  local _mission_swap = training_settings.mission_replay_on and training_settings.mission_play_side == 2
+  if is_in_match and not is_menu_open and (swap_characters or _mission_swap) then
     swap_inputs(_input)
   end
 
@@ -2568,7 +2626,7 @@ function before_frame()
   -- frame advantage
   frame_advantage_update(player, dummy)
 
-  if not training_settings.recording_mission_mode then
+  if not training_settings.recording_mission_mode and not training_settings.mission_replay_on then
     -- pose
     update_pose(_input, dummy, training_settings.pose)
 
@@ -2592,8 +2650,13 @@ function before_frame()
   process_pending_input_sequence(player_objects[1], _input)
   process_pending_input_sequence(player_objects[2], _input)
 
-  if mission_replay_active and not mission_replay_pending and not training_settings.recording_mission_mode and not is_menu_open and is_in_match then
-    if player_objects[2].pending_input_sequence == nil then
+  if mission_replay_trigger then
+    mission_replay_trigger = false
+    replay_current_mission()
+  end
+
+  if mission_replay_active and not mission_replay_pending and training_settings.mission_replay_on and not training_settings.recording_mission_mode and not is_menu_open and is_in_match then
+    if player_objects[mission_dummy_id].pending_input_sequence == nil then
       replay_current_mission()
     end
   end
@@ -2639,7 +2702,9 @@ function before_frame()
   end
   previous_input = _input
 
-  joypad.set(_input)
+  if not is_fightcade_replay then
+    joypad.set(_input)
+  end
 
   update_framedata_recording(player_objects[1], projectiles)
   update_idle_framedata_recording(player_objects[2])
@@ -3085,7 +3150,8 @@ function on_gui()
 
   if mission_recording_active then
     local _frame_count = #mission_recording_inputs
-    local _text = string.format("Mission REC... (%d)", _frame_count)
+    local _slot_index = training_settings.current_mission_slot
+    local _text = string.format("Mission REC [slot %d] (%d)", _slot_index, _frame_count)
     gui.text(270, 15, _text, 0xFF4444FF, text_default_border_color)
   end
 
@@ -3107,8 +3173,8 @@ function on_gui()
         mission_replay_active = false
       else
         menu_stack_clear()
-        if not training_settings.recording_mission_mode then
-          replay_current_mission()
+        if not training_settings.recording_mission_mode and training_settings.mission_replay_on then
+          mission_replay_trigger = true
         end
       end
     end

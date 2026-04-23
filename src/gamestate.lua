@@ -1,6 +1,7 @@
 -- # global variables
 frame_number = 0
 is_in_match = false
+is_fightcade_replay = false
 player_objects = {}
 P1 = nil
 P2 = nil
