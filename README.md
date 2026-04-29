@@ -96,6 +96,12 @@ Thank you for your support in this matter and please enjoy!
 [Trello board](https://trello.com/b/UQ8ey2rQ/3rdtraining)
 
 ## Changelog
+### v0.13 (29/04/2026)
+- [Fix] Dummy behavior is now disabled when Mission settings are off (contribution of @Juilin77)
+- [Improvement] Follow Character option is grayed out when Special Training is set to none (contribution of @Juilin77)
+- [Improvement] Recording frame count is hidden when Mission recording is on (contribution of @Juilin77)
+- [Feature] Added independent Clear Slot button (LP to confirm) (contribution of @Juilin77)
+
 ### v0.12 (23/04/2026)
 - [Feature] Replay Mission ON/OFF toggle in Missions tab — replay starts on menu close, pauses on menu open (contribution of @Juilin77)
 - [Feature] Mission recording now captures both P1 and P2 inputs simultaneously; Play Side setting determines which side the dummy replays (contribution of @Juilin77)
