@@ -519,7 +519,8 @@ function button_menu_item(_name, _validate_function)
       end
     end
 
-    gui.text(_x, _y,self.name, _c, text_default_border_color)
+    local _display_name = type(self.name) == "function" and self.name() or self.name
+    gui.text(_x, _y, _display_name, _c, text_default_border_color)
   end
 
   function _o:validate()

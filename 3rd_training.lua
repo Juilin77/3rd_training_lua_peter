@@ -1674,7 +1674,8 @@ function delete_mission_slot_files(_slot_index)
 end
 
 function clear_mission_slot()
-  local _slot_index = training_settings.current_mission_slot
+  local _slot_index = training_settings.current_clear_mission_slot - 1
+  if _slot_index < 1 then return end
   delete_mission_slot_files(_slot_index)
   mission_slots[_slot_index] = make_mission_slot()
 end
@@ -1780,6 +1781,7 @@ training_settings = {
   auto_crop_recording_end = true,
   current_recording_slot = 1,
   current_mission_slot = 1,
+  current_clear_mission_slot = 1,
   current_replay_mission_slot = 1,
   replay_mode = 1,
   music_volume = 10,
@@ -1929,7 +1931,30 @@ main_menu = make_multitab_menu(
         replay_slot_item,
         replay_mission_item,
         list_menu_item("Play Side", training_settings, "mission_play_side", mission_play_side_names),
-        button_menu_item("Clear Mission Slot", clear_mission_slot),
+        (function()
+          local _item = list_menu_item("Clear Slot", training_settings, "current_clear_mission_slot", mission_recording_slots_names)
+          _item.last_frame_validated = 0
+          _item.validate = function(self)
+            if training_settings.current_clear_mission_slot ~= 1 then
+              clear_mission_slot()
+              training_settings.current_clear_mission_slot = 1
+              self.last_frame_validated = frame_number
+            end
+          end
+          _item.legend = function() return "LP: Validate | MP: Reset to default" end
+          local _orig_draw = _item.draw
+          _item.draw = function(self, _x, _y, _selected)
+            if _selected and self.last_frame_validated > 0 then
+              if frame_number < self.last_frame_validated then self.last_frame_validated = 0 end
+              if frame_number - self.last_frame_validated < 5 then
+                gui.text(_x, _y, "< Clear Slot : "..mission_recording_slots_names[training_settings.current_clear_mission_slot].." >", 0xFFFF00FF, text_default_border_color)
+                return
+              end
+            end
+            _orig_draw(self, _x, _y, _selected)
+          end
+          return _item
+        end)(),
         button_menu_item("Clear All Mission Slots", clear_all_mission_slots),
       }
     },
@@ -1974,7 +1999,11 @@ main_menu = make_multitab_menu(
       name = "Special Training",
       entries = {
         list_menu_item("Mode", training_settings, "special_training_current_mode", special_training_mode),
-        checkbox_menu_item("Follow Character", training_settings, "special_training_follow_character"),
+        (function()
+          local _item = checkbox_menu_item("Follow Character", training_settings, "special_training_follow_character")
+          _item.is_disabled = function() return training_settings.special_training_current_mode == 1 end
+          return _item
+        end)(),
         parry_forward_on_item,
         parry_down_on_item,
         parry_air_on_item,
@@ -1988,15 +2017,18 @@ main_menu = make_multitab_menu(
   end,
   function(_menu)
     -- recording slots special display
-    if _menu.main_menu_selected_index == 2 then
+    if _menu.main_menu_selected_index == 2 and not training_settings.recording_mission_mode then
       local _t = string.format("%d frames", #recording_slots[training_settings.current_recording_slot].inputs)
       gui.text(_menu.left + 83, _menu.top + 23 + 3 * menu_y_interval, _t, text_disabled_color, text_default_border_color)
     end
     -- missions special display
     if _menu.main_menu_selected_index == 3 then
       local _slot = mission_slots[training_settings.current_mission_slot]
-      local _label = "Mission Slot : " .. mission_slot_names[training_settings.current_mission_slot]
-      gui.text(_menu.left + 10 + get_text_width(_label) + 20, _menu.top + 23 + 1 * menu_y_interval, _slot.name, text_disabled_color, text_default_border_color)
+      local _slot_name = mission_slot_names[training_settings.current_mission_slot]
+      if _slot and _slot_name then
+        local _label = "Mission Slot : " .. _slot_name
+        gui.text(_menu.left + 10 + get_text_width(_label) + 20, _menu.top + 23 + 1 * menu_y_interval, _slot.name, text_disabled_color, text_default_border_color)
+      end
     end
   end
 )
@@ -2625,6 +2657,8 @@ function before_frame()
 
   -- frame advantage
   frame_advantage_update(player, dummy)
+
+  if replay_mission_item.is_disabled() then training_settings.mission_replay_on = false end
 
   if not training_settings.recording_mission_mode and not training_settings.mission_replay_on then
     -- pose
