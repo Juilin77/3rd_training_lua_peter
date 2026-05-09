@@ -96,6 +96,11 @@ Thank you for your support in this matter and please enjoy!
 [Trello board](https://trello.com/b/UQ8ey2rQ/3rdtraining)
 
 ## Changelog
+### v0.14 (10/05/2026)
+- [Fix] Mission recording no longer freezes 5-6 seconds on first Alt+5 press (contribution of @Juilin77)
+- [Fix] Mission recording frame counter now displays correctly instead of always showing 0 (contribution of @Juilin77)
+- [Improvement] Increased mission slots from 5 to 10 (contribution of @Juilin77)
+
 ### v0.13 (29/04/2026)
 - [Fix] Dummy behavior is now disabled when Mission settings are off (contribution of @Juilin77)
 - [Improvement] Follow Character option is grayed out when Special Training is set to none (contribution of @Juilin77)

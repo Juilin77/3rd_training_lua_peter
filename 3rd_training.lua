@@ -569,14 +569,14 @@ for _i = 1, #recording_slots do
   table.insert(recording_slots_names, "slot ".._i)
 end
 
+mission_slot_count = 10
+
 mission_recording_slots_names = {"none"}
-for _i = 1, 5 do
+for _i = 1, mission_slot_count do
   table.insert(mission_recording_slots_names, "slot ".._i)
 end
 
 mission_play_side_names = { "1P", "2P" }
-
-mission_slot_count = 5
 
 function make_mission_slot()
   return { name = "none", inputs = {p1 = {}, p2 = {}}, savestate_path = nil }
@@ -1628,7 +1628,7 @@ mission_replay_active = false
 mission_replay_pending = false
 mission_replay_trigger = false
 mission_dummy_id = 2
-saved_missions_dir_ready = false
+
 
 function get_mission_slot_paths(_slot_index)
   return {
@@ -2553,10 +2553,6 @@ function hotkey5()
     mission_recording_start_frame = frame_number
     local _slot_index = training_settings.current_mission_slot
     mission_recording_savestate_path = string.format("%smission_slot_%d.fs", saved_missions_path, _slot_index)
-    if not saved_missions_dir_ready then
-      os.execute("mkdir "..string.gsub(saved_missions_path, "/", "\\").." 2>nul")
-      saved_missions_dir_ready = true
-    end
     savestate.save(savestate.create(mission_recording_savestate_path))
   else
     mission_recording_active = false
@@ -3183,7 +3179,7 @@ function on_gui()
   end
 
   if mission_recording_active then
-    local _frame_count = #mission_recording_inputs
+    local _frame_count = #mission_recording_inputs.p1
     local _slot_index = training_settings.current_mission_slot
     local _text = string.format("Mission REC [slot %d] (%d)", _slot_index, _frame_count)
     gui.text(270, 15, _text, 0xFF4444FF, text_default_border_color)
