@@ -96,6 +96,9 @@ Thank you for your support in this matter and please enjoy!
 [Trello board](https://trello.com/b/UQ8ey2rQ/3rdtraining)
 
 ## Changelog
+### v0.16 (17/05/2026)
+- [Fix] Replaced os.execute mkdir with .gitkeep — saved/recording_missions/ directory now ships with the repo, eliminating startup freeze (contribution of @Juilin77)
+
 ### v0.15 (17/05/2026)
 - [Fix] Mission recording slots no longer empty after reloading script — saved/recording_missions/ directory is now created automatically on startup (contribution of @Juilin77)
 

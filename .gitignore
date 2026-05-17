@@ -1,6 +1,7 @@
 saved/*.*
 saved/recordings/*.*
-saved/recording_missions/
+saved/recording_missions/*
+!saved/recording_missions/.gitkeep
 !saved/recordings/A_Guard_Jump_Back.json
 !saved/recordings/A_Guard_Jump_Forward.json
 !saved/recordings/A_Guard_Jump_Neutral.json

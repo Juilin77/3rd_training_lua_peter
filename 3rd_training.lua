@@ -2519,7 +2519,6 @@ function on_load_state()
 end
 
 function on_start()
-  os.execute("mkdir "..string.gsub(saved_missions_path, "/", "\\").." 2>nul")
   load_training_data()
   load_frame_data()
   load_missions_from_files()
