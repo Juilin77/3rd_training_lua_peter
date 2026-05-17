@@ -96,6 +96,9 @@ Thank you for your support in this matter and please enjoy!
 [Trello board](https://trello.com/b/UQ8ey2rQ/3rdtraining)
 
 ## Changelog
+### v0.15 (17/05/2026)
+- [Fix] Mission recording slots no longer empty after reloading script — saved/recording_missions/ directory is now created automatically on startup (contribution of @Juilin77)
+
 ### v0.14 (10/05/2026)
 - [Fix] Mission recording no longer freezes 5-6 seconds on first Alt+5 press (contribution of @Juilin77)
 - [Fix] Mission recording frame counter now displays correctly instead of always showing 0 (contribution of @Juilin77)
