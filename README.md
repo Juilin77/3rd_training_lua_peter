@@ -96,6 +96,17 @@ Thank you for your support in this matter and please enjoy!
 [Trello board](https://trello.com/b/UQ8ey2rQ/3rdtraining)
 
 ## Changelog
+### v0.18 (14/06/2026)
+- [Feature] Added "Pattern Replay Mode" (normal / random / ordered / repeat) for Replay Import patterns (contribution of @Juilin77)
+- [Improvement] Replaced "Direct Play (LP)" button with a "Pattern Replay" start/stop toggle, mirroring Mission Replay (contribution of @Juilin77)
+- [Improvement] "Pattern" entry now always shows after scanning (including `empty`), grayed out until a pattern is found; resets to `Pattern (P2: ?) : empty` when the P2 character changes (contribution of @Juilin77)
+
+### v0.17 (11/06/2026)
+- [Improvement] Missions tab redesign: "Record Mission in Slot" and "Replay Mission for Slot" now both show `slot N (content / empty)` inline in the menu item itself (contribution of @Juilin77)
+- [Improvement] Reordered Play Side above Replay Mission; Replay Mission and Play Side are grayed out when no recording exists in the selected replay slot (contribution of @Juilin77)
+- [Feature] Added on-screen frame counter during Mission Replay (top-right HUD) (contribution of @Juilin77)
+- [Fix] Corrected `replay_output_path` to point to `replay-pattern-trainer/patterns/` for Direct Play (contribution of @Juilin77)
+
 ### v0.16 (17/05/2026)
 - [Fix] Replaced os.execute mkdir with .gitkeep — saved/recording_missions/ directory now ships with the repo, eliminating startup freeze (contribution of @Juilin77)
 

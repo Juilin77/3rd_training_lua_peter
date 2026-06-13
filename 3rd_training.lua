@@ -592,6 +592,17 @@ for _i = 1, mission_slot_count do
   table.insert(mission_slot_names, "slot ".._i)
 end
 
+-- builds "slot N (content name / empty)" labels for Record/Replay/Clear Slot menus
+function refresh_mission_recording_slots_names()
+  for _i = 1, mission_slot_count do
+    local _content = mission_slots[_i].name == "none" and "empty" or mission_slots[_i].name
+    local _label = string.format("slot %d (%s)", _i, _content)
+    mission_slot_names[_i] = _label
+    mission_recording_slots_names[_i + 1] = _label
+  end
+end
+refresh_mission_recording_slots_names()
+
 slot_replay_mode = {
   "normal",
   "random",
@@ -599,6 +610,13 @@ slot_replay_mode = {
   "repeat",
   "repeat random",
   "repeat ordered",
+}
+
+pattern_replay_mode_options = {
+  "normal",
+  "random",
+  "ordered",
+  "repeat",
 }
 
 -- save/load
@@ -1618,6 +1636,106 @@ load_recording_slot_popup = make_menu(71, 61, 312, 122, -- screen size 383,223
   button_menu_item("Cancel", function() menu_stack_pop(load_recording_slot_popup) end),
 })
 
+-- REPLAY IMPORT
+
+replay_output_path = "../replay-pattern-trainer/patterns/"
+
+replay_import_state = {
+  file_index = 1,
+}
+replay_import_char = "(not scanned)"
+replay_import_files = { "empty" }
+direct_play_pending = false
+direct_play_inputs  = nil
+
+function scan_replay_files()
+  local _char = player_objects[2].char_str or "unknown"
+  replay_import_char = _char
+  for i = #replay_import_files, 1, -1 do table.remove(replay_import_files, i) end
+  local _win = string.gsub(replay_output_path .. _char .. "/", "/", "\\")
+  local _f = io.popen('dir /b "' .. _win .. '*.json"')
+  if _f then
+    local _str = _f:read("*all")
+    _f:close()
+    for _line in string.gmatch(_str, "([^\r\n]+)") do
+      if _line ~= "" and not string.find(_line, "%.inputs%.json$") then
+        table.insert(replay_import_files, _line)
+      end
+    end
+  end
+  if #replay_import_files == 0 then table.insert(replay_import_files, "empty") end
+  replay_import_state.file_index = 1
+  _replay_file_item.name = string.format("Pattern (P2: %s)", string.upper(_char))
+  print(string.format("[import] P2=%s  found %d patterns", _char, #replay_import_files))
+end
+
+function direct_play_pattern()
+  local _file = replay_import_files[replay_import_state.file_index]
+  if not _file or _file == "empty" then
+    print("[direct play] no pattern selected") return
+  end
+  local _base = replay_output_path .. replay_import_char .. "/" .. string.gsub(_file, "%.json$", "")
+  local _meta        = read_object_from_json_file(_base .. ".json")
+  local _inputs_data = read_object_from_json_file(_base .. ".inputs.json")
+  if not _meta or not _inputs_data then
+    print("[direct play] failed to read " .. _base) return
+  end
+  local _owner_side = _meta.owner or "p2"
+  local _inputs = _inputs_data[_owner_side]
+  if not _inputs or #_inputs == 0 then
+    print("[direct play] no inputs in pattern") return
+  end
+  local _fs_path = _base .. ".fs"
+  local _fs_check = io.open(_fs_path, "r")
+  if _fs_check then
+    _fs_check:close()
+    direct_play_inputs  = _inputs
+    direct_play_pending = true
+    mission_replay_active = true
+    savestate.load(savestate.create(_fs_path))
+    print(string.format("[direct play] %s  char=%s  frames=%d  loading savestate...",
+      _file, replay_import_char, #_inputs))
+  else
+    queue_input_sequence(player_objects[2], _inputs)
+    mission_replay_active = true
+    print(string.format("[direct play] %s  char=%s  frames=%d  (no savestate, close menu to start)",
+      _file, replay_import_char, #_inputs))
+  end
+end
+
+_replay_file_item = list_menu_item("Pattern (P2: ?)", replay_import_state, "file_index", replay_import_files)
+
+-- disable Pattern Replay Mode / Pattern Replay until Replay Import: Scan has found at least one pattern
+function no_pattern_available()
+  return replay_import_files[1] == "empty"
+end
+
+-- gray out "Pattern" entry when nothing has been scanned yet
+-- (left/right are already no-ops on a single-element list, so this only changes the color)
+local _replay_file_item_orig_draw = _replay_file_item.draw
+function _replay_file_item:draw(_x, _y, _selected)
+  if no_pattern_available() then
+    gui.text(_x, _y, self.name.." : "..tostring(self.list[self.object[self.property_name]]), text_disabled_color, text_default_border_color)
+    return
+  end
+  _replay_file_item_orig_draw(self, _x, _y, _selected)
+end
+
+last_ordered_pattern_index = 0
+
+function pick_random_pattern_index()
+  if no_pattern_available() then return false end
+  replay_import_state.file_index = math.random(#replay_import_files)
+  return true
+end
+
+function pick_next_ordered_pattern_index()
+  if no_pattern_available() then return false end
+  last_ordered_pattern_index = (last_ordered_pattern_index % #replay_import_files) + 1
+  replay_import_state.file_index = last_ordered_pattern_index
+  return true
+end
+
 -- MISSION RECORDING
 
 mission_recording_active = false
@@ -1627,6 +1745,7 @@ mission_recording_savestate_path = nil
 mission_replay_active = false
 mission_replay_pending = false
 mission_replay_trigger = false
+pattern_replay_trigger = false
 mission_dummy_id = 2
 
 
@@ -1664,6 +1783,7 @@ function load_missions_from_files()
       mission_slots[_i].dummy_id = _meta.dummy_id or 2
     end
   end
+  refresh_mission_recording_slots_names()
 end
 
 function delete_mission_slot_files(_slot_index)
@@ -1678,6 +1798,7 @@ function clear_mission_slot()
   if _slot_index < 1 then return end
   delete_mission_slot_files(_slot_index)
   mission_slots[_slot_index] = make_mission_slot()
+  refresh_mission_recording_slots_names()
 end
 
 function clear_all_mission_slots()
@@ -1685,6 +1806,7 @@ function clear_all_mission_slots()
     delete_mission_slot_files(_i)
     mission_slots[_i] = make_mission_slot()
   end
+  refresh_mission_recording_slots_names()
 end
 
 function mission_replay_queue_inputs()
@@ -1791,6 +1913,8 @@ training_settings = {
   recording_mission_mode = false,
   mission_play_side = 1,
   mission_replay_on = false,
+  pattern_replay_on = false,
+  pattern_replay_mode = 1, -- normal
 
   -- special training
   special_training_current_mode = 1,
@@ -1861,15 +1985,28 @@ end
 display_p2_input_history_item = checkbox_menu_item("Display P2 Input History", training_settings, "display_p2_input_history")
 display_p2_input_history_item.is_disabled = function() return training_settings.display_p1_input_history_dynamic end
 
-replay_slot_item = list_menu_item("Replay Slot", training_settings, "current_replay_mission_slot", mission_recording_slots_names)
+replay_slot_item = list_menu_item("Replay Mission for Slot", training_settings, "current_replay_mission_slot", mission_recording_slots_names)
 
-replay_mission_item = checkbox_menu_item("Replay Mission", training_settings, "mission_replay_on")
-replay_mission_item.is_disabled = function()
-  if training_settings.recording_mission_mode then return true end
+-- disable Replay Mission / Play Side when no non-empty replay slot is selected
+function no_replay_slot_selected()
   if training_settings.current_replay_mission_slot == 1 then return true end
   local _slot = mission_slots[training_settings.current_replay_mission_slot - 1]
   return _slot == nil or _slot.name == "none"
 end
+
+pattern_replay_mode_item = list_menu_item("Pattern Replay Mode", training_settings, "pattern_replay_mode", pattern_replay_mode_options)
+pattern_replay_mode_item.is_disabled = no_pattern_available
+
+direct_play_item = checkbox_menu_item("Pattern Replay", training_settings, "pattern_replay_on", nil, {"start", "stop"})
+direct_play_item.is_disabled = no_pattern_available
+
+replay_mission_item = checkbox_menu_item("Replay Mission", training_settings, "mission_replay_on", nil, {"start", "stop"})
+replay_mission_item.is_disabled = function()
+  if training_settings.recording_mission_mode then return true end
+  return no_replay_slot_selected()
+end
+
+recording_mission_mode_item = checkbox_menu_item("Recording Mission Mode", training_settings, "recording_mission_mode", nil, {"on", "off"})
 
 change_characters_item = button_menu_item("Select Characters", start_character_select_sequence)
 change_characters_item.is_disabled = function()
@@ -1926,11 +2063,17 @@ main_menu = make_multitab_menu(
     {
       name = "Missions",
       entries = {
-        checkbox_menu_item("Recording Mission Mode", training_settings, "recording_mission_mode"),
-        list_menu_item("Mission Slot", training_settings, "current_mission_slot", mission_slot_names),
+        recording_mission_mode_item,
+        list_menu_item("Record Mission in Slot", training_settings, "current_mission_slot", mission_slot_names),
         replay_slot_item,
+        (function()
+          local _item = list_menu_item("Play Side", training_settings, "mission_play_side", mission_play_side_names)
+          _item.is_disabled = function()
+            return training_settings.recording_mission_mode or no_replay_slot_selected()
+          end
+          return _item
+        end)(),
         replay_mission_item,
-        list_menu_item("Play Side", training_settings, "mission_play_side", mission_play_side_names),
         (function()
           local _item = list_menu_item("Clear Slot", training_settings, "current_clear_mission_slot", mission_recording_slots_names)
           _item.last_frame_validated = 0
@@ -1956,6 +2099,10 @@ main_menu = make_multitab_menu(
           return _item
         end)(),
         button_menu_item("Clear All Mission Slots", clear_all_mission_slots),
+        button_menu_item("-- Replay Import: Scan --", scan_replay_files),
+        _replay_file_item,
+        pattern_replay_mode_item,
+        direct_play_item,
       }
     },
     {
@@ -2021,15 +2168,6 @@ main_menu = make_multitab_menu(
       local _t = string.format("%d frames", #recording_slots[training_settings.current_recording_slot].inputs)
       gui.text(_menu.left + 83, _menu.top + 23 + 3 * menu_y_interval, _t, text_disabled_color, text_default_border_color)
     end
-    -- missions special display
-    if _menu.main_menu_selected_index == 3 then
-      local _slot = mission_slots[training_settings.current_mission_slot]
-      local _slot_name = mission_slot_names[training_settings.current_mission_slot]
-      if _slot and _slot_name then
-        local _label = "Mission Slot : " .. _slot_name
-        gui.text(_menu.left + 10 + get_text_width(_label) + 20, _menu.top + 23 + 1 * menu_y_interval, _slot.name, text_disabled_color, text_default_border_color)
-      end
-    end
   end
 )
 
@@ -2055,7 +2193,7 @@ for _, _entry in ipairs(main_menu.content[1].entries) do
   end
 end
 
--- Gray out Replay Slot (3), Replay Mission (4), Play Side (5), Clear Mission Slot (6), Clear All Mission Slots (7) in Missions tab (3)
+-- Gray out Replay Mission for Slot (3), Play Side (4), Replay Mission (5), Clear Mission Slot (6), Clear All Mission Slots (7) in Missions tab (3)
 for _entry_index = 3, 7 do
   local _entry = main_menu.content[3].entries[_entry_index]
   if _entry then
@@ -2505,6 +2643,14 @@ function on_load_state()
     mission_replay_queue_inputs()
   end
 
+  if direct_play_pending then
+    direct_play_pending = false
+    if direct_play_inputs then
+      queue_input_sequence(player_objects[2], direct_play_inputs)
+      direct_play_inputs = nil
+    end
+  end
+
   -- reset recording states in a useful way
   if current_recording_state == 3 then
     set_recording_state({}, 2)
@@ -2563,6 +2709,7 @@ function hotkey5()
     mission_slots[_slot_index].inputs = mission_recording_inputs
     mission_slots[_slot_index].savestate_path = mission_recording_savestate_path
     save_mission_to_file(_slot_index)
+    refresh_mission_recording_slots_names()
     for _i = 1, mission_slot_count do
       local _next = (_slot_index - 1 + _i) % mission_slot_count + 1
       if mission_slots[_next].name == "none" then
@@ -2604,6 +2751,14 @@ function before_frame()
   -- load recordings according to P2 character
   if _previous_dummy_char_str ~= player_objects[2].char_str then
     restore_recordings()
+    -- invalidate stale Pattern scan (cheap string reset, no io.popen)
+    if replay_import_char ~= "(not scanned)" and replay_import_char ~= player_objects[2].char_str then
+      replay_import_char = "(not scanned)"
+      for i = #replay_import_files, 1, -1 do table.remove(replay_import_files, i) end
+      table.insert(replay_import_files, "empty")
+      replay_import_state.file_index = 1
+      _replay_file_item.name = "Pattern (P2: ?)"
+    end
   end
 
   -- cap training settings
@@ -2655,6 +2810,7 @@ function before_frame()
   frame_advantage_update(player, dummy)
 
   if replay_mission_item.is_disabled() then training_settings.mission_replay_on = false end
+  if direct_play_item.is_disabled() then training_settings.pattern_replay_on = false end
 
   if not training_settings.recording_mission_mode and not training_settings.mission_replay_on then
     -- pose
@@ -2688,6 +2844,26 @@ function before_frame()
   if mission_replay_active and not mission_replay_pending and training_settings.mission_replay_on and not training_settings.recording_mission_mode and not is_menu_open and is_in_match then
     if player_objects[mission_dummy_id].pending_input_sequence == nil then
       replay_current_mission()
+    end
+  end
+
+  if pattern_replay_trigger then
+    pattern_replay_trigger = false
+    direct_play_pattern()
+  end
+
+  if training_settings.pattern_replay_on and not is_menu_open and is_in_match then
+    if player_objects[2].pending_input_sequence == nil and not direct_play_pending then
+      local _mode = training_settings.pattern_replay_mode
+      if _mode == 1 then -- normal: play once then stop
+        training_settings.pattern_replay_on = false
+      elseif _mode == 2 then -- random
+        if pick_random_pattern_index() then direct_play_pattern() else training_settings.pattern_replay_on = false end
+      elseif _mode == 3 then -- ordered
+        if pick_next_ordered_pattern_index() then direct_play_pattern() else training_settings.pattern_replay_on = false end
+      else -- repeat
+        direct_play_pattern()
+      end
     end
   end
 
@@ -3182,7 +3358,16 @@ function on_gui()
     local _frame_count = #mission_recording_inputs.p1
     local _slot_index = training_settings.current_mission_slot
     local _text = string.format("Mission REC [slot %d] (%d)", _slot_index, _frame_count)
-    gui.text(270, 15, _text, 0xFF4444FF, text_default_border_color)
+    gui.text(306, 8, _text, 0xFF4444FF, text_default_border_color)
+  end
+
+  if mission_replay_active then
+    local _dummy = player_objects[mission_dummy_id]
+    if _dummy and _dummy.pending_input_sequence then
+      local _seq = _dummy.pending_input_sequence
+      local _text = string.format("Replay (%d/%d)", _seq.current_frame, #_seq.sequence)
+      gui.text(306, 8, _text, 0xFF44FF44, text_default_border_color)
+    end
   end
 
   if log_enabled then
@@ -3205,6 +3390,9 @@ function on_gui()
         menu_stack_clear()
         if not training_settings.recording_mission_mode and training_settings.mission_replay_on then
           mission_replay_trigger = true
+        end
+        if training_settings.pattern_replay_on then
+          pattern_replay_trigger = true
         end
       end
     end

@@ -272,13 +272,15 @@ function textfield_menu_item(_name, _object, _property_name, _default_value, _ma
   return _o
 end
 
-function checkbox_menu_item(_name, _object, _property_name, _default_value)
+function checkbox_menu_item(_name, _object, _property_name, _default_value, _value_labels)
   if _default_value == nil then _default_value = false end
+  if _value_labels == nil then _value_labels = {"yes", "no"} end
   local _o = {}
   _o.name = _name
   _o.object = _object
   _o.property_name = _property_name
   _o.default_value = _default_value
+  _o.value_labels = _value_labels
 
   function _o:draw(_x, _y, _selected)
     local _c = text_default_color
@@ -292,9 +294,9 @@ function checkbox_menu_item(_name, _object, _property_name, _default_value)
 
     local _value = ""
     if self.object[self.property_name] then
-      _value = "yes"
+      _value = self.value_labels[1]
     else
-      _value = "no"
+      _value = self.value_labels[2]
     end
     gui.text(_x, _y, _prefix..self.name.." : ".._value.._suffix, _c, text_default_border_color)
   end
