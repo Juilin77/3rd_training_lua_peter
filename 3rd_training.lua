@@ -1685,6 +1685,12 @@ function direct_play_pattern()
   if not _inputs or #_inputs == 0 then
     print("[direct play] no inputs in pattern") return
   end
+  if _meta.start_pos then
+    memory.writeword(player_objects[1].base + 0x64, bit.band(_meta.start_pos.p1.x, 0xFFFF))
+    memory.writeword(player_objects[1].base + 0x68, bit.band(_meta.start_pos.p1.y, 0xFFFF))
+    memory.writeword(player_objects[2].base + 0x64, bit.band(_meta.start_pos.p2.x, 0xFFFF))
+    memory.writeword(player_objects[2].base + 0x68, bit.band(_meta.start_pos.p2.y, 0xFFFF))
+  end
   local _fs_path = _base .. ".fs"
   local _fs_check = io.open(_fs_path, "r")
   if _fs_check then
