@@ -3,45 +3,21 @@ Training mode for Street Fighter III 3rd Strike (Japan 990512), on Fightcade v2.
 
 The right version of Fightcade can be downloaded [here](https://www.fightcade.com/)
 
-## How to use
-* Download emulator from [here](https://www.fightcade.com/) and find the proper roms
-* Download the archive from [here](https://github.com/Grouflon/3rd_training_lua/archive/master.zip) or clone repository
-* Extract the archive anywhere on your computer
-* Start the emulator, load the rom, start a match with P1 and P2 (you will need to map input for both players)
-* Go to Game->Lua Scripting->New Lua Script Window and run the script **3rd_training.lua** from here
-* Follow instructions from the Output Console
+## Main Features
+- Can set dummy to counter-attack with any move on frame 1 after any hit / block / parry / wake-up
+- Can record and replay sequences into 8 different slots
+- Can replay sequences randomly and as counter-attack
+- Can save/load recorded sequences to/from files
+- Can display hit/hurt/throwboxes
+- Can display input history for both players
+- Special training mode to train parries and red parries
 
-## Bug reporting / Contribute
-If you want to be informed when a new version come out and/or discuss the current bugs and features, you can join the [Discord server](https://discord.gg/CDXQyFmcSe) of the project.
+### Frame Table
+Real-time per-frame state timeline (startup/active/recovery/hitstun/parry/invincible) for both players
 
-This training mode is still in development and you may encounter bugs or missing features while using it. Please report any bug on the **#bugs** channel, and any feature request on the **#features** channel of the discord server.
+![Frame Table](screenshots/frame_table.png)
 
-If you wish to contribute or give any feedback, feel free to get in touch or submit pull requests.
-
-## Troubleshooting
-**Q: Missing rom, zip file not found**
-
-A: Make sure you have the proper roms. You must have at least 2 roms: _sfiii3.zip_ and _sfiii3a.zip_. sfiii3 is the japanese version and the zip contains _sfiii3_japan_nocd.29f400.u2_. sfiiia is the american version and contains _sfiii3_usa.29f400.u2_.
-
-You may need to rename zip files so they match exactly what the emulator expect for.
-
-**Q: When I run the script, the characters can no longer move**
-
-A: You are probably using the script on FBA-RR which is not supported anymore, in order to benefit from the last features and improvement you must run the script on Fightcade2's FBNeo emulator. However if you still want to use FBA-RR, you can go back to v0.6 which was the last version supported on FBA-RR.
-
-**Q: Emulator crash when I run lua script**
-
-A: Check video settings, you musn't use "Enhanced" blitter option.
-
-**Q: UI looks weird and hitboxes are misplaced**
-
-A: Check video settings, you must use "Basic" blitter option with no scanlines if you want the UI to work properly.
-
-**Q: Emulator doesn't run at all, there's a missing dll**
-
-A: Install prerequires from [here](https://github.com/TASVideos/BizHawk-Prereqs/releases/latest/)
-
-## Guard Jump
+### Guard Jump
 The way guard jump works is that there are situations where you are throw invulnerable (cannot be thrown). These situations are after a reset, knockdown and blocking or being hit by an attack. This unthrowable state lasts for 6 frames.  Guard jump should be input to block for this duration, jumping in a direction and then blocking again.
 
 The current implementation of Counter-Attack Move does not work with how guard jump functions and needs to be input for all of these situations.  
@@ -83,18 +59,43 @@ One such advanced use case example would be a Makoto player using the ability us
 
 Thank you for your support in this matter and please enjoy!
 
-## Frame Table
-- Frame Table: real-time per-frame state timeline (startup/active/recovery/hitstun/parry/invincible) for both players
+## How to use
+* Download emulator from [here](https://www.fightcade.com/) and find the proper roms
+* Download the archive from [here](https://github.com/Grouflon/3rd_training_lua/archive/master.zip) or clone repository
+* Extract the archive anywhere on your computer
+* Start the emulator, load the rom, start a match with P1 and P2 (you will need to map input for both players)
+* Go to Game->Lua Scripting->New Lua Script Window and run the script **3rd_training.lua** from here
+* Follow instructions from the Output Console
 
-![Frame Table](screenshots/frame_table.png)
+## Bug reporting / Contribute
+If you want to be informed when a new version come out and/or discuss the current bugs and features, you can join the [Discord server](https://discord.gg/CDXQyFmcSe) of the project.
 
-- Can set dummy to counter-attack with any move on frame 1 after any hit / block / parry / wake-up
-- Can record and replay sequences into 8 different slots
-- Can replay sequences randomly and as counter-attack
-- Can save/load recorded sequences to/from files
-- Can display hit/hurt/throwboxes
-- Can display input history for both players
-- Special training mode to train parries and red parries
+This training mode is still in development and you may encounter bugs or missing features while using it. Please report any bug on the **#bugs** channel, and any feature request on the **#features** channel of the discord server.
+
+If you wish to contribute or give any feedback, feel free to get in touch or submit pull requests.
+
+## Troubleshooting
+**Q: Missing rom, zip file not found**
+
+A: Make sure you have the proper roms. You must have at least 2 roms: _sfiii3.zip_ and _sfiii3a.zip_. sfiii3 is the japanese version and the zip contains _sfiii3_japan_nocd.29f400.u2_. sfiiia is the american version and contains _sfiii3_usa.29f400.u2_.
+
+You may need to rename zip files so they match exactly what the emulator expect for.
+
+**Q: When I run the script, the characters can no longer move**
+
+A: You are probably using the script on FBA-RR which is not supported anymore, in order to benefit from the last features and improvement you must run the script on Fightcade2's FBNeo emulator. However if you still want to use FBA-RR, you can go back to v0.6 which was the last version supported on FBA-RR.
+
+**Q: Emulator crash when I run lua script**
+
+A: Check video settings, you musn't use "Enhanced" blitter option.
+
+**Q: UI looks weird and hitboxes are misplaced**
+
+A: Check video settings, you must use "Basic" blitter option with no scanlines if you want the UI to work properly.
+
+**Q: Emulator doesn't run at all, there's a missing dll**
+
+A: Install prerequires from [here](https://github.com/TASVideos/BizHawk-Prereqs/releases/latest/)
 
 ## Roadmap
 [Trello board](https://trello.com/b/UQ8ey2rQ/3rdtraining)
