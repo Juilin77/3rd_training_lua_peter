@@ -96,6 +96,19 @@ Thank you for your support in this matter and please enjoy!
 [Trello board](https://trello.com/b/UQ8ey2rQ/3rdtraining)
 
 ## Changelog
+### v0.19 (15/06/2026)
+- [Feature] Added Frame Table: a real-time per-frame state timeline (startup/active/recovery/hitstun/parry/invincible) for both players with a color legend (contribution of @Juilin77)
+- [Improvement] Frame Table capture arms on `has_just_attacked`/`has_just_thrown` to correctly catch invincible startup frames (contribution of @Juilin77)
+- [Improvement] Frame Table shows P1/P2 Start/Total/Adv stats independently, resetting on each new capture (contribution of @Juilin77)
+- [Improvement] Frame Table blocks enlarged and labeled with per-segment frame durations (contribution of @Juilin77)
+- [Fix] Fixed frame count accumulation across capture windows for combos longer than 90 frames (contribution of @Juilin77)
+- [Improvement] An attack now arms the opponent's Frame Table in sync, so the defender's capture starts with real neutral pre-roll frames (contribution of @Juilin77)
+- [Improvement] Adv value color-coded green/red/yellow, matching `frame_advantage.lua` (contribution of @Juilin77)
+- [Improvement] Combos longer than 90 frames keep a dimmed afterimage of the previous capture window (contribution of @Juilin77)
+- [Fix] Combo cancels (e.g. 236EXP into 2MP) now correctly split the second hit's startup from the first hit's recovery (contribution of @Juilin77)
+- [Fix] Fixed a JSON syntax error in `urien_framedata.json` that broke Urien frame data loading (contribution of @Juilin77)
+- [Fix] Reset P1/P2 position before Pattern Replay to fix position drift (contribution of @Juilin77)
+
 ### v0.18 (14/06/2026)
 - [Feature] Added "Pattern Replay Mode" (normal / random / ordered / repeat) for Replay Import patterns (contribution of @Juilin77)
 - [Improvement] Replaced "Direct Play (LP)" button with a "Pattern Replay" start/stop toggle, mirroring Mission Replay (contribution of @Juilin77)
