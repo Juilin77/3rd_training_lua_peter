@@ -16,7 +16,7 @@ frame_table_players = {
   p1 = { buffer = {}, armed = false, count = 0, start_frame = 0 },
   p2 = { buffer = {}, armed = false, count = 0, start_frame = 0 },
 }
-frame_table_stats = nil
+frame_table_stats = { p1 = nil, p2 = nil }
 frame_table_has_been_active = { p1 = false, p2 = false }
 frame_table_in_hitstun = { p1 = false, p2 = false }
 
@@ -138,7 +138,7 @@ function frame_table_update_stats(_attacker_key)
     end
   end
 
-  frame_table_stats = {
+  frame_table_stats[_attacker_key] = {
     startup   = _active_start - 1,
     total     = _total,
     advantage = _advantage,
@@ -165,6 +165,7 @@ function frame_table_update(_player1_obj, _player2_obj)
         _p.count = 0
         _p.buffer = {}
         _p.start_frame = frame_number
+        frame_table_stats[_key] = nil
       end
     end
 
@@ -183,7 +184,7 @@ end
 function frame_table_reset()
   frame_table_players.p1 = { buffer = {}, armed = false, count = 0, start_frame = 0 }
   frame_table_players.p2 = { buffer = {}, armed = false, count = 0, start_frame = 0 }
-  frame_table_stats = nil
+  frame_table_stats = { p1 = nil, p2 = nil }
   frame_table_has_been_active = { p1 = false, p2 = false }
   frame_table_in_hitstun = { p1 = false, p2 = false }
 end
@@ -199,20 +200,22 @@ function frame_table_draw_row(_buffer, _x, _y)
   end
 end
 
-function frame_table_stats_text()
-  if not frame_table_stats then
-    return "Start --F / Total --F / Adv --F"
+function frame_table_stats_text(_key)
+  local _label = (_key == "p1") and "P1" or "P2"
+  local _stats = frame_table_stats[_key]
+  if not _stats then
+    return string.format("%s: Start --F / Total --F / Adv --F", _label)
   end
   local _total_str = "--"
-  if frame_table_stats.total then
-    _total_str = string.format("%d", frame_table_stats.total)
+  if _stats.total then
+    _total_str = string.format("%d", _stats.total)
   end
   local _adv_str = "--"
-  if frame_table_stats.advantage then
-    local _sign = frame_table_stats.advantage >= 0 and "+" or ""
-    _adv_str = string.format("%s%d", _sign, frame_table_stats.advantage)
+  if _stats.advantage then
+    local _sign = _stats.advantage >= 0 and "+" or ""
+    _adv_str = string.format("%s%d", _sign, _stats.advantage)
   end
-  return string.format("Start %dF / Total %sF / Adv %sF", frame_table_stats.startup, _total_str, _adv_str)
+  return string.format("%s: Start %dF / Total %sF / Adv %sF", _label, _stats.startup, _total_str, _adv_str)
 end
 
 frame_table_legend_order = { "neutral", "startup", "active", "recovery", "hitstun", "parry", "invincible" }
@@ -254,10 +257,8 @@ function frame_table_display()
   -- solid background panel behind the color blocks only (text area stays transparent)
   gui.box(_x - 4, _y_p1 - 2, _x + _table_width + 4, _y_p2 + 6, 0x000000FF, 0x00000000)
 
-  local _text = frame_table_stats_text()
-
-  gui.text(_x, _y_text_top, _text, text_default_color, text_default_border_color)
+  gui.text(_x, _y_text_top, frame_table_stats_text("p1"), text_default_color, text_default_border_color)
   frame_table_draw_row(frame_table_players.p1.buffer, _x, _y_p1)
   frame_table_draw_row(frame_table_players.p2.buffer, _x, _y_p2)
-  gui.text(_x, _y_text_bottom, _text, text_default_color, text_default_border_color)
+  gui.text(_x, _y_text_bottom, frame_table_stats_text("p2"), text_default_color, text_default_border_color)
 end
