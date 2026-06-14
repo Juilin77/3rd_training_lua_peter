@@ -96,6 +96,41 @@ end
 
 -- # Draw functions
 
+-- hitbox colors, also used by hitbox_legend_display()
+hitbox_colors = {
+  vulnerability     = 0x0000FFFF,
+  attack            = 0xFF0000FF,
+  throwable         = 0x00FF00FF,
+  throw             = 0xFFFF00FF,
+  push              = 0xFF00FFFF,
+  ["ext. vulnerability"] = 0x00FFFFFF,
+}
+
+hitbox_legend_order = { "attack", "throw", "throwable", "push", "vulnerability", "ext. vulnerability" }
+hitbox_legend_labels = {
+  attack            = "Attack",
+  throw             = "Throw",
+  throwable         = "Throwable",
+  push              = "Push",
+  vulnerability     = "Vulnerable",
+  ["ext. vulnerability"] = "Ext.Vuln",
+}
+
+function hitbox_legend_display(_x, _y)
+  local _box_size = 6
+  local _col_width = 56
+  local _row_height = 10
+  local _per_row = 3
+  for i, _key in ipairs(hitbox_legend_order) do
+    local _col = (i - 1) % _per_row
+    local _row = math.floor((i - 1) / _per_row)
+    local _cx = _x + _col * _col_width
+    local _cy = _y + _row * _row_height
+    gui.box(_cx, _cy, _cx + _box_size, _cy + _box_size, hitbox_colors[_key], 0x00000000)
+    gui.text(_cx + _box_size + 2, _cy - 1, hitbox_legend_labels[_key], text_disabled_color, text_default_border_color)
+  end
+end
+
 -- draws a set of hitboxes
 function draw_hitboxes(_pos_x, _pos_y, _flip_x, _boxes, _filter, _dilation)
   _dilation = _dilation or 0
@@ -103,18 +138,7 @@ function draw_hitboxes(_pos_x, _pos_y, _flip_x, _boxes, _filter, _dilation)
 
   for __, _box in ipairs(_boxes) do
     if _filter == nil or _filter[_box.type] == true then
-      local _c = 0x0000FFFF
-      if (_box.type == "attack") then
-        _c = 0xFF0000FF
-      elseif (_box.type == "throwable") then
-        _c = 0x00FF00FF
-      elseif (_box.type == "throw") then
-        _c = 0xFFFF00FF
-      elseif (_box.type == "push") then
-        _c = 0xFF00FFFF
-      elseif (_box.type == "ext. vulnerability") then
-        _c = 0x00FFFFFF
-      end
+      local _c = hitbox_colors[_box.type] or 0x0000FFFF
 
       local _l, _r
       if _flip_x == 0 then

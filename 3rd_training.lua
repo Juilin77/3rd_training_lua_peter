@@ -63,6 +63,7 @@ require("src/gamestate")
 require("src/input_history")
 require("src/attack_data")
 require("src/frame_advantage")
+require("src/frame_table")
 require("src/character_select")
 
 recording_slot_count = 8
@@ -1900,6 +1901,7 @@ training_settings = {
   display_p2_input_history = false,
   display_attack_data = false,
   display_frame_advantage = false,
+  display_frame_table = false,
   display_hitboxes = false,
   display_distances = false,
   mid_distance_height = 70,
@@ -2121,6 +2123,7 @@ main_menu = make_multitab_menu(
         display_p2_input_history_item,
         checkbox_menu_item("Display Damage Info", training_settings, "display_attack_data"),
         checkbox_menu_item("Display Frame Advantage", training_settings, "display_frame_advantage"),
+        checkbox_menu_item("Display Frame Table", training_settings, "display_frame_table"),
         checkbox_menu_item("Display Hitboxes", training_settings, "display_hitboxes"),
         checkbox_menu_item("Display Distances", training_settings, "display_distances"),
         mid_distance_height_item,
@@ -2173,6 +2176,19 @@ main_menu = make_multitab_menu(
     if _menu.main_menu_selected_index == 2 and not training_settings.recording_mission_mode then
       local _t = string.format("%d frames", #recording_slots[training_settings.current_recording_slot].inputs)
       gui.text(_menu.left + 83, _menu.top + 23 + 3 * menu_y_interval, _t, text_disabled_color, text_default_border_color)
+    end
+
+    -- Display tab: color legends in the right-side blank space, only while the
+    -- corresponding entry is selected and its display is turned on
+    if not _menu.is_main_menu_selected and _menu.main_menu_selected_index == 4 then
+      local _legend_x = _menu.left + 160
+      if _menu.sub_menu_selected_index == 8 and training_settings.display_frame_table then
+        local _legend_y = _menu.top + 23 + (8 - 1) * menu_y_interval - 1
+        frame_table_legend_display(_legend_x, _legend_y)
+      elseif _menu.sub_menu_selected_index == 9 and training_settings.display_hitboxes then
+        local _legend_y = _menu.top + 23 + (9 - 1) * menu_y_interval - 1
+        hitbox_legend_display(_legend_x, _legend_y)
+      end
     end
   end
 )
@@ -2815,6 +2831,9 @@ function before_frame()
   -- frame advantage
   frame_advantage_update(player, dummy)
 
+  -- frame table
+  frame_table_update(player_objects[1], player_objects[2])
+
   if replay_mission_item.is_disabled() then training_settings.mission_replay_on = false end
   if direct_play_item.is_disabled() then training_settings.pattern_replay_on = false end
 
@@ -2880,6 +2899,7 @@ function before_frame()
     clear_input_history()
     attack_data_reset()
     frame_advantage_reset()
+    frame_table_reset()
   end
 
   -- character select
@@ -3033,6 +3053,11 @@ function on_gui()
     -- move advantage
     if training_settings.display_frame_advantage then
       frame_advantage_display()
+    end
+
+    -- frame table
+    if training_settings.display_frame_table then
+      frame_table_display()
     end
 
     -- debug
