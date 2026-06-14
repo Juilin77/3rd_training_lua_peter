@@ -13,8 +13,8 @@ frame_table_colors = {
 -- each player has its own independent capture: p1 and p2 arm/fill/freeze separately,
 -- so a long sequence on one side doesn't restart the other side's display
 frame_table_players = {
-  p1 = { buffer = {}, run_lengths = {}, armed = false, count = 0, start_frame = 0 },
-  p2 = { buffer = {}, run_lengths = {}, armed = false, count = 0, start_frame = 0 },
+  p1 = { buffer = {}, run_lengths = {}, armed = false, count = 0, start_frame = 0, prev_buffer = nil, prev_run_lengths = nil },
+  p2 = { buffer = {}, run_lengths = {}, armed = false, count = 0, start_frame = 0, prev_buffer = nil, prev_run_lengths = nil },
 }
 frame_table_stats = { p1 = nil, p2 = nil }
 frame_table_has_been_active = { p1 = false, p2 = false }
@@ -43,6 +43,16 @@ local function has_vulnerability_box(_player_obj)
     end
   end
   return false
+end
+
+-- halves each RGB channel (keeps alpha) for the dimmed "previous capture"
+-- overlay; avoids Lua 5.1 bitwise operators (not available in FBNeo's Lua)
+local function frame_table_dim_color(_color)
+  local _a = _color % 256
+  local _b = math.floor(_color / 256) % 256
+  local _g = math.floor(_color / 65536) % 256
+  local _r = math.floor(_color / 16777216) % 256
+  return math.floor(_r / 2) * 16777216 + math.floor(_g / 2) * 65536 + math.floor(_b / 2) * 256 + _a
 end
 
 local function find_first(_buffer, _value, _from)
@@ -152,8 +162,19 @@ function frame_table_update_stats(_attacker_key)
   }
 end
 
-local function frame_table_arm(_key)
+local function frame_table_arm(_key, _preserve_as_dimmed)
   local _p = frame_table_players[_key]
+  -- if this is a continuation re-arm (the previous capture filled the whole
+  -- table while the action was still going), keep it as a dimmed overlay for
+  -- the columns the new capture hasn't reached yet (1.17). a fresh-action
+  -- re-arm discards it, since the dimmed data wouldn't relate to the new action.
+  if _preserve_as_dimmed and _p.count >= FRAME_TABLE_LENGTH then
+    _p.prev_buffer = _p.buffer
+    _p.prev_run_lengths = _p.run_lengths
+  else
+    _p.prev_buffer = nil
+    _p.prev_run_lengths = nil
+  end
   _p.armed = true
   _p.count = 0
   _p.buffer = {}
@@ -193,14 +214,19 @@ function frame_table_update(_player1_obj, _player2_obj)
     if not _p.armed then
       local _fresh_trigger = _state == "parry" or has_just_attacked(_objs[_key])
       local _continuation_trigger = _state == "startup" or _state == "active" or _state == "hitstun"
+      -- a true continuation means the just-frozen buffer's last slot was already
+      -- in this same state (the action carried straight through frame 90);
+      -- otherwise this is a brand-new action (e.g. a jump starting right after
+      -- an unrelated capture froze) and shouldn't inherit its dimmed overlay
+      local _is_true_continuation = _continuation_trigger and _p.buffer[FRAME_TABLE_LENGTH] == _state
 
       if _fresh_trigger or _continuation_trigger then
-        frame_table_arm(_key)
+        frame_table_arm(_key, _is_true_continuation and not _fresh_trigger)
 
         if _fresh_trigger then
           local _other_key = (_key == "p1") and "p2" or "p1"
           if not frame_table_players[_other_key].armed then
-            frame_table_arm(_other_key)
+            frame_table_arm(_other_key, false)
           end
         end
       end
@@ -225,8 +251,8 @@ function frame_table_update(_player1_obj, _player2_obj)
 end
 
 function frame_table_reset()
-  frame_table_players.p1 = { buffer = {}, run_lengths = {}, armed = false, count = 0, start_frame = 0 }
-  frame_table_players.p2 = { buffer = {}, run_lengths = {}, armed = false, count = 0, start_frame = 0 }
+  frame_table_players.p1 = { buffer = {}, run_lengths = {}, armed = false, count = 0, start_frame = 0, prev_buffer = nil, prev_run_lengths = nil }
+  frame_table_players.p2 = { buffer = {}, run_lengths = {}, armed = false, count = 0, start_frame = 0, prev_buffer = nil, prev_run_lengths = nil }
   frame_table_stats = { p1 = nil, p2 = nil }
   frame_table_has_been_active = { p1 = false, p2 = false }
   frame_table_in_hitstun = { p1 = false, p2 = false }
@@ -234,35 +260,51 @@ function frame_table_reset()
   frame_table_prev_state = { p1 = nil, p2 = nil }
 end
 
-function frame_table_draw_row(_buffer, _run_lengths, _x, _y)
-  local _block_width  = 4
-  local _block_height = 8
-  for i = 1, FRAME_TABLE_LENGTH do
-    local _state = _buffer[i] or "neutral"
-    local _color = frame_table_colors[_state] or frame_table_colors.neutral
-    local _bx = _x + (i - 1) * _block_width
-    gui.box(_bx, _y, _bx + _block_width - 1, _y + _block_height, _color, 0x00000000)
-  end
-
-  -- label the end of each non-neutral run with its (true, possibly
-  -- pre-capture) consecutive frame count from _run_lengths, right-aligned
-  -- to the last block of the run
-  local i = 1
-  while i <= FRAME_TABLE_LENGTH do
+-- label the end of each non-neutral run within [_from, _to] with its (true,
+-- possibly pre-capture) consecutive frame count from _run_lengths,
+-- right-aligned to the last block of the run
+local function frame_table_draw_run_labels(_buffer, _run_lengths, _from, _to, _x, _y, _text_color)
+  local _block_width = 4
+  local i = _from
+  while i <= _to do
     local _state = _buffer[i] or "neutral"
     if _state == "neutral" then
       i = i + 1
     else
       local _end = i
-      while _end + 1 <= FRAME_TABLE_LENGTH and (_buffer[_end + 1] or "neutral") == _state do
+      while _end + 1 <= _to and (_buffer[_end + 1] or "neutral") == _state do
         _end = _end + 1
       end
       local _length = _run_lengths[_end] or (_end - i + 1)
       local _digits = string.format("%d", _length)
       local _right_edge = _x + _end * _block_width
-      gui.text(_right_edge - get_text_width(_digits), _y, _digits, text_default_color, text_default_border_color)
+      gui.text(_right_edge - get_text_width(_digits), _y, _digits, _text_color, text_default_border_color)
       i = _end + 1
     end
+  end
+end
+
+function frame_table_draw_row(_buffer, _run_lengths, _prev_buffer, _prev_run_lengths, _x, _y)
+  local _block_width  = 4
+  local _block_height = 8
+  for i = 1, FRAME_TABLE_LENGTH do
+    local _state = _buffer[i]
+    local _color
+    if _state then
+      _color = frame_table_colors[_state] or frame_table_colors.neutral
+    elseif _prev_buffer and _prev_buffer[i] then
+      _color = frame_table_dim_color(frame_table_colors[_prev_buffer[i]] or frame_table_colors.neutral)
+    else
+      _color = frame_table_colors.neutral
+    end
+    local _bx = _x + (i - 1) * _block_width
+    gui.box(_bx, _y, _bx + _block_width - 1, _y + _block_height, _color, 0x00000000)
+  end
+
+  frame_table_draw_run_labels(_buffer, _run_lengths, 1, FRAME_TABLE_LENGTH, _x, _y, text_default_color)
+
+  if _prev_buffer then
+    frame_table_draw_run_labels(_prev_buffer, _prev_run_lengths, #_buffer + 1, FRAME_TABLE_LENGTH, _x, _y, text_disabled_color)
   end
 end
 
@@ -349,8 +391,10 @@ function frame_table_display()
   gui.text(_x, _y_text_top, _p1_prefix, text_default_color, text_default_border_color)
   gui.text(_x + get_text_width(_p1_prefix), _y_text_top, _p1_adv_str, _p1_adv_color, text_default_border_color)
 
-  frame_table_draw_row(frame_table_players.p1.buffer, frame_table_players.p1.run_lengths, _x, _y_p1)
-  frame_table_draw_row(frame_table_players.p2.buffer, frame_table_players.p2.run_lengths, _x, _y_p2)
+  frame_table_draw_row(frame_table_players.p1.buffer, frame_table_players.p1.run_lengths,
+    frame_table_players.p1.prev_buffer, frame_table_players.p1.prev_run_lengths, _x, _y_p1)
+  frame_table_draw_row(frame_table_players.p2.buffer, frame_table_players.p2.run_lengths,
+    frame_table_players.p2.prev_buffer, frame_table_players.p2.prev_run_lengths, _x, _y_p2)
 
   local _p2_prefix, _p2_adv_str, _p2_adv_color = frame_table_stats_parts("p2")
   gui.text(_x, _y_text_bottom, _p2_prefix, text_default_color, text_default_border_color)
