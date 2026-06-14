@@ -4,6 +4,10 @@ Training mode for Street Fighter III 3rd Strike (Japan 990512), on Fightcade v2.
 The right version of Fightcade can be downloaded [here](https://www.fightcade.com/)
 
 ## Main features
+- Frame Table: real-time per-frame state timeline (startup/active/recovery/hitstun/parry/invincible) for both players
+
+![Frame Table](screenshots/frame_table.png)
+
 - Can set dummy to counter-attack with any move on frame 1 after any hit / block / parry / wake-up
 - Can record and replay sequences into 8 different slots
 - Can replay sequences randomly and as counter-attack
