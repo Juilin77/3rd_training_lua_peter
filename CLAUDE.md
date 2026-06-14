@@ -3,7 +3,7 @@
 ## 概覽
 - FightCade v2 / FBNeo 的 SF3 3rd Strike 訓練模式腳本
 - GitHub：https://github.com/Juilin77/3rd_training_lua_peter
-- 目前版本：v0.18
+- 目前版本：v0.19
 
 ## 主要檔案
 - `3rd_training.lua` — 主腳本（所有功能都在這）
