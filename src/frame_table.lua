@@ -2,12 +2,12 @@ FRAME_TABLE_LENGTH = 90 -- ~1.5s at 60fps
 
 frame_table_colors = {
   neutral    = 0x444444FF, -- idle / empty
-  startup    = 0x00FF00FF, -- 出招 (windup before hitbox)
-  active     = 0xFF4040FF, -- 發生攻擊 (hitbox active)
-  recovery   = 0x4080FFFF, -- 動作收回 (recovery / busy after active)
-  hitstun    = 0xFFFF00FF, -- 因傷害/防禦/倒地而無法行動 (hitstun/blockstun/knockdown/wakeup/thrown)
-  parry      = 0xCC33FFFF, -- 格擋(parry)瞬間
-  invincible = 0xFFFFFFFF, -- 無敵時間
+  startup    = 0x00FF00FF, -- startup (windup before hitbox)
+  active     = 0xFF4040FF, -- active (hitbox active)
+  recovery   = 0x4080FFFF, -- recovery (busy after active)
+  hitstun    = 0xFFFF00FF, -- hitstun/blockstun/knockdown/wakeup/thrown
+  parry      = 0xCC33FFFF, -- parry success
+  invincible = 0xFFFFFFFF, -- invincible
 }
 
 -- each player has its own independent capture: p1 and p2 arm/fill/freeze separately,
