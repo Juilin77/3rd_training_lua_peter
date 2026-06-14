@@ -3,19 +3,6 @@ Training mode for Street Fighter III 3rd Strike (Japan 990512), on Fightcade v2.
 
 The right version of Fightcade can be downloaded [here](https://www.fightcade.com/)
 
-## Main features
-- Frame Table: real-time per-frame state timeline (startup/active/recovery/hitstun/parry/invincible) for both players
-
-![Frame Table](screenshots/frame_table.png)
-
-- Can set dummy to counter-attack with any move on frame 1 after any hit / block / parry / wake-up
-- Can record and replay sequences into 8 different slots
-- Can replay sequences randomly and as counter-attack
-- Can save/load recorded sequences to/from files
-- Can display hit/hurt/throwboxes
-- Can display input history for both players
-- Special training mode to train parries and red parries
-
 ## How to use
 * Download emulator from [here](https://www.fightcade.com/) and find the proper roms
 * Download the archive from [here](https://github.com/Grouflon/3rd_training_lua/archive/master.zip) or clone repository
@@ -95,6 +82,19 @@ If you want randomization between the three replays then simply load each one in
 One such advanced use case example would be a Makoto player using the ability use replay weighting to simulate weighted decisions in order to practice post hayate mixups against an opponent that favors specific types of defensive options.
 
 Thank you for your support in this matter and please enjoy!
+
+## Frame Table
+- Frame Table: real-time per-frame state timeline (startup/active/recovery/hitstun/parry/invincible) for both players
+
+![Frame Table](screenshots/frame_table.png)
+
+- Can set dummy to counter-attack with any move on frame 1 after any hit / block / parry / wake-up
+- Can record and replay sequences into 8 different slots
+- Can replay sequences randomly and as counter-attack
+- Can save/load recorded sequences to/from files
+- Can display hit/hurt/throwboxes
+- Can display input history for both players
+- Special training mode to train parries and red parries
 
 ## Roadmap
 [Trello board](https://trello.com/b/UQ8ey2rQ/3rdtraining)
