@@ -266,22 +266,43 @@ function frame_table_draw_row(_buffer, _run_lengths, _x, _y)
   end
 end
 
-function frame_table_stats_text(_key)
+-- same convention as frame_advantage.lua: green when ahead, red when behind
+frame_table_advantage_colors = {
+  positive = 0x10FB00FF,
+  negative = 0xE70000FF,
+  zero     = 0xFFFB63FF,
+}
+
+-- returns the "Start/Total" prefix (default color), and the "Adv" value
+-- with its own color (green/red/yellow depending on sign), drawn separately
+-- so the Adv number can stand out from the rest of the line
+function frame_table_stats_parts(_key)
   local _label = (_key == "p1") and "P1" or "P2"
   local _stats = frame_table_stats[_key]
   if not _stats then
-    return string.format("%s: Start --F / Total --F / Adv --F", _label)
+    return string.format("%s: Start --F / Total --F / Adv ", _label), "--F", text_default_color
   end
   local _total_str = "--"
   if _stats.total then
     _total_str = string.format("%d", _stats.total)
   end
-  local _adv_str = "--"
+  local _prefix = string.format("%s: Start %dF / Total %sF / Adv ", _label, _stats.startup, _total_str)
+
+  local _adv_str = "--F"
+  local _adv_color = text_default_color
   if _stats.advantage then
     local _sign = _stats.advantage >= 0 and "+" or ""
-    _adv_str = string.format("%s%d", _sign, _stats.advantage)
+    _adv_str = string.format("%s%dF", _sign, _stats.advantage)
+    if _stats.advantage > 0 then
+      _adv_color = frame_table_advantage_colors.positive
+    elseif _stats.advantage < 0 then
+      _adv_color = frame_table_advantage_colors.negative
+    else
+      _adv_color = frame_table_advantage_colors.zero
+    end
   end
-  return string.format("%s: Start %dF / Total %sF / Adv %sF", _label, _stats.startup, _total_str, _adv_str)
+
+  return _prefix, _adv_str, _adv_color
 end
 
 frame_table_legend_order = { "neutral", "startup", "active", "recovery", "hitstun", "parry", "invincible" }
@@ -324,8 +345,14 @@ function frame_table_display()
   -- solid background panel behind the color blocks only (text area stays transparent)
   gui.box(_x - 4, _y_p1 - 2, _x + _table_width + 4, _y_p2 + _block_height + 2, 0x000000FF, 0x00000000)
 
-  gui.text(_x, _y_text_top, frame_table_stats_text("p1"), text_default_color, text_default_border_color)
+  local _p1_prefix, _p1_adv_str, _p1_adv_color = frame_table_stats_parts("p1")
+  gui.text(_x, _y_text_top, _p1_prefix, text_default_color, text_default_border_color)
+  gui.text(_x + get_text_width(_p1_prefix), _y_text_top, _p1_adv_str, _p1_adv_color, text_default_border_color)
+
   frame_table_draw_row(frame_table_players.p1.buffer, frame_table_players.p1.run_lengths, _x, _y_p1)
   frame_table_draw_row(frame_table_players.p2.buffer, frame_table_players.p2.run_lengths, _x, _y_p2)
-  gui.text(_x, _y_text_bottom, frame_table_stats_text("p2"), text_default_color, text_default_border_color)
+
+  local _p2_prefix, _p2_adv_str, _p2_adv_color = frame_table_stats_parts("p2")
+  gui.text(_x, _y_text_bottom, _p2_prefix, text_default_color, text_default_border_color)
+  gui.text(_x + get_text_width(_p2_prefix), _y_text_bottom, _p2_adv_str, _p2_adv_color, text_default_border_color)
 end
