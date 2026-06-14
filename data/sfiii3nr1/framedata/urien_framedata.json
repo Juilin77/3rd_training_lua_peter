@@ -3020,13 +3020,13 @@
       },{
         "frame_id":21130,
         "boxes":[
-          {"type":"attack", "bottom":57, "height":44, "left":-50, "width":12}
+          {"type":"attack", "bottom":57, "height":44, "left":-50, "width":12},
           {"type":"attack", "bottom":35, "height":90, "left":-48, "width":8}],
         "movement":[0,0]
       },{
         "frame_id":21130,
         "boxes":[
-          {"type":"attack", "bottom":57, "height":44, "left":-50, "width":12}
+          {"type":"attack", "bottom":57, "height":44, "left":-50, "width":12},
           {"type":"attack", "bottom":35, "height":90, "left":-48, "width":8}],
         "movement":[0,0]
       },{
