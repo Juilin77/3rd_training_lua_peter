@@ -13,12 +13,19 @@ frame_table_colors = {
 -- each player has its own independent capture: p1 and p2 arm/fill/freeze separately,
 -- so a long sequence on one side doesn't restart the other side's display
 frame_table_players = {
-  p1 = { buffer = {}, armed = false, count = 0, start_frame = 0 },
-  p2 = { buffer = {}, armed = false, count = 0, start_frame = 0 },
+  p1 = { buffer = {}, run_lengths = {}, armed = false, count = 0, start_frame = 0 },
+  p2 = { buffer = {}, run_lengths = {}, armed = false, count = 0, start_frame = 0 },
 }
 frame_table_stats = { p1 = nil, p2 = nil }
 frame_table_has_been_active = { p1 = false, p2 = false }
 frame_table_in_hitstun = { p1 = false, p2 = false }
+
+-- tracks how many consecutive frames each player has been in the current
+-- classify() state, independent of buffer/capture resets, so the per-segment
+-- frame count stays correct across a re-arm in the middle of a long run
+-- (e.g. a combo's "active"/"hitstun" run lasting longer than FRAME_TABLE_LENGTH)
+frame_table_run_length = { p1 = 0, p2 = 0 }
+frame_table_prev_state = { p1 = nil, p2 = nil }
 
 local function has_hitbox(_player_obj)
   for _, _box in ipairs(_player_obj.boxes) do
@@ -156,6 +163,13 @@ function frame_table_update(_player1_obj, _player2_obj)
     local _state = _states[_key]
     local _p = frame_table_players[_key]
 
+    if _state == frame_table_prev_state[_key] then
+      frame_table_run_length[_key] = frame_table_run_length[_key] + 1
+    else
+      frame_table_run_length[_key] = 1
+    end
+    frame_table_prev_state[_key] = _state
+
     if not _p.armed then
       -- only start a new capture when a fresh attack is actually beginning
       -- (don't let a knocked-down player's wakeup/hitstun restart their own display either)
@@ -164,6 +178,7 @@ function frame_table_update(_player1_obj, _player2_obj)
         _p.armed = true
         _p.count = 0
         _p.buffer = {}
+        _p.run_lengths = {}
         _p.start_frame = frame_number
         frame_table_stats[_key] = nil
       end
@@ -171,6 +186,7 @@ function frame_table_update(_player1_obj, _player2_obj)
 
     if _p.armed then
       table.insert(_p.buffer, _state)
+      table.insert(_p.run_lengths, frame_table_run_length[_key])
       _p.count = _p.count + 1
 
       if _p.count >= FRAME_TABLE_LENGTH then
@@ -182,14 +198,16 @@ function frame_table_update(_player1_obj, _player2_obj)
 end
 
 function frame_table_reset()
-  frame_table_players.p1 = { buffer = {}, armed = false, count = 0, start_frame = 0 }
-  frame_table_players.p2 = { buffer = {}, armed = false, count = 0, start_frame = 0 }
+  frame_table_players.p1 = { buffer = {}, run_lengths = {}, armed = false, count = 0, start_frame = 0 }
+  frame_table_players.p2 = { buffer = {}, run_lengths = {}, armed = false, count = 0, start_frame = 0 }
   frame_table_stats = { p1 = nil, p2 = nil }
   frame_table_has_been_active = { p1 = false, p2 = false }
   frame_table_in_hitstun = { p1 = false, p2 = false }
+  frame_table_run_length = { p1 = 0, p2 = 0 }
+  frame_table_prev_state = { p1 = nil, p2 = nil }
 end
 
-function frame_table_draw_row(_buffer, _x, _y)
+function frame_table_draw_row(_buffer, _run_lengths, _x, _y)
   local _block_width  = 4
   local _block_height = 8
   for i = 1, FRAME_TABLE_LENGTH do
@@ -199,8 +217,9 @@ function frame_table_draw_row(_buffer, _x, _y)
     gui.box(_bx, _y, _bx + _block_width - 1, _y + _block_height, _color, 0x00000000)
   end
 
-  -- label the last block of each non-neutral run with its frame count
-  -- (two-digit counts split across the last two blocks: tens then units)
+  -- label the end of each non-neutral run with its (true, possibly
+  -- pre-capture) consecutive frame count from _run_lengths, right-aligned
+  -- to the last block of the run
   local i = 1
   while i <= FRAME_TABLE_LENGTH do
     local _state = _buffer[i] or "neutral"
@@ -211,14 +230,10 @@ function frame_table_draw_row(_buffer, _x, _y)
       while _end + 1 <= FRAME_TABLE_LENGTH and (_buffer[_end + 1] or "neutral") == _state do
         _end = _end + 1
       end
-      local _length = _end - i + 1
-      local _bx = _x + (_end - 1) * _block_width
-      if _length >= 10 then
-        gui.text(_bx - _block_width + 1, _y, string.format("%d", math.floor(_length / 10)), text_default_color, text_default_border_color)
-        gui.text(_bx + 1, _y, string.format("%d", _length % 10), text_default_color, text_default_border_color)
-      else
-        gui.text(_bx + 1, _y, string.format("%d", _length), text_default_color, text_default_border_color)
-      end
+      local _length = _run_lengths[_end] or (_end - i + 1)
+      local _digits = string.format("%d", _length)
+      local _right_edge = _x + _end * _block_width
+      gui.text(_right_edge - get_text_width(_digits), _y, _digits, text_default_color, text_default_border_color)
       i = _end + 1
     end
   end
@@ -283,7 +298,7 @@ function frame_table_display()
   gui.box(_x - 4, _y_p1 - 2, _x + _table_width + 4, _y_p2 + _block_height + 2, 0x000000FF, 0x00000000)
 
   gui.text(_x, _y_text_top, frame_table_stats_text("p1"), text_default_color, text_default_border_color)
-  frame_table_draw_row(frame_table_players.p1.buffer, _x, _y_p1)
-  frame_table_draw_row(frame_table_players.p2.buffer, _x, _y_p2)
+  frame_table_draw_row(frame_table_players.p1.buffer, frame_table_players.p1.run_lengths, _x, _y_p1)
+  frame_table_draw_row(frame_table_players.p2.buffer, frame_table_players.p2.run_lengths, _x, _y_p2)
   gui.text(_x, _y_text_bottom, frame_table_stats_text("p2"), text_default_color, text_default_border_color)
 end
