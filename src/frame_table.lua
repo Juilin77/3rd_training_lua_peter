@@ -152,6 +152,16 @@ function frame_table_update_stats(_attacker_key)
   }
 end
 
+local function frame_table_arm(_key)
+  local _p = frame_table_players[_key]
+  _p.armed = true
+  _p.count = 0
+  _p.buffer = {}
+  _p.run_lengths = {}
+  _p.start_frame = frame_number
+  frame_table_stats[_key] = nil
+end
+
 function frame_table_update(_player1_obj, _player2_obj)
   local _states = {
     p1 = frame_table_classify(_player1_obj, "p1"),
@@ -159,30 +169,47 @@ function frame_table_update(_player1_obj, _player2_obj)
   }
   local _objs = { p1 = _player1_obj, p2 = _player2_obj }
 
+  -- run-length tracking, independent of arming
   for _, _key in ipairs({ "p1", "p2" }) do
     local _state = _states[_key]
-    local _p = frame_table_players[_key]
-
     if _state == frame_table_prev_state[_key] then
       frame_table_run_length[_key] = frame_table_run_length[_key] + 1
     else
       frame_table_run_length[_key] = 1
     end
     frame_table_prev_state[_key] = _state
+  end
+
+  -- a fresh attack/parry on one side also arms the other side (if it isn't
+  -- already capturing its own thing), with the same start_frame, so the
+  -- defender's buffer starts with real neutral frames before the action lands.
+  -- continuation re-arms (state still active/hitstun/startup after a previous
+  -- capture filled up) only re-arm the player it belongs to, so they don't
+  -- reset the other player's already-frozen display.
+  for _, _key in ipairs({ "p1", "p2" }) do
+    local _state = _states[_key]
+    local _p = frame_table_players[_key]
 
     if not _p.armed then
-      -- only start a new capture when a fresh attack is actually beginning
-      -- (don't let a knocked-down player's wakeup/hitstun restart their own display either)
-      if _state == "startup" or _state == "active" or _state == "hitstun" or _state == "parry"
-        or has_just_attacked(_objs[_key]) then
-        _p.armed = true
-        _p.count = 0
-        _p.buffer = {}
-        _p.run_lengths = {}
-        _p.start_frame = frame_number
-        frame_table_stats[_key] = nil
+      local _fresh_trigger = _state == "parry" or has_just_attacked(_objs[_key])
+      local _continuation_trigger = _state == "startup" or _state == "active" or _state == "hitstun"
+
+      if _fresh_trigger or _continuation_trigger then
+        frame_table_arm(_key)
+
+        if _fresh_trigger then
+          local _other_key = (_key == "p1") and "p2" or "p1"
+          if not frame_table_players[_other_key].armed then
+            frame_table_arm(_other_key)
+          end
+        end
       end
     end
+  end
+
+  for _, _key in ipairs({ "p1", "p2" }) do
+    local _state = _states[_key]
+    local _p = frame_table_players[_key]
 
     if _p.armed then
       table.insert(_p.buffer, _state)
