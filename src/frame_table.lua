@@ -47,6 +47,13 @@ local function find_first(_buffer, _value, _from)
   return nil
 end
 
+-- same "move just started" trigger as frame_advantage.lua, used to arm the
+-- capture earlier than classify() would (which can miss the first startup
+-- frames while is_idle is still true)
+local function has_just_attacked(_player_obj)
+  return _player_obj.has_just_attacked or _player_obj.has_just_thrown
+end
+
 function frame_table_classify(_player_obj, _player_key)
   -- parry and hitbox-active can land on the same frame as is_idle == true,
   -- so check them before the early-out neutral return
@@ -143,6 +150,7 @@ function frame_table_update(_player1_obj, _player2_obj)
     p1 = frame_table_classify(_player1_obj, "p1"),
     p2 = frame_table_classify(_player2_obj, "p2"),
   }
+  local _objs = { p1 = _player1_obj, p2 = _player2_obj }
 
   for _, _key in ipairs({ "p1", "p2" }) do
     local _state = _states[_key]
@@ -151,7 +159,8 @@ function frame_table_update(_player1_obj, _player2_obj)
     if not _p.armed then
       -- only start a new capture when a fresh attack is actually beginning
       -- (don't let a knocked-down player's wakeup/hitstun restart their own display either)
-      if _state == "startup" or _state == "active" or _state == "hitstun" or _state == "parry" then
+      if _state == "startup" or _state == "active" or _state == "hitstun" or _state == "parry"
+        or has_just_attacked(_objs[_key]) then
         _p.armed = true
         _p.count = 0
         _p.buffer = {}
