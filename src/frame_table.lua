@@ -190,13 +190,37 @@ function frame_table_reset()
 end
 
 function frame_table_draw_row(_buffer, _x, _y)
-  local _block_width  = 3
-  local _block_height = 4
+  local _block_width  = 4
+  local _block_height = 8
   for i = 1, FRAME_TABLE_LENGTH do
     local _state = _buffer[i] or "neutral"
     local _color = frame_table_colors[_state] or frame_table_colors.neutral
     local _bx = _x + (i - 1) * _block_width
     gui.box(_bx, _y, _bx + _block_width - 1, _y + _block_height, _color, 0x00000000)
+  end
+
+  -- label the last block of each non-neutral run with its frame count
+  -- (two-digit counts split across the last two blocks: tens then units)
+  local i = 1
+  while i <= FRAME_TABLE_LENGTH do
+    local _state = _buffer[i] or "neutral"
+    if _state == "neutral" then
+      i = i + 1
+    else
+      local _end = i
+      while _end + 1 <= FRAME_TABLE_LENGTH and (_buffer[_end + 1] or "neutral") == _state do
+        _end = _end + 1
+      end
+      local _length = _end - i + 1
+      local _bx = _x + (_end - 1) * _block_width
+      if _length >= 10 then
+        gui.text(_bx - _block_width + 1, _y, string.format("%d", math.floor(_length / 10)), text_default_color, text_default_border_color)
+        gui.text(_bx + 1, _y, string.format("%d", _length % 10), text_default_color, text_default_border_color)
+      else
+        gui.text(_bx + 1, _y, string.format("%d", _length), text_default_color, text_default_border_color)
+      end
+      i = _end + 1
+    end
   end
 end
 
@@ -245,17 +269,18 @@ function frame_table_legend_display(_x, _y)
 end
 
 function frame_table_display()
-  local _block_width  = 3
+  local _block_width  = 4
+  local _block_height = 8
   local _table_width  = FRAME_TABLE_LENGTH * _block_width
-  local _x = (screen_width - _table_width) / 2
+  local _x = 6
 
-  local _y_text_top    = 170
-  local _y_p1          = 179
-  local _y_p2          = 184
-  local _y_text_bottom = 190
+  local _y_text_top    = 163
+  local _y_p1          = 172
+  local _y_p2          = 182
+  local _y_text_bottom = 192
 
   -- solid background panel behind the color blocks only (text area stays transparent)
-  gui.box(_x - 4, _y_p1 - 2, _x + _table_width + 4, _y_p2 + 6, 0x000000FF, 0x00000000)
+  gui.box(_x - 4, _y_p1 - 2, _x + _table_width + 4, _y_p2 + _block_height + 2, 0x000000FF, 0x00000000)
 
   gui.text(_x, _y_text_top, frame_table_stats_text("p1"), text_default_color, text_default_border_color)
   frame_table_draw_row(frame_table_players.p1.buffer, _x, _y_p1)
