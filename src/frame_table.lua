@@ -190,6 +190,40 @@ function frame_table_update(_player1_obj, _player2_obj)
   }
   local _objs = { p1 = _player1_obj, p2 = _player2_obj }
 
+  -- a hit landing right after a "recovery" classification means the previous
+  -- move's recovery was actually canceled straight into this move's startup
+  -- (no neutral frame in between, so classify() had no chance to reset).
+  -- retroactively relabel the tail of the "recovery" run as "startup" - only
+  -- the new move's own startup length (from its recorded hit_frames[1].min),
+  -- so the previous move's actual recovery frames stay blue. the run_lengths
+  -- values stay valid since the run's total length doesn't change, just its
+  -- color split (1.18)
+  for _, _key in ipairs({ "p1", "p2" }) do
+    if _states[_key] == "active" and frame_table_prev_state[_key] == "recovery" then
+      local _p = frame_table_players[_key]
+      local _run = frame_table_run_length[_key]
+      local _n = #_p.buffer
+
+      local _startup_len = _run
+      local _frame_data = _objs[_key].relevant_animation_frame_data
+      local _hit_frame = _frame_data and _frame_data.hit_frames and _frame_data.hit_frames[1]
+      if _hit_frame and _hit_frame.min then
+        _startup_len = math.min(_hit_frame.min, _run)
+      end
+
+      -- the relabeled tail becomes its own run, so its run_lengths need to
+      -- restart from 1 (they were previously counting up as part of the
+      -- single 27-frame recovery run)
+      local _from = math.max(_n - _startup_len + 1, 1)
+      for i = _n, _from, -1 do
+        if _p.buffer[i] == "recovery" then
+          _p.buffer[i] = "startup"
+          _p.run_lengths[i] = i - _from + 1
+        end
+      end
+    end
+  end
+
   -- run-length tracking, independent of arming
   for _, _key in ipairs({ "p1", "p2" }) do
     local _state = _states[_key]
