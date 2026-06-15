@@ -493,7 +493,7 @@ blocking_mode =
 {
   "never",
   "always",
-  "first hit",
+  "combo only",
   "random",
 }
 
@@ -1135,7 +1135,7 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
             _dummy.blocking.is_precise_timing = false
             log(_dummy.prefix, "blocking", string.format("block in %d", _dummy.blocking.expected_attack_animation_hit_frame - _player_relevant_animation_frame))
 
-            if _mode == 3 then -- first hit
+            if _mode == 3 then -- combo only
               if not _dummy.blocking.block_string and not _dummy.blocking.wait_for_block_string then
                 _dummy.blocking.should_block = false
               end
@@ -1223,7 +1223,7 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
             _dummy.blocking.is_precise_timing = _movement ~= nil
             log(_dummy.prefix, "blocking", string.format("block proj %s in %d", _projectile_obj.id, _i))
 
-            if _mode == 3 then -- first hit
+            if _mode == 3 then -- combo only
               if not _dummy.blocking.block_string and not _dummy.blocking.wait_for_block_string then
                 _dummy.blocking.should_block_projectile = false
               end

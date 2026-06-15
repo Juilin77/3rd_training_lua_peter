@@ -203,6 +203,17 @@ frame_data_meta["makoto"].moves["ed98"] = { hits = {{ type = 3 }} } -- M Oroshi
 frame_data_meta["makoto"].moves["ee98"] = { hits = {{ type = 3 }} } -- H Oroshi
 frame_data_meta["makoto"].moves["ef98"] = { hits = {{ type = 3 }} } -- EX Oroshi
 
+frame_data_meta["makoto"].moves["e2d0"] = { hits = {{ type = 3 }} } -- Oroshi LP (active hit)
+frame_data_meta["makoto"].moves["dbf0"] = { proxy = { offset = -2, id = "e2d0" } } -- Oroshi LP startup tail (2 frames before e2d0)
+
+frame_data_meta["makoto"].moves["e3f8"] = { hits = {{ type = 3 }} } -- Oroshi MP (active hit)
+frame_data_meta["makoto"].moves["dc90"] = { proxy = { offset = -5, id = "e3f8" } } -- Oroshi MP startup tail (5 frames before e3f8)
+
+frame_data_meta["makoto"].moves["dd60"] = { proxy = { offset = -7, id = "e2d0" } } -- Oroshi HP startup tail (7 frames before e2d0, shares active hit anim with LP)
+
+frame_data_meta["makoto"].moves["e860"] = { hits = {{ type = 3 }} } -- Oroshi EXP (active hit)
+frame_data_meta["makoto"].moves["de30"] = { proxy = { offset = -17, id = "e860" } } -- Oroshi EXP startup tail (17 frames before e860)
+
 frame_data_meta["makoto"].moves["31e0"] = { hits = {{ type = 3 }}, movement_type = 2 } -- Straight Air LP
 frame_data_meta["makoto"].moves["32c0"] = { hits = {{ type = 3 }}, movement_type = 2 } -- Straight Air MP
 frame_data_meta["makoto"].moves["3380"] = { hits = {{ type = 3 }}, movement_type = 2 } -- Straight Air HP
