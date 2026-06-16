@@ -3519,17 +3519,19 @@ function on_gui()
     throw_tech_disp.name_color = nil
     draw_parry_gauge_group(_x, _y, throw_tech_disp, _gauge_x_scale)
     if throw_tech_disp.success == false then
-      local _reason
+      local _word
       if (throw_tech_disp.parry_at_grab or 0) > 0 then
-        _reason = ": parry active"
+        _word = "parry active"
       elseif throw_tech_disp.delta and throw_tech_disp.delta < 0 then
-        _reason = ": too early"
+        _word = "too early"
       else
-        _reason = ": too late"
+        _word = "too late"
       end
-      gui.text(_x + 41, _y, _reason, 0xE70000FF, text_default_border_color)
+      gui.text(_x + 41, _y, ":", text_default_color, text_default_border_color)
+      gui.text(_x + 45, _y, _word, 0xE70000FF, text_default_border_color)
     elseif throw_tech_disp.success == true then
-      gui.text(_x + 41, _y, ": success", 0x10FB00FF, text_default_border_color)
+      gui.text(_x + 41, _y, ":", text_default_color, text_default_border_color)
+      gui.text(_x + 45, _y, "success", 0x10FB00FF, text_default_border_color)
     end
   end
 
