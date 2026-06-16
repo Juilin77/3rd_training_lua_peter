@@ -85,6 +85,37 @@ function display_draw_life(_player_object)
 end
 
 
+function display_draw_life_loss(_player_object)
+  if _player_object.life >= 160 then return end
+
+  -- 1px = 1HP, no proportional scaling needed
+  -- P1: bar pixels start at x=7, outer bracket left at x=8 (1px inset from pixel start)
+  -- P2: bar pixels end at x=376, outer bracket right at x=375 (1px inset from pixel end)
+  local _lost = 160 - _player_object.life
+
+  local _seg_l, _seg_r
+  if _player_object.id == 1 then
+    _seg_l = 8
+    _seg_r = 7 + _lost
+  else
+    _seg_l = 376 - _lost
+    _seg_r = 375
+  end
+
+  local _y       = 12
+  local _drop    = 3
+  local _color   = 0xFF4040FF
+  local _str     = string.format("%d", _lost)
+  local _half_tw = get_text_width(_str) * 0.5
+  local _cx      = (_seg_l + _seg_r) * 0.5
+  draw_horizontal_line(_seg_l, _cx - _half_tw - 3, _y, _color, 1)
+  draw_horizontal_line(_cx + _half_tw + 3, _seg_r, _y, _color, 1)
+  gui.text(_cx - _half_tw, _y - 3, _str, 0xFFFB63FF)
+  draw_vertical_line(_seg_l, _y, _y + _drop, _color, 1)
+  draw_vertical_line(_seg_r, _y, _y + _drop, _color, 1)
+end
+
+
 function display_draw_meter(_player_object)
   local _x = 0
   local _y = 214

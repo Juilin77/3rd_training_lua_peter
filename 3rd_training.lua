@@ -3002,6 +3002,8 @@ function on_gui()
     if training_settings.display_gauges then
       display_draw_life(player_objects[1])
       display_draw_life(player_objects[2])
+      display_draw_life_loss(player_objects[1])
+      display_draw_life_loss(player_objects[2])
 
       display_draw_meter(player_objects[1])
       display_draw_meter(player_objects[2])
