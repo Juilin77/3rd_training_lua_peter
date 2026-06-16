@@ -2209,7 +2209,7 @@ main_menu = make_multitab_menu(
       local _b = text_default_border_color
       gui.text(_dx, _dy,      "Green bar: 5F tech window (press LP+LK)", _c, _b)
       gui.text(_dx, _dy + 10, "Orange bar: fwd/down parry validity", _c, _b)
-      gui.text(_dx, _dy + 20, "Parry active = throw-invulnerable", _c, _b)
+      gui.text(_dx, _dy + 20, "Parry active = can't tech throw", _c, _b)
     end
 
     if _menu.main_menu_selected_index == 6 and special_training_mode[training_settings.special_training_current_mode] == "juggle" then
@@ -3518,6 +3518,9 @@ function on_gui()
     local _x = screen_width - 138 - get_text_width("juggle: ")
     local _y = 82
     draw_parry_gauge_group(_x, _y, throw_tech_disp, _gauge_x_scale)
+    if throw_tech_disp.success == false and (throw_tech_disp.parry_at_grab or 0) > 0 then
+      gui.text(_x + 1, _y + 24, "parry active", text_disabled_color, text_default_border_color)
+    end
   end
 
   if is_in_match and current_recording_state ~= 1 then
