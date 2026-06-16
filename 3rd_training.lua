@@ -550,10 +550,27 @@ special_training_mode = {
   "parry",
   "charge",
   "Hyakuretsu Kyaku (Chun Li)",
-  "juggle"
+  "juggle",
+  "tech throw"
 }
 
 juggle_disp = { jc = 0, air_time = 0, expired = false, was_airborne = false }
+throw_tech_disp = {
+  name = "TECH THROW",
+  max_validity = 5,
+  max_cooldown = 10,
+  validity_time = 0,
+  cooldown_time = 0,
+  delta = nil,
+  success = nil,
+  armed = false,
+  prev_being_thrown = false,
+  grab_frame = 0,
+  last_lplk_frame = -99,
+  prev_lplk = false,
+  pre_press_delta = nil,
+  parry_at_grab = 0,
+}
 
 function make_recording_slot()
   return {
@@ -2162,7 +2179,7 @@ main_menu = make_multitab_menu(
           local _item = checkbox_menu_item("Follow Character", training_settings, "special_training_follow_character")
           _item.is_disabled = function()
             local _m = training_settings.special_training_current_mode
-            return _m == 1 or special_training_mode[_m] == "juggle"
+            return _m == 1 or special_training_mode[_m] == "juggle" or special_training_mode[_m] == "tech throw"
           end
           return _item
         end)(),
@@ -2184,7 +2201,17 @@ main_menu = make_multitab_menu(
       gui.text(_menu.left + 83, _menu.top + 23 + 3 * menu_y_interval, _t, text_disabled_color, text_default_border_color)
     end
 
-    -- Special Training tab: juggle mode description
+    -- Special Training tab: mode descriptions
+    if _menu.main_menu_selected_index == 6 and special_training_mode[training_settings.special_training_current_mode] == "tech throw" then
+      local _dx = _menu.left + 160
+      local _dy = _menu.top + 23
+      local _c = text_disabled_color
+      local _b = text_default_border_color
+      gui.text(_dx, _dy,      "Green bar: 5F tech window (press LP+LK)", _c, _b)
+      gui.text(_dx, _dy + 10, "Orange bar: fwd/down parry validity", _c, _b)
+      gui.text(_dx, _dy + 20, "Parry active = throw-invulnerable", _c, _b)
+    end
+
     if _menu.main_menu_selected_index == 6 and special_training_mode[training_settings.special_training_current_mode] == "juggle" then
       local _dx = _menu.left + 160
       local _dy = _menu.top + 23
@@ -2999,6 +3026,61 @@ end
 
 is_menu_open = false
 
+function draw_parry_gauge_group(_x, _y, _parry_object, _scale)
+  local _gauge_height = 4
+  local _gauge_background_color = 0xD6E7EF77
+  local _gauge_valid_fill_color = 0x08CF00FF
+  local _gauge_cooldown_fill_color = 0xFF7939FF
+  local _success_color = 0x10FB00FF
+  local _miss_color = 0xE70000FF
+
+  local _validity_gauge_width = _parry_object.max_validity * _scale
+  local _cooldown_gauge_width = _parry_object.max_cooldown * _scale
+  local _validity_gauge_left = math.floor(_x + (_cooldown_gauge_width - _validity_gauge_width) * 0.5)
+  local _validity_gauge_right = _validity_gauge_left + _validity_gauge_width + 1
+  local _cooldown_gauge_left = _x
+  local _cooldown_gauge_right = _cooldown_gauge_left + _cooldown_gauge_width + 1
+  local _validity_time_text = string.format("%d", _parry_object.validity_time)
+  local _cooldown_time_text = string.format("%d", _parry_object.cooldown_time)
+  local _validity_text_color = text_default_color
+  local _validity_outline_color = text_default_border_color
+  if _parry_object.delta then
+    if _parry_object.success then
+      _validity_text_color = _success_color
+      _validity_outline_color = 0x00A200FF
+    else
+      _validity_text_color = _miss_color
+      _validity_outline_color = 0x840000FF
+    end
+    if _parry_object.delta >= 0 then
+      _validity_time_text = string.format("%d", -_parry_object.delta)
+    else
+      _validity_time_text = string.format("+%d", -_parry_object.delta)
+    end
+  end
+
+  gui.text(_x + 1, _y, _parry_object.name, text_default_color, text_default_border_color)
+  gui.box(_cooldown_gauge_left + 1, _y + 11, _validity_gauge_left, _y + 11, 0x00000000, 0xFFFFFF77)
+  gui.box(_cooldown_gauge_left, _y + 10, _cooldown_gauge_left, _y + 12, 0x00000000, 0xFFFFFF77)
+  gui.box(_validity_gauge_right, _y + 11, _cooldown_gauge_right - 1, _y + 11, 0x00000000, 0xFFFFFF77)
+  gui.box(_cooldown_gauge_right, _y + 10, _cooldown_gauge_right, _y + 12, 0x00000000, 0xFFFFFF77)
+  draw_gauge(_validity_gauge_left, _y + 8, _validity_gauge_width, _gauge_height + 1, _parry_object.validity_time / _parry_object.max_validity, _gauge_valid_fill_color, _gauge_background_color, nil, true)
+  draw_gauge(_cooldown_gauge_left, _y + 8 + _gauge_height + 2, _cooldown_gauge_width, _gauge_height, _parry_object.cooldown_time / _parry_object.max_cooldown, _gauge_cooldown_fill_color, _gauge_background_color, nil, true)
+
+  gui.box(_validity_gauge_left + 3 * _scale, _y + 8, _validity_gauge_left + 2 + 3 * _scale, _y + 8 + _gauge_height + 2, 0xFF000077, 0x00000000)
+
+  if _parry_object.delta then
+    local _marker_x = _validity_gauge_left + _parry_object.delta * _scale
+    _marker_x = math.min(math.max(_marker_x, _x), _cooldown_gauge_right)
+    gui.box(_marker_x, _y + 7, _marker_x + _scale, _y + 8 + _gauge_height + 2, _validity_text_color, _validity_outline_color)
+  end
+
+  gui.text(_cooldown_gauge_right + 4, _y + 7, _validity_time_text, _validity_text_color, text_default_border_color)
+  gui.text(_cooldown_gauge_right + 4, _y + 13, _cooldown_time_text, text_default_color, text_default_border_color)
+
+  return 8 + 5 + (_gauge_height * 2)
+end
+
 function on_gui()
 
   if P1.input.pressed.start then
@@ -3067,7 +3149,9 @@ function on_gui()
 
     -- attack data
     -- do not show if special training not following character is on, otherwise it will overlap
-    if training_settings.display_attack_data and (training_settings.special_training_current_mode == 1 or training_settings.special_training_follow_character) then
+    -- exception: juggle and tech throw have fixed-position gauges at y=82, no overlap with damage info at y=49
+    local _st_mode = special_training_mode[training_settings.special_training_current_mode]
+    if training_settings.display_attack_data and (training_settings.special_training_current_mode == 1 or training_settings.special_training_follow_character or _st_mode == "juggle" or _st_mode == "tech throw") then
       attack_data_display()
     end
 
@@ -3134,62 +3218,6 @@ function on_gui()
     local _y_offset = 0
     local _group_y_margin = 6
 
-    function draw_parry_gauge_group(_x, _y, _parry_object)
-      local _gauge_height = 4
-      --local _gauge_background_color = 0x101008FF
-      local _gauge_background_color = 0xD6E7EF77
-      local _gauge_valid_fill_color = 0x08CF00FF
-      local _gauge_cooldown_fill_color = 0xFF7939FF
-      local _success_color = 0x10FB00FF
-      local _miss_color = 0xE70000FF
-
-      local _validity_gauge_width = _parry_object.max_validity * _gauge_x_scale
-      local _cooldown_gauge_width = _parry_object.max_cooldown * _gauge_x_scale
-      local _validity_gauge_left = math.floor(_x + (_cooldown_gauge_width - _validity_gauge_width) * 0.5)
-      local _validity_gauge_right = _validity_gauge_left + _validity_gauge_width + 1
-      local _cooldown_gauge_left = _x
-      local _cooldown_gauge_right = _cooldown_gauge_left + _cooldown_gauge_width + 1
-      local _validity_time_text = string.format("%d", _parry_object.validity_time)
-      local _cooldown_time_text = string.format("%d", _parry_object.cooldown_time)
-      local _validity_text_color = text_default_color
-      local _validity_outline_color = text_default_border_color
-      if _parry_object.delta then
-        if _parry_object.success then
-          _validity_text_color = _success_color
-          _validity_outline_color = 0x00A200FF
-        else
-          _validity_text_color = _miss_color
-          _validity_outline_color = 0x840000FF
-        end
-        if _parry_object.delta >= 0 then
-          _validity_time_text = string.format("%d", -_parry_object.delta)
-        else
-          _validity_time_text = string.format("+%d", -_parry_object.delta)
-        end
-      end
-
-      gui.text(_x + 1, _y, _parry_object.name, text_default_color, text_default_border_color)
-      gui.box(_cooldown_gauge_left + 1, _y + 11, _validity_gauge_left, _y + 11, 0x00000000, 0xFFFFFF77)
-      gui.box(_cooldown_gauge_left, _y + 10, _cooldown_gauge_left, _y + 12, 0x00000000, 0xFFFFFF77)
-      gui.box(_validity_gauge_right, _y + 11, _cooldown_gauge_right - 1, _y + 11, 0x00000000, 0xFFFFFF77)
-      gui.box(_cooldown_gauge_right, _y + 10, _cooldown_gauge_right, _y + 12, 0x00000000, 0xFFFFFF77)
-      draw_gauge(_validity_gauge_left, _y + 8, _validity_gauge_width, _gauge_height + 1, _parry_object.validity_time / _parry_object.max_validity, _gauge_valid_fill_color, _gauge_background_color, nil, true)
-      draw_gauge(_cooldown_gauge_left, _y + 8 + _gauge_height + 2, _cooldown_gauge_width, _gauge_height, _parry_object.cooldown_time / _parry_object.max_cooldown, _gauge_cooldown_fill_color, _gauge_background_color, nil, true)
-
-      gui.box(_validity_gauge_left + 3 * _gauge_x_scale, _y + 8, _validity_gauge_left + 2 + 3 * _gauge_x_scale,  _y + 8 + _gauge_height + 2, 0xFF000077, 0x00000000)
-
-      if _parry_object.delta then
-        local _marker_x = _validity_gauge_left + _parry_object.delta * _gauge_x_scale
-        _marker_x = math.min(math.max(_marker_x, _x), _cooldown_gauge_right)
-        gui.box(_marker_x, _y + 7, _marker_x + _gauge_x_scale, _y + 8 + _gauge_height + 2, _validity_text_color, _validity_outline_color)
-      end
-
-      gui.text(_cooldown_gauge_right + 4, _y + 7, _validity_time_text, _validity_text_color, text_default_border_color)
-      gui.text(_cooldown_gauge_right + 4, _y + 13, _cooldown_time_text, text_default_color, text_default_border_color)
-
-      return 8 + 5 + (_gauge_height * 2)
-    end
-
     local _parry_array = {
       {
         object = _player.parry_forward,
@@ -3212,7 +3240,7 @@ function on_gui()
     for _i, _parry in ipairs(_parry_array) do
 
       if _parry.enabled then
-        _y_offset = _y_offset + _group_y_margin + draw_parry_gauge_group(_x, _y + _y_offset, _parry.object)
+        _y_offset = _y_offset + _group_y_margin + draw_parry_gauge_group(_x, _y + _y_offset, _parry.object, _gauge_x_scale)
       end
     end
   end
@@ -3413,6 +3441,78 @@ function on_gui()
       gui.line(_x + _tx, _y, _x + _tx, _y + _gauge_h, 0x000000FF)
     end
 
+  end
+
+  if is_in_match and not training_settings.recording_mission_mode and special_training_mode[training_settings.special_training_current_mode] == "tech throw" then
+    local _target = player
+    local _gauge_x_scale = 4
+
+    -- LP+LK input tracking
+    local _raw_input = joypad.get()
+    local _prefix = _target.prefix
+    local _lplk = (_raw_input[_prefix .. " Weak Punch"] or false) and (_raw_input[_prefix .. " Weak Kick"] or false)
+    local _just_lplk = _lplk and not throw_tech_disp.prev_lplk
+    throw_tech_disp.prev_lplk = _lplk
+    if _just_lplk then
+      throw_tech_disp.last_lplk_frame = frame_number
+    end
+
+    -- Grab detection (rising edge of is_being_thrown)
+    local _just_thrown = _target.is_being_thrown and not throw_tech_disp.prev_being_thrown
+    throw_tech_disp.prev_being_thrown = _target.is_being_thrown
+
+    -- Lower bar: forward/down parry validity (throw-invulnerable while active)
+    throw_tech_disp.cooldown_time = math.max(
+      _target.parry_forward and _target.parry_forward.validity_time or 0,
+      _target.parry_down and _target.parry_down.validity_time or 0
+    )
+
+    if _just_thrown then
+      throw_tech_disp.grab_frame = frame_number
+      throw_tech_disp.armed = true
+      throw_tech_disp.delta = nil
+      throw_tech_disp.success = nil
+      throw_tech_disp.validity_time = 5
+      throw_tech_disp.parry_at_grab = throw_tech_disp.cooldown_time
+      local _pre = throw_tech_disp.last_lplk_frame
+      if _pre >= frame_number - 5 and _pre < frame_number then
+        throw_tech_disp.pre_press_delta = _pre - frame_number
+      else
+        throw_tech_disp.pre_press_delta = nil
+      end
+    end
+
+    -- Window tracking
+    if throw_tech_disp.armed then
+      local _fi = frame_number - throw_tech_disp.grab_frame
+      throw_tech_disp.validity_time = math.max(5 - _fi, 0)
+
+      if _just_lplk and throw_tech_disp.delta == nil then
+        throw_tech_disp.delta = _fi
+      end
+
+      -- Use RAM action for success: handles pre-press (held LP+LK before throw) correctly.
+      -- action 43 = defender tech, 44 = attacker tech. Propagates 1F after the tech frame.
+      local _teched = _target.action == 43 or _target.action == 44
+      if _teched then
+        if throw_tech_disp.delta == nil then
+          throw_tech_disp.delta = throw_tech_disp.pre_press_delta or 0
+        end
+        throw_tech_disp.success = true
+        throw_tech_disp.armed = false
+      elseif _fi >= 5 then
+        if throw_tech_disp.delta == nil then
+          throw_tech_disp.delta = throw_tech_disp.pre_press_delta or 5
+        end
+        throw_tech_disp.success = false
+        throw_tech_disp.armed = false
+      end
+    end
+
+    -- Draw parry-style gauge
+    local _x = screen_width - 138 - get_text_width("juggle: ")
+    local _y = 82
+    draw_parry_gauge_group(_x, _y, throw_tech_disp, _gauge_x_scale)
   end
 
   if is_in_match and current_recording_state ~= 1 then
