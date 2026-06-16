@@ -3517,21 +3517,15 @@ function on_gui()
     -- Draw parry-style gauge
     local _x = screen_width - 138 - get_text_width("juggle: ")
     local _y = 82
-    if throw_tech_disp.success == false then
-      if (throw_tech_disp.parry_at_grab or 0) > 0 then
-        throw_tech_disp.name = "TECH THROW: parry active"
-      else
-        throw_tech_disp.name = "TECH THROW: too late"
-      end
-      throw_tech_disp.name_color = 0xE70000FF
-    elseif throw_tech_disp.success == true then
-      throw_tech_disp.name = "TECH THROW"
-      throw_tech_disp.name_color = 0x10FB00FF
-    else
-      throw_tech_disp.name = "TECH THROW"
-      throw_tech_disp.name_color = nil
-    end
+    throw_tech_disp.name = "TECH THROW"
+    throw_tech_disp.name_color = nil
     draw_parry_gauge_group(_x, _y, throw_tech_disp, _gauge_x_scale)
+    if throw_tech_disp.success == false then
+      local _reason = (throw_tech_disp.parry_at_grab or 0) > 0 and ": parry active" or ": too late"
+      gui.text(_x + 41, _y, _reason, 0xE70000FF, text_default_border_color)
+    elseif throw_tech_disp.success == true then
+      gui.text(_x + 41, _y, ": success", 0x10FB00FF, text_default_border_color)
+    end
   end
 
   if is_in_match and current_recording_state ~= 1 then
