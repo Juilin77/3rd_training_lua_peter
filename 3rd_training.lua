@@ -3519,7 +3519,7 @@ function on_gui()
     local _y = 82
     draw_parry_gauge_group(_x, _y, throw_tech_disp, _gauge_x_scale)
     if throw_tech_disp.success == false and (throw_tech_disp.parry_at_grab or 0) > 0 then
-      gui.text(_x + 1, _y + 24, "parry active", text_disabled_color, text_default_border_color)
+      gui.text(_x + 61, _y + 7, "parry active", text_disabled_color, text_default_border_color)
     end
   end
 
