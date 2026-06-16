@@ -3067,8 +3067,6 @@ function draw_parry_gauge_group(_x, _y, _parry_object, _scale)
   draw_gauge(_validity_gauge_left, _y + 8, _validity_gauge_width, _gauge_height + 1, _parry_object.validity_time / _parry_object.max_validity, _gauge_valid_fill_color, _gauge_background_color, nil, true)
   draw_gauge(_cooldown_gauge_left, _y + 8 + _gauge_height + 2, _cooldown_gauge_width, _gauge_height, _parry_object.cooldown_time / _parry_object.max_cooldown, _gauge_cooldown_fill_color, _gauge_background_color, nil, true)
 
-  gui.box(_validity_gauge_left + 3 * _scale, _y + 8, _validity_gauge_left + 2 + 3 * _scale, _y + 8 + _gauge_height + 2, 0xFF000077, 0x00000000)
-
   if _parry_object.delta then
     local _marker_x = _validity_gauge_left + _parry_object.delta * _scale
     _marker_x = math.min(math.max(_marker_x, _x), _cooldown_gauge_right)
@@ -3521,7 +3519,14 @@ function on_gui()
     throw_tech_disp.name_color = nil
     draw_parry_gauge_group(_x, _y, throw_tech_disp, _gauge_x_scale)
     if throw_tech_disp.success == false then
-      local _reason = (throw_tech_disp.parry_at_grab or 0) > 0 and ": parry active" or ": too late"
+      local _reason
+      if (throw_tech_disp.parry_at_grab or 0) > 0 then
+        _reason = ": parry active"
+      elseif throw_tech_disp.delta and throw_tech_disp.delta < 0 then
+        _reason = ": too early"
+      else
+        _reason = ": too late"
+      end
       gui.text(_x + 41, _y, _reason, 0xE70000FF, text_default_border_color)
     elseif throw_tech_disp.success == true then
       gui.text(_x + 41, _y, ": success", 0x10FB00FF, text_default_border_color)
