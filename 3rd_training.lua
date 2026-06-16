@@ -3517,10 +3517,16 @@ function on_gui()
     -- Draw parry-style gauge
     local _x = screen_width - 138 - get_text_width("juggle: ")
     local _y = 82
-    draw_parry_gauge_group(_x, _y, throw_tech_disp, _gauge_x_scale)
-    if throw_tech_disp.success == false and (throw_tech_disp.parry_at_grab or 0) > 0 then
-      gui.text(_x + 61, _y + 7, "parry active", text_disabled_color, text_default_border_color)
+    if throw_tech_disp.success == false then
+      if (throw_tech_disp.parry_at_grab or 0) > 0 then
+        throw_tech_disp.name = "TECH THROW: parry active"
+      else
+        throw_tech_disp.name = "TECH THROW: too late"
+      end
+    else
+      throw_tech_disp.name = "TECH THROW"
     end
+    draw_parry_gauge_group(_x, _y, throw_tech_disp, _gauge_x_scale)
   end
 
   if is_in_match and current_recording_state ~= 1 then
