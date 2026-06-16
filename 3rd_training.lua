@@ -549,8 +549,11 @@ special_training_mode = {
   "none",
   "parry",
   "charge",
-  "Hyakuretsu Kyaku (Chun Li)"
+  "Hyakuretsu Kyaku (Chun Li)",
+  "juggle"
 }
+
+juggle_disp = { jc = 0, air_time = 0, expired = false, was_airborne = false }
 
 function make_recording_slot()
   return {
@@ -2157,7 +2160,10 @@ main_menu = make_multitab_menu(
         list_menu_item("Mode", training_settings, "special_training_current_mode", special_training_mode),
         (function()
           local _item = checkbox_menu_item("Follow Character", training_settings, "special_training_follow_character")
-          _item.is_disabled = function() return training_settings.special_training_current_mode == 1 end
+          _item.is_disabled = function()
+            local _m = training_settings.special_training_current_mode
+            return _m == 1 or special_training_mode[_m] == "juggle"
+          end
           return _item
         end)(),
         parry_forward_on_item,
@@ -2176,6 +2182,19 @@ main_menu = make_multitab_menu(
     if _menu.main_menu_selected_index == 2 and not training_settings.recording_mission_mode then
       local _t = string.format("%d frames", #recording_slots[training_settings.current_recording_slot].inputs)
       gui.text(_menu.left + 83, _menu.top + 23 + 3 * menu_y_interval, _t, text_disabled_color, text_default_border_color)
+    end
+
+    -- Special Training tab: juggle mode description
+    if _menu.main_menu_selected_index == 6 and special_training_mode[training_settings.special_training_current_mode] == "juggle" then
+      local _dx = _menu.left + 160
+      local _dy = _menu.top + 23
+      local _c = text_disabled_color
+      local _b = text_default_border_color
+      gui.text(_dx, _dy,      "Gauge: remaining air hitstun", _c, _b)
+      gui.text(_dx, _dy + 10, "Ticks: initial frames by juggle count", _c, _b)
+      gui.text(_dx, _dy + 20, "1->121  2->101  3->81  4->61", _c, _b)
+      gui.text(_dx, _dy + 30, "5->41   6->21   7->11  8->5", _c, _b)
+      gui.text(_dx, _dy + 40, "9->2    10+->1", _c, _b)
     end
 
     -- Display tab: color legends in the right-side blank space, only while the
@@ -3358,6 +3377,42 @@ function on_gui()
     else
       gui.text(_x -8, _y, "Hyakuretsu Kyaku not enabled \nfor this character")
     end
+  end
+
+  if is_in_match and not training_settings.recording_mission_mode and special_training_mode[training_settings.special_training_current_mode] == "juggle" then
+    local _target = dummy
+    local _airborne = (_target.pos_y ~= 0)
+
+    if _airborne and not juggle_disp.was_airborne then
+      juggle_disp.jc = 0
+      juggle_disp.air_time = 0
+      juggle_disp.expired = false
+    end
+
+    if _airborne then
+      local _jt = _target.juggle_time
+      juggle_disp.jc = _target.juggle_count
+      juggle_disp.expired = (_jt == 0xFF)
+      juggle_disp.air_time = juggle_disp.expired and 0 or math.floor((_jt + 1) / 2)
+    end
+
+    juggle_disp.was_airborne = _airborne
+
+    local _x = screen_width - 138 - get_text_width("juggle: ")
+    local _y = 82
+    local _gauge_w = 121
+    local _gauge_h = 4
+
+    gui.box(_x, _y, _x + _gauge_w, _y + _gauge_h, 0x00000000, 0x000000FF)
+    if not juggle_disp.expired and juggle_disp.air_time > 0 then
+      local _fill = math.min(juggle_disp.air_time, _gauge_w)
+      gui.box(_x, _y, _x + _fill, _y + _gauge_h, 0x00C080FF, 0x000000FF)
+      gui.text(_x + _fill + 2, _y, tostring(juggle_disp.air_time), text_default_color, text_default_border_color)
+    end
+    for _, _tx in ipairs({1, 2, 5, 11, 21, 41, 61, 81, 101}) do
+      gui.line(_x + _tx, _y, _x + _tx, _y + _gauge_h, 0x000000FF)
+    end
+
   end
 
   if is_in_match and current_recording_state ~= 1 then

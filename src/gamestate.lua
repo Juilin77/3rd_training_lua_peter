@@ -376,6 +376,9 @@ function read_player_vars(_player_obj)
   _player_obj.is_throwing = bit.rshift(_player_obj.movement_type2, 4) == 9
   _player_obj.has_just_thrown = not _previous_is_throwing and _player_obj.is_throwing
 
+  _player_obj.juggle_time  = memory.readbyte(_player_obj.base + 0x3C3)
+  _player_obj.juggle_count = memory.readbyte(_player_obj.base + 0x3C5)
+
   _player_obj.is_being_thrown = memory.readbyte(_player_obj.base + 0x3CF) ~= 0
   _player_obj.throw_countdown = _player_obj.throw_countdown or 0
   _player_obj.previous_throw_countdown = _player_obj.throw_countdown
