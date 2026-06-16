@@ -3431,14 +3431,19 @@ function on_gui()
     local _gauge_w = 121
     local _gauge_h = 4
 
-    gui.box(_x, _y, _x + _gauge_w, _y + _gauge_h, 0x00000000, 0x000000FF)
+    gui.text(_x + 1, _y, string.format("juggle: %d", juggle_disp.air_time), text_default_color, text_default_border_color)
+    gui.text(_x + _gauge_w - 6, _y, "121", text_disabled_color, text_default_border_color)
+    gui.box(_x, _y + 10, _x + _gauge_w, _y + 10 + _gauge_h, 0x00000000, 0x000000FF)
     if not juggle_disp.expired and juggle_disp.air_time > 0 then
       local _fill = math.min(juggle_disp.air_time, _gauge_w)
-      gui.box(_x, _y, _x + _fill, _y + _gauge_h, 0x00C080FF, 0x000000FF)
-      gui.text(_x + _fill + 2, _y, tostring(juggle_disp.air_time), text_default_color, text_default_border_color)
+      gui.box(_x, _y + 10, _x + _fill, _y + 10 + _gauge_h, 0x00C080FF, 0x000000FF)
+      gui.text(_x + _fill + 2, _y + 10, tostring(juggle_disp.air_time), text_default_color, text_default_border_color)
     end
     for _, _tx in ipairs({1, 2, 5, 11, 21, 41, 61, 81, 101}) do
-      gui.line(_x + _tx, _y, _x + _tx, _y + _gauge_h, 0x000000FF)
+      gui.line(_x + _tx, _y + 10, _x + _tx, _y + 10 + _gauge_h, 0x000000FF)
+    end
+    for _, _tx in ipairs({21, 41, 61, 81, 101}) do
+      gui.text(_x + _tx - 4, _y + 10 + _gauge_h + 2, tostring(_tx), text_disabled_color, text_default_border_color)
     end
 
   end
