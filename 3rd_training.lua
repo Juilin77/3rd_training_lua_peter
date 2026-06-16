@@ -3059,7 +3059,7 @@ function draw_parry_gauge_group(_x, _y, _parry_object, _scale)
     end
   end
 
-  gui.text(_x + 1, _y, _parry_object.name, text_default_color, text_default_border_color)
+  gui.text(_x + 1, _y, _parry_object.name, _parry_object.name_color or text_default_color, text_default_border_color)
   gui.box(_cooldown_gauge_left + 1, _y + 11, _validity_gauge_left, _y + 11, 0x00000000, 0xFFFFFF77)
   gui.box(_cooldown_gauge_left, _y + 10, _cooldown_gauge_left, _y + 12, 0x00000000, 0xFFFFFF77)
   gui.box(_validity_gauge_right, _y + 11, _cooldown_gauge_right - 1, _y + 11, 0x00000000, 0xFFFFFF77)
@@ -3523,8 +3523,13 @@ function on_gui()
       else
         throw_tech_disp.name = "TECH THROW: too late"
       end
+      throw_tech_disp.name_color = 0xE70000FF
+    elseif throw_tech_disp.success == true then
+      throw_tech_disp.name = "TECH THROW"
+      throw_tech_disp.name_color = 0x10FB00FF
     else
       throw_tech_disp.name = "TECH THROW"
+      throw_tech_disp.name_color = nil
     end
     draw_parry_gauge_group(_x, _y, throw_tech_disp, _gauge_x_scale)
   end
