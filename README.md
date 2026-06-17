@@ -12,6 +12,133 @@ The right version of Fightcade can be downloaded [here](https://www.fightcade.co
 - Can display input history for both players
 - Special training mode to train parries and red parries
 
+---
+
+### Dummy
+
+Configure how the CPU-controlled dummy behaves during training. Set its default stance, blocking style, throw tech responses, and counter-attack options.
+
+| Option | Description |
+|--------|-------------|
+| Pose | Default stance for the dummy: normal, crouching, jumping, or high jumping. |
+| Blocking Style | How the dummy defends: block (normal guard), parry (forward parry), or red parry. Enables "Hits before Red Parry" when set to red parry. |
+| Hits before Red Parry | Number of hits received before the dummy performs a red parry. Only active when Blocking Style is set to red parry. |
+| Blocking | When the dummy triggers its blocking behavior: never, always, on combo hits only, or randomly. |
+| Tech Throws | Whether the dummy attempts to escape throws: never, always, or randomly. |
+| Counter-Attack Move | Stick motion the dummy performs when counter-attacking (QCF, QCB, HCF, DPF, jumps, etc.). |
+| Counter-Attack Action | Button the dummy presses for its counter-attack. Set to "recording" to replay a recorded slot instead. |
+| Fast Wake Up | Whether the dummy quick-rises after a knockdown: never, always, or randomly. |
+
+---
+
+### Recording
+
+Record and manage input sequences across up to 8 slots. Control playback order, timing, and save/load sequences to files.
+
+| Option | Description |
+|--------|-------------|
+| Auto Crop First Frames | Automatically remove leading empty frames (no input) when recording ends. |
+| Auto Crop Last Frames | Automatically remove trailing empty frames when recording ends. |
+| Replay Mode | Order in which multiple slots are played back: normal (current slot only), random, ordered (sequential), or repeat variants that loop each slot before moving to the next. |
+| Slot | Currently active slot for recording and playback (slots 1–8). |
+| Weight | Probability weight for this slot in random replay mode — higher values mean it is selected more often (0–100). |
+| Counter-attack delay | Frame offset for the counter-attack trigger. Negative values fire earlier, positive values fire later (range: −40 to 40). |
+| Counter-attack max random deviation | Maximum random frame deviation applied to the counter-attack trigger timing (range: −600 to 600). |
+| Clear slot | Erase all recorded data in the currently selected slot. |
+| Clear all slots | Erase recorded data in all 8 slots at once. |
+| Save slot to file | Save the current slot's recording to a file (opens a save dialog). |
+| Load slot from file | Load a recording from a file into the current slot (opens a load dialog). |
+
+---
+
+### Missions
+
+Record and replay multi-step training scenarios (missions) across up to 10 dedicated slots. Also provides pattern import for replaying AI-analyzed combo patterns against the dummy.
+
+| Option | Description |
+|--------|-------------|
+| Recording Mission Mode | Enable mission record mode. While on, the Dummy, Recording, Rules, and Special Training tabs are grayed out. |
+| Record Mission in Slot | Choose which mission slot (1–10) to record into. Slot label shows existing content or "empty". |
+| Replay Mission for Slot | Choose which recorded mission to replay. Set to none to disable playback; grays out Play Side and Replay Mission. |
+| Play Side | Which side the dummy controls during mission replay: 1P or 2P. |
+| Replay Mission | Start or stop mission replay (toggle: start / stop). |
+| Clear Slot | Select a mission slot and confirm with LP to erase it. A confirmation message appears for 5 frames. |
+| Clear All Mission Slots | Erase all 10 mission slots at once. |
+| -- Replay Import: Scan -- | Scan the patterns folder for .json pattern files matching the current P2 character. |
+| Pattern (P2: ?) | Select a scanned pattern file to use for Pattern Replay. Shows "empty" until a scan finds files. |
+| Pattern Replay Mode | Playback order for patterns: normal (selected pattern only), random, ordered, or repeat (loop current pattern). |
+| Pattern Replay | Start or stop pattern replay against the dummy (toggle: start / stop). |
+
+---
+
+### Display
+
+![Display Gauges Numbers](screenshots/display_gauges.png)
+
+Toggle various on-screen overlays to visualize game data in real time.
+
+| Option | Description |
+|--------|-------------|
+| Display Controllers | Show a controller icon with live button states for both P1 and P2. |
+| Display Gauges Numbers | Show numeric values for HP, stun, and Super meter for both players. Also enables the Life Loss Indicator (a red bracket showing lost HP above the health bar). |
+| Display P1 Input History | Show a scrolling log of P1's recent inputs. |
+| Dynamic P1 Input History | Auto-scroll P1's input log so the most recent input always appears at the top. When enabled, Display P2 Input History is grayed out. |
+| Display P2 Input History | Show a scrolling log of P2's recent inputs. Grayed out when Dynamic P1 Input History is on. |
+| Display Damage Info | Show numeric damage values for each hit. |
+| Display Frame Advantage | Show frame advantage or disadvantage after each hit or block. |
+| Display Frame Table | Show the real-time per-frame state timeline for both players (startup / active / recovery / hitstun / parry / invincible). |
+| Display Hitboxes | Show attack and hurt boxes with a color legend. |
+| Display Distances | Show the distance between P1 and P2. Enables the three distance options below. |
+| Mid Distance Height | Y-coordinate reference height used for mid-range distance calculation (0–200, default 10). |
+| P1 distance reference point | Distance measurement origin for P1: character origin or hurtbox edge. |
+| P2 distance reference point | Distance measurement origin for P2: character origin or hurtbox edge. |
+
+![Display Hitboxes](screenshots/display_hitboxes.png)
+
+---
+
+### Rules
+
+Adjust match conditions to suit your training goals — time, health recovery, stun behavior, meter, and miscellaneous options.
+
+| Option | Description |
+|--------|-------------|
+| Select Characters | Go to the character select screen to change characters. Only supported on the sfiii3nr1 ROM; not available on 4rd Strike. |
+| Infinite Time | Prevent the round timer from counting down. |
+| Life Refill Mode | HP recovery behavior: no refill (none), refill (recover to full after a delay), or infinite (never lose HP). |
+| Life refill delay | Frames to wait after taking damage before HP starts recovering. Active when Life Refill Mode is set to refill (1–100, default 20). |
+| Stun Mode | Stun bar behavior: normal, no stun (stun never builds), or delayed reset (stun resets to a set value after a delay). |
+| P1 Stun reset value | Stun value P1 resets to after the delay. Active when Stun Mode is set to delayed reset (0–64). |
+| P2 Stun reset value | Stun value P2 resets to after the delay. Active when Stun Mode is set to delayed reset (0–64). |
+| Stun reset delay | Frames to wait after taking a hit before stun resets. Active when Stun Mode is set to delayed reset (1–100, default 20). |
+| Meter Refill Mode | Super meter refill behavior: no refill, refill (recover to a set amount after a delay), or infinite. |
+| P1 Meter | Target Super meter level for P1 when Meter Refill Mode is set to refill. |
+| P2 Meter | Target Super meter level for P2 when Meter Refill Mode is set to refill. |
+| Meter refill delay | Frames to wait before the Super meter refills. Active when Meter Refill Mode is set to refill (1–100, default 20). |
+| Infinite Super Art Time | Super Art gauge does not drain after activation — the effect lasts indefinitely. |
+| Music Volume | Background music volume (0–10, default 10). |
+| Speed Up Game Intro | Skip or accelerate the game intro animation to reduce wait time. |
+
+---
+
+### Special Training
+
+![Special Training](screenshots/special_training.png)
+
+Focused training tools for specific SF3 mechanics — parry timing, charge inputs, Chun-Li's Hyakuretsu Kyaku, juggle hitstun, and throw tech.
+
+| Option | Description |
+|--------|-------------|
+| Mode | Training mode to activate: none (off), parry (visual parry timing helpers), charge (charge input timer display), Hyakuretsu Kyaku (Chun-Li rapid kick trainer), juggle (remaining air hitstun gauge for combos), or tech throw (5-frame throw tech window display). |
+| Follow Character | When enabled, the special training gauge follows the character's position on screen. Grayed out in none, juggle, and tech throw modes. |
+| Forward Parry Helper | Show a timing window for forward parry inputs. Active in parry mode only. |
+| Down Parry Helper | Show a timing window for down parry inputs. Active in parry mode only. |
+| Air Parry Helper | Show a timing window for air parry inputs. Active in parry mode only. |
+| Anti-Air Parry Helper | Show a timing window for anti-air parry inputs. Active in parry mode only. |
+| Display Overcharge | Highlight when a charge input has been held longer than the minimum required (overcharge). Active in charge mode only. |
+
+---
+
 ### Frame Table
 Real-time per-frame state timeline (startup/active/recovery/hitstun/parry/invincible) for both players
 
@@ -101,6 +228,9 @@ A: Install prerequires from [here](https://github.com/TASVideos/BizHawk-Prereqs/
 [Trello board](https://trello.com/b/UQ8ey2rQ/3rdtraining)
 
 ## Changelog
+### v0.20 (16/06/2026)
+- [Feature] Added Life Loss Indicator above health bars: when Display Gauges Numbers is enabled and HP is below max, draws a ㄇ-shaped red bracket over the lost HP region with the amount lost in yellow at center, displayed independently for both P1 and P2 (contribution of @Juilin77)
+
 ### v0.19 (15/06/2026)
 - [Feature] Added Frame Table: a real-time per-frame state timeline (startup/active/recovery/hitstun/parry/invincible) for both players with a color legend (contribution of @Juilin77)
 - [Improvement] Frame Table capture arms on `has_just_attacked`/`has_just_thrown` to correctly catch invincible startup frames (contribution of @Juilin77)
