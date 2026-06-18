@@ -124,13 +124,14 @@ Adjust match conditions to suit your training goals — time, health recovery, s
 ### Special Training
 
 ![Special Training](screenshots/special_training.png)
+![Tech Throw Training](screenshots/tech_throw.png)
 
 Focused training tools for specific SF3 mechanics — parry timing, charge inputs, Chun-Li's Hyakuretsu Kyaku, juggle hitstun, and throw tech.
 
 | Option | Description |
 |--------|-------------|
-| Mode | Training mode to activate: none (off), parry (visual parry timing helpers), charge (charge input timer display), Hyakuretsu Kyaku (Chun-Li rapid kick trainer), juggle (remaining air hitstun gauge for combos), or tech throw (5-frame throw tech window display). |
-| Follow Character | When enabled, the special training gauge follows the character's position on screen. Grayed out in none, juggle, and tech throw modes. |
+| Mode | Training mode to activate: None (off), Parry (parry timing gauges with validity and cooldown windows), Charge (charge input timer for held-input normals and specials), Hyakuretsu Kyaku (Chun-Li rapid kick input trainer), Juggle (remaining air hitstun gauge for combo extensions), or Tech Throw (throw tech training — shows a 5-frame timing window with Success / Too Late / Too Early / Parry Active feedback and a delta marker showing input timing). |
+| Follow Character | When enabled, the special training gauge follows P1's position on screen. Grayed out in None, Juggle, and Tech Throw modes. |
 | Forward Parry Helper | Show a timing window for forward parry inputs. Active in parry mode only. |
 | Down Parry Helper | Show a timing window for down parry inputs. Active in parry mode only. |
 | Air Parry Helper | Show a timing window for air parry inputs. Active in parry mode only. |
