@@ -79,7 +79,10 @@ log_categories_display =
   projectiles =               { history = false, print = false },
   fight =                     { history = false, print = false },
   animation =                 { history = false, print = false },
-  parry_training_FORWARD =    { history = false, print = false },
+  parry_training_Forward =    { history = false, print = false },
+  parry_training_Down =       { history = false, print = false },
+  parry_training_Air =        { history = false, print = false },
+  ["parry_training_Anti-Air"] = { history = false, print = false },
   blocking =                  { history = false, print = false },
   counter_attack =            { history = false, print = false },
   block_string =              { history = false, print = false },
@@ -546,12 +549,12 @@ players = {
 }
 
 special_training_mode = {
-  "none",
-  "parry",
-  "charge",
+  "None",
+  "Parry",
+  "Charge",
   "Hyakuretsu Kyaku (Chun Li)",
-  "juggle",
-  "tech throw"
+  "Juggle",
+  "Tech Throw",
 }
 
 juggle_disp = { jc = 0, air_time = 0, expired = false, was_airborne = false }
@@ -570,6 +573,14 @@ throw_tech_disp = {
   prev_lplk = false,
   pre_press_delta = nil,
   parry_at_grab = 0,
+  frozen_x = nil,
+  frozen_y = nil,
+}
+
+rot720_disp = {
+  history = {},
+  window = 90,
+  success_flash = 0,
 }
 
 function make_recording_slot()
@@ -2042,12 +2053,12 @@ change_characters_item.is_disabled = function()
   return rom_name ~= "sfiii3nr1"
 end
 
-p1_distances_reference_point_item = list_menu_item("P1 distance reference point", training_settings, "p1_distances_reference_point", distance_display_reference_point)
+p1_distances_reference_point_item = list_menu_item("P1 Distance Reference Point", training_settings, "p1_distances_reference_point", distance_display_reference_point)
 p1_distances_reference_point_item.is_disabled = function()
   return not training_settings.display_distances
 end
 
-p2_distances_reference_point_item = list_menu_item("P2 distance reference point", training_settings, "p2_distances_reference_point", distance_display_reference_point)
+p2_distances_reference_point_item = list_menu_item("P2 Distance Reference Point", training_settings, "p2_distances_reference_point", distance_display_reference_point)
 p2_distances_reference_point_item.is_disabled = function()
   return not training_settings.display_distances
 end
@@ -2082,10 +2093,10 @@ main_menu = make_multitab_menu(
         slot_weight_item,
         counter_attack_delay_item,
         counter_attack_random_deviation_item,
-        button_menu_item("Clear slot", clear_slot),
-        button_menu_item("Clear all slots", clear_all_slots),
-        button_menu_item("Save slot to file", open_save_popup),
-        button_menu_item("Load slot from file", open_load_popup),
+        button_menu_item("Clear Slot", clear_slot),
+        button_menu_item("Clear All Slots", clear_all_slots),
+        button_menu_item("Save Slot To File", open_save_popup),
+        button_menu_item("Load Slot From File", open_load_popup),
       }
     },
     {
@@ -2179,7 +2190,7 @@ main_menu = make_multitab_menu(
           local _item = checkbox_menu_item("Follow Character", training_settings, "special_training_follow_character")
           _item.is_disabled = function()
             local _m = training_settings.special_training_current_mode
-            return _m == 1 or special_training_mode[_m] == "juggle" or special_training_mode[_m] == "tech throw"
+            return _m == 1 or special_training_mode[_m] == "Juggle" or special_training_mode[_m] == "720" or special_training_mode[_m] == "Tech Throw"
           end
           return _item
         end)(),
@@ -2202,7 +2213,7 @@ main_menu = make_multitab_menu(
     end
 
     -- Special Training tab: mode descriptions
-    if _menu.main_menu_selected_index == 6 and special_training_mode[training_settings.special_training_current_mode] == "tech throw" then
+    if _menu.main_menu_selected_index == 6 and special_training_mode[training_settings.special_training_current_mode] == "Tech Throw" then
       local _dx = _menu.left + 160
       local _dy = _menu.top + 23
       local _c = text_disabled_color
@@ -2212,7 +2223,7 @@ main_menu = make_multitab_menu(
       gui.text(_dx, _dy + 20, "Parry active = can't tech throw", _c, _b)
     end
 
-    if _menu.main_menu_selected_index == 6 and special_training_mode[training_settings.special_training_current_mode] == "juggle" then
+    if _menu.main_menu_selected_index == 6 and special_training_mode[training_settings.special_training_current_mode] == "Juggle" then
       local _dx = _menu.left + 160
       local _dy = _menu.top + 23
       local _c = text_disabled_color
@@ -3073,8 +3084,8 @@ function draw_parry_gauge_group(_x, _y, _parry_object, _scale)
     gui.box(_marker_x, _y + 7, _marker_x + _scale, _y + 8 + _gauge_height + 2, _validity_text_color, _validity_outline_color)
   end
 
-  gui.text(_cooldown_gauge_right + 4, _y + 7, _validity_time_text, _validity_text_color, text_default_border_color)
-  gui.text(_cooldown_gauge_right + 4, _y + 13, _cooldown_time_text, text_default_color, text_default_border_color)
+  gui.text(_cooldown_gauge_right + 4, _y + 7, " " .. _validity_time_text, _validity_text_color, text_default_border_color)
+  gui.text(_cooldown_gauge_right + 4, _y + 13, " " .. _cooldown_time_text, text_default_color, text_default_border_color)
 
   return 8 + 5 + (_gauge_height * 2)
 end
@@ -3149,7 +3160,7 @@ function on_gui()
     -- do not show if special training not following character is on, otherwise it will overlap
     -- exception: juggle and tech throw have fixed-position gauges at y=82, no overlap with damage info at y=49
     local _st_mode = special_training_mode[training_settings.special_training_current_mode]
-    if training_settings.display_attack_data and (training_settings.special_training_current_mode == 1 or training_settings.special_training_follow_character or _st_mode == "juggle" or _st_mode == "tech throw") then
+    if training_settings.display_attack_data and (training_settings.special_training_current_mode == 1 or training_settings.special_training_follow_character or _st_mode == "Juggle" or _st_mode == "Tech Throw") then
       attack_data_display()
     end
 
@@ -3195,7 +3206,7 @@ function on_gui()
     end
   end
 
-  if is_in_match and not training_settings.recording_mission_mode and special_training_mode[training_settings.special_training_current_mode] == "parry" then
+  if is_in_match and not training_settings.recording_mission_mode and special_training_mode[training_settings.special_training_current_mode] == "Parry" then
 
     local _player = P1
     local _x = 235 --96
@@ -3244,7 +3255,7 @@ function on_gui()
   end
 
   -- Charge Meter Drawing
-  if is_in_match and not training_settings.recording_mission_mode and special_training_mode[training_settings.special_training_current_mode] == "charge" then
+  if is_in_match and not training_settings.recording_mission_mode and special_training_mode[training_settings.special_training_current_mode] == "Charge" then
 
     local _player = P1
     local _x = 276 --96
@@ -3405,7 +3416,7 @@ function on_gui()
     end
   end
 
-  if is_in_match and not training_settings.recording_mission_mode and special_training_mode[training_settings.special_training_current_mode] == "juggle" then
+  if is_in_match and not training_settings.recording_mission_mode and special_training_mode[training_settings.special_training_current_mode] == "Juggle" then
     local _target = dummy
     local _airborne = (_target.pos_y ~= 0)
 
@@ -3424,12 +3435,12 @@ function on_gui()
 
     juggle_disp.was_airborne = _airborne
 
-    local _x = screen_width - 138 - get_text_width("juggle: ")
+    local _x = screen_width - 138 - get_text_width("Juggle: ")
     local _y = 82
     local _gauge_w = 121
     local _gauge_h = 4
 
-    gui.text(_x + 1, _y, string.format("juggle: %d", juggle_disp.air_time), text_default_color, text_default_border_color)
+    gui.text(_x + 1, _y, string.format("Juggle: %d", juggle_disp.air_time), text_default_color, text_default_border_color)
     gui.text(_x + _gauge_w - 6, _y, "121", text_disabled_color, text_default_border_color)
     gui.box(_x, _y + 10, _x + _gauge_w, _y + 10 + _gauge_h, 0x00000000, 0x000000FF)
     if not juggle_disp.expired and juggle_disp.air_time > 0 then
@@ -3446,7 +3457,7 @@ function on_gui()
 
   end
 
-  if is_in_match and not training_settings.recording_mission_mode and special_training_mode[training_settings.special_training_current_mode] == "tech throw" then
+  if is_in_match and not training_settings.recording_mission_mode and special_training_mode[training_settings.special_training_current_mode] == "Tech Throw" then
     local _target = player
     local _gauge_x_scale = 4
 
@@ -3475,7 +3486,6 @@ function on_gui()
       throw_tech_disp.armed = true
       throw_tech_disp.delta = nil
       throw_tech_disp.success = nil
-      throw_tech_disp.validity_time = 5
       throw_tech_disp.parry_at_grab = throw_tech_disp.cooldown_time
       local _pre = throw_tech_disp.last_lplk_frame
       if _pre >= frame_number - 5 and _pre < frame_number then
@@ -3483,12 +3493,16 @@ function on_gui()
       else
         throw_tech_disp.pre_press_delta = nil
       end
+      throw_tech_disp.frozen_x = nil  -- 在 draw 時設定
+      throw_tech_disp.frozen_y = nil
     end
 
     -- Window tracking
     if throw_tech_disp.armed then
       local _fi = frame_number - throw_tech_disp.grab_frame
-      throw_tech_disp.validity_time = math.max(5 - _fi, 0)
+      if throw_tech_disp.delta == nil then
+        throw_tech_disp.validity_time = math.max(5 - _fi, 0)
+      end
 
       if _just_lplk and throw_tech_disp.delta == nil then
         throw_tech_disp.delta = _fi
@@ -3503,7 +3517,7 @@ function on_gui()
         end
         throw_tech_disp.success = true
         throw_tech_disp.armed = false
-      elseif _fi >= 5 then
+      elseif _fi >= 6 then
         if throw_tech_disp.delta == nil then
           throw_tech_disp.delta = throw_tech_disp.pre_press_delta or 5
         end
@@ -3513,26 +3527,159 @@ function on_gui()
     end
 
     -- Draw parry-style gauge
-    local _x = screen_width - 138 - get_text_width("juggle: ")
+    local _x = screen_width - 138 - get_text_width("Juggle: ")
     local _y = 82
-    throw_tech_disp.name = "TECH THROW"
+    -- TODO: Follow Character for tech throw — defer to next version (head position varies by character)
+    -- local _player = _target
+    -- if not training_settings.special_training_follow_character then throw_tech_disp.frozen_x = nil end
+    -- if training_settings.special_training_follow_character then
+    --   if throw_tech_disp.frozen_x then
+    --     _x = throw_tech_disp.frozen_x
+    --     _y = throw_tech_disp.frozen_y
+    --   else
+    --     local _px = _player.pos_x - screen_x + emu.screenwidth()/2
+    --     local _py = emu.screenheight() - (_player.pos_y - screen_y) - ground_offset
+    --     local _half_width = throw_tech_disp.max_cooldown * _gauge_x_scale / 2
+    --     _x = _px - _half_width
+    --     _x = math.max(_x, 4)
+    --     _x = math.min(_x, emu.screenwidth() - (_half_width * 2.0 + 14))
+    --     local _push_height = 90
+    --     for _, _box in ipairs(_player.boxes) do
+    --       if _box.type == "push" then
+    --         _push_height = _box.bottom + _box.height
+    --         break
+    --       end
+    --     end
+    --     _y = _py - _push_height - 16
+    --     if throw_tech_disp.armed then
+    --       throw_tech_disp.frozen_x = _x
+    --       throw_tech_disp.frozen_y = _y
+    --     end
+    --   end
+    -- end
+    throw_tech_disp.name = "Tech Throw: "
     throw_tech_disp.name_color = nil
     draw_parry_gauge_group(_x, _y, throw_tech_disp, _gauge_x_scale)
     if throw_tech_disp.success == false then
       local _word
       if (throw_tech_disp.parry_at_grab or 0) > 0 then
-        _word = "parry active"
+        _word = "Parry Active"
       elseif throw_tech_disp.delta and throw_tech_disp.delta < 0 then
-        _word = "too early"
+        _word = "Too Early"
       else
-        _word = "too late"
+        _word = "Too Late"
       end
-      gui.text(_x + 41, _y, ":", text_default_color, text_default_border_color)
-      gui.text(_x + 45, _y, _word, 0xE70000FF, text_default_border_color)
+      gui.text(_x + 49, _y, _word, 0xE70000FF, text_default_border_color)
     elseif throw_tech_disp.success == true then
-      gui.text(_x + 41, _y, ":", text_default_color, text_default_border_color)
-      gui.text(_x + 45, _y, "success", 0x10FB00FF, text_default_border_color)
+      gui.text(_x + 49, _y, "Success", 0x10FB00FF, text_default_border_color)
     end
+  end
+
+  if is_in_match and not training_settings.recording_mission_mode
+     and special_training_mode[training_settings.special_training_current_mode] == "720" then
+
+    -- 讀取目前方向輸入
+    local _input = joypad.get()
+    local _prefix = "P1 "  -- 訓練者為 P1
+
+    -- numpad notation 轉換（複用 input_history.lua 的邏輯）
+    local _up    = _input[_prefix .. "Up"]    or false
+    local _down  = _input[_prefix .. "Down"]  or false
+    local _left  = _input[_prefix .. "Left"]  or false
+    local _right = _input[_prefix .. "Right"] or false
+
+    -- 轉成 numpad (1-9)
+    local _numpad = 5
+    if     _up    and _right then _numpad = 9
+    elseif _up    and _left  then _numpad = 7
+    elseif _down  and _right then _numpad = 3
+    elseif _down  and _left  then _numpad = 1
+    elseif _up               then _numpad = 8
+    elseif _down             then _numpad = 2
+    elseif _right            then _numpad = 6
+    elseif _left             then _numpad = 4
+    end
+
+    -- numpad → sector index (0-7, clockwise from N)
+    local NUMPAD_TO_SECTOR = { [8]=0, [9]=1, [6]=2, [3]=3, [2]=4, [1]=5, [4]=6, [7]=7 }
+    local _sector = NUMPAD_TO_SECTOR[_numpad]
+
+    -- 記錄到 history（只記非中立方向）
+    if _sector ~= nil then
+      -- 避免同一 sector 連續重複記錄（持住方向）
+      local _last = rot720_disp.history[#rot720_disp.history]
+      if _last == nil or _last ~= _sector then
+        table.insert(rot720_disp.history, _sector)
+      end
+    end
+
+    -- 限制 history 長度（90 幀窗口 = 最多 90 個 sector 記錄）
+    while #rot720_disp.history > rot720_disp.window do
+      table.remove(rot720_disp.history, 1)
+    end
+
+    -- 計算是否完成 720（兩個不重疊的 360，各自蓋滿 8 sector）
+    local function check_720(_hist)
+      local ALL_8 = 0xFF
+      local _mask1 = 0
+      local _split = nil
+      for i = 1, #_hist do
+        _mask1 = bit.bor(_mask1, bit.lshift(1, _hist[i]))
+        if _mask1 == ALL_8 then _split = i; break end
+      end
+      if _split == nil then return false, 0, 0 end
+      local _mask2 = 0
+      for i = _split + 1, #_hist do
+        _mask2 = bit.bor(_mask2, bit.lshift(1, _hist[i]))
+        if _mask2 == ALL_8 then return true, ALL_8, ALL_8 end
+      end
+      return false, ALL_8, _mask2
+    end
+
+    local _done, _mask1, _mask2 = check_720(rot720_disp.history)
+
+    if _done then
+      rot720_disp.success_flash = 60
+      rot720_disp.history = {}
+      _mask1 = 0xFF
+      _mask2 = 0xFF
+    end
+
+    if rot720_disp.success_flash > 0 then
+      rot720_disp.success_flash = rot720_disp.success_flash - 1
+    end
+
+    -- === 繪圖 ===
+    local _x = 170
+    local _y = 82
+    local _cell = 8  -- 每格寬度
+    local _gap = 2
+
+    -- 標題
+    gui.text(_x, _y - 10, "720", 0xFFFFFFFF, 0x00000080)
+
+    -- 第一圈
+    for i = 0, 7 do
+      local _cx = _x + i * (_cell + _gap)
+      local _lit = bit.band(_mask1, bit.lshift(1, i)) ~= 0
+      local _color = _lit and 0xFFEB04FF or 0x444444FF
+      gui.box(_cx, _y, _cx + _cell, _y + _cell, _color, 0x000000FF)
+    end
+
+    -- 第二圈
+    local _y2 = _y + _cell + 4
+    for i = 0, 7 do
+      local _cx = _x + i * (_cell + _gap)
+      local _lit = bit.band(_mask2, bit.lshift(1, i)) ~= 0
+      local _color = _lit and 0xFF6B00FF or 0x333333FF  -- 橙色為第二圈
+      gui.box(_cx, _y2, _cx + _cell, _y2 + _cell, _color, 0x000000FF)
+    end
+
+    -- 成功閃爍
+    if rot720_disp.success_flash > 0 and rot720_disp.success_flash % 8 < 4 then
+      gui.text(_x + 30, _y2 + _cell + 4, "720!", 0xFFEB04FF, 0x00000080)
+    end
+
   end
 
   if is_in_match and current_recording_state ~= 1 then

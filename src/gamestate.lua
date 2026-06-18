@@ -823,10 +823,10 @@ function read_player_vars(_player_obj)
 
   -- PARRY BUFFERS
   -- global game consts
-  _player_obj.parry_forward = _player_obj.parry_forward or { name = "FORWARD", max_validity = 10, max_cooldown = 23 }
-  _player_obj.parry_down = _player_obj.parry_down or { name = "DOWN", max_validity = 10, max_cooldown = 23 }
-  _player_obj.parry_air = _player_obj.parry_air or { name = "AIR", max_validity = 7, max_cooldown = 20 }
-  _player_obj.parry_antiair = _player_obj.parry_antiair or { name = "ANTI-AIR", max_validity = 5, max_cooldown = 18 }
+  _player_obj.parry_forward = _player_obj.parry_forward or { name = "Forward", max_validity = 10, max_cooldown = 23 }
+  _player_obj.parry_down = _player_obj.parry_down or { name = "Down", max_validity = 10, max_cooldown = 23 }
+  _player_obj.parry_air = _player_obj.parry_air or { name = "Air", max_validity = 7, max_cooldown = 20 }
+  _player_obj.parry_antiair = _player_obj.parry_antiair or { name = "Anti-Air", max_validity = 5, max_cooldown = 18 }
 
   function read_parry_state(_parry_object, _validity_addr, _cooldown_addr)
     -- read data
@@ -897,9 +897,9 @@ function read_player_vars(_player_obj)
 
 -- CHARGE STATE
   -- global game consts
-  _player_obj.charge_1 = _player_obj.charge_1 or { name = "Charge1", max_charge = 43, max_reset = 43, enabled = false }
-  _player_obj.charge_2 = _player_obj.charge_2 or { name = "Charge2", max_charge = 43, max_reset = 43, enabled = false }
-  _player_obj.charge_3 = _player_obj.charge_3 or { name = "Charge3", max_charge = 43, max_reset = 43, enabled = false }
+  _player_obj.charge_1 = _player_obj.charge_1 or { name = "Charge 1", max_charge = 43, max_reset = 43, enabled = false }
+  _player_obj.charge_2 = _player_obj.charge_2 or { name = "Charge 2", max_charge = 43, max_reset = 43, enabled = false }
+  _player_obj.charge_3 = _player_obj.charge_3 or { name = "Charge 3", max_charge = 43, max_reset = 43, enabled = false }
 
 
   function read_charge_state(_charge_object, _valid_charge, _charge_addr, _reset_addr)
