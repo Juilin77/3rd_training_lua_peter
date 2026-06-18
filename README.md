@@ -229,8 +229,12 @@ A: Install prerequires from [here](https://github.com/TASVideos/BizHawk-Prereqs/
 [Trello board](https://trello.com/b/UQ8ey2rQ/3rdtraining)
 
 ## Changelog
-### v0.20 (16/06/2026)
+### v0.20 (18/06/2026)
+- [Feature] Throw Tech Training (Special Training → Mode → Tech Throw): shows a 5-frame throw tech window after being grabbed, with a delta marker showing when LP+LK was pressed and result feedback — Success (green), Too Late, Too Early, or Parry Active (red) (contribution of @Juilin77)
+- [Improvement] Tech Throw gauge extended timeout window to 6F to account for action propagation delay; validity bar freezes at input frame to eliminate off-by-one visual gap (contribution of @Juilin77)
+- [Feature] Added Juggle Air Timer (Special Training → Mode → Juggle): gauge displays remaining air hitstun frames for the dummy with tick marks matching SF3 juggle decay values (contribution of @Juilin77)
 - [Feature] Added Life Loss Indicator above health bars: when Display Gauges Numbers is enabled and HP is below max, draws a ㄇ-shaped red bracket over the lost HP region with the amount lost in yellow at center, displayed independently for both P1 and P2 (contribution of @Juilin77)
+- [Improvement] Standardized all menu labels and on-screen display text to Title Case (contribution of @Juilin77)
 
 ### v0.19 (15/06/2026)
 - [Feature] Added Frame Table: a real-time per-frame state timeline (startup/active/recovery/hitstun/parry/invincible) for both players with a color legend (contribution of @Juilin77)
