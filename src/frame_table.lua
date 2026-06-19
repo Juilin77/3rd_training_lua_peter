@@ -27,7 +27,6 @@ frame_table_in_hitstun = { p1 = false, p2 = false }
 -- (e.g. a combo's "active"/"hitstun" run lasting longer than FRAME_TABLE_LENGTH)
 frame_table_run_length = { p1 = 0, p2 = 0 }
 frame_table_prev_state = { p1 = nil, p2 = nil }
-frame_table_prev_animation = { p1 = nil, p2 = nil }
 
 local function has_hitbox(_player_obj)
   for _, _box in ipairs(_player_obj.boxes) do
@@ -186,33 +185,29 @@ local function frame_table_arm(_key, _preserve_as_dimmed)
 end
 
 function frame_table_update(_player1_obj, _player2_obj)
-  local _objs = { p1 = _player1_obj, p2 = _player2_obj }
-  local _cancel_detected = { p1 = false, p2 = false }
-
-  -- detect cancel: animation ID changes while the player was mid-attack and not
-  -- transitioning to idle. reset has_been_active so classify() correctly labels
-  -- the new move's startup as green rather than recovery (1.26)
-  for _, _key in ipairs({ "p1", "p2" }) do
-    local _curr_anim = _objs[_key].animation
-    local _prev_anim = frame_table_prev_animation[_key]
-    if _prev_anim ~= nil and _curr_anim ~= _prev_anim
-       and frame_table_has_been_active[_key]
-       and not _objs[_key].is_idle then
-      frame_table_has_been_active[_key] = false
-      _cancel_detected[_key] = true
-    end
-    frame_table_prev_animation[_key] = _curr_anim
-  end
-
   local _states = {
     p1 = frame_table_classify(_player1_obj, "p1"),
     p2 = frame_table_classify(_player2_obj, "p2"),
   }
+  local _objs = { p1 = _player1_obj, p2 = _player2_obj }
 
-  -- replace the cancel transition frame with the cancel marker
+  -- detect cancel: active frame follows a recovery frame (1.26)
+  -- mark the first recovery frame as cancel, relabel the rest as startup
   for _, _key in ipairs({ "p1", "p2" }) do
-    if _cancel_detected[_key] then
-      _states[_key] = "cancel"
+    if _states[_key] == "active" and frame_table_prev_state[_key] == "recovery" then
+      local _p = frame_table_players[_key]
+      local _run = frame_table_run_length[_key]
+      local _n = #_p.buffer
+      local _cancel_start = math.max(_n - _run + 1, 1)
+      -- mark the first recovery frame as cancel, relabel the rest as startup
+      _p.buffer[_cancel_start] = "cancel"
+      _p.run_lengths[_cancel_start] = 1
+      for i = _cancel_start + 1, _n do
+        if _p.buffer[i] == "recovery" then
+          _p.buffer[i] = "startup"
+          _p.run_lengths[i] = i - _cancel_start
+        end
+      end
     end
   end
 
@@ -284,7 +279,6 @@ function frame_table_reset()
   frame_table_in_hitstun = { p1 = false, p2 = false }
   frame_table_run_length = { p1 = 0, p2 = 0 }
   frame_table_prev_state = { p1 = nil, p2 = nil }
-  frame_table_prev_animation = { p1 = nil, p2 = nil }
 end
 
 -- label the end of each non-neutral run within [_from, _to] with its (true,
