@@ -5,6 +5,7 @@ frame_table_colors = {
   startup    = 0x00FF00FF, -- startup (windup before hitbox)
   active     = 0xFF4040FF, -- active (hitbox active)
   recovery   = 0x4080FFFF, -- recovery (busy after active)
+  cancel     = 0xFF8800FF, -- cancel point marker (orange)
   hitstun    = 0xFFFF00FF, -- hitstun/blockstun/knockdown/wakeup/thrown
   parry      = 0xCC33FFFF, -- parry success
   invincible = 0xFFFFFFFF, -- invincible
@@ -26,6 +27,7 @@ frame_table_in_hitstun = { p1 = false, p2 = false }
 -- (e.g. a combo's "active"/"hitstun" run lasting longer than FRAME_TABLE_LENGTH)
 frame_table_run_length = { p1 = 0, p2 = 0 }
 frame_table_prev_state = { p1 = nil, p2 = nil }
+frame_table_prev_animation = { p1 = nil, p2 = nil }
 
 local function has_hitbox(_player_obj)
   for _, _box in ipairs(_player_obj.boxes) do
@@ -184,43 +186,33 @@ local function frame_table_arm(_key, _preserve_as_dimmed)
 end
 
 function frame_table_update(_player1_obj, _player2_obj)
+  local _objs = { p1 = _player1_obj, p2 = _player2_obj }
+  local _cancel_detected = { p1 = false, p2 = false }
+
+  -- detect cancel: animation ID changes while the player was mid-attack and not
+  -- transitioning to idle. reset has_been_active so classify() correctly labels
+  -- the new move's startup as green rather than recovery (1.26)
+  for _, _key in ipairs({ "p1", "p2" }) do
+    local _curr_anim = _objs[_key].animation
+    local _prev_anim = frame_table_prev_animation[_key]
+    if _prev_anim ~= nil and _curr_anim ~= _prev_anim
+       and frame_table_has_been_active[_key]
+       and not _objs[_key].is_idle then
+      frame_table_has_been_active[_key] = false
+      _cancel_detected[_key] = true
+    end
+    frame_table_prev_animation[_key] = _curr_anim
+  end
+
   local _states = {
     p1 = frame_table_classify(_player1_obj, "p1"),
     p2 = frame_table_classify(_player2_obj, "p2"),
   }
-  local _objs = { p1 = _player1_obj, p2 = _player2_obj }
 
-  -- a hit landing right after a "recovery" classification means the previous
-  -- move's recovery was actually canceled straight into this move's startup
-  -- (no neutral frame in between, so classify() had no chance to reset).
-  -- retroactively relabel the tail of the "recovery" run as "startup" - only
-  -- the new move's own startup length (from its recorded hit_frames[1].min),
-  -- so the previous move's actual recovery frames stay blue. the run_lengths
-  -- values stay valid since the run's total length doesn't change, just its
-  -- color split (1.18)
+  -- replace the cancel transition frame with the cancel marker
   for _, _key in ipairs({ "p1", "p2" }) do
-    if _states[_key] == "active" and frame_table_prev_state[_key] == "recovery" then
-      local _p = frame_table_players[_key]
-      local _run = frame_table_run_length[_key]
-      local _n = #_p.buffer
-
-      local _startup_len = _run
-      local _frame_data = _objs[_key].relevant_animation_frame_data
-      local _hit_frame = _frame_data and _frame_data.hit_frames and _frame_data.hit_frames[1]
-      if _hit_frame and _hit_frame.min then
-        _startup_len = math.min(_hit_frame.min, _run)
-      end
-
-      -- the relabeled tail becomes its own run, so its run_lengths need to
-      -- restart from 1 (they were previously counting up as part of the
-      -- single 27-frame recovery run)
-      local _from = math.max(_n - _startup_len + 1, 1)
-      for i = _n, _from, -1 do
-        if _p.buffer[i] == "recovery" then
-          _p.buffer[i] = "startup"
-          _p.run_lengths[i] = i - _from + 1
-        end
-      end
+    if _cancel_detected[_key] then
+      _states[_key] = "cancel"
     end
   end
 
@@ -292,6 +284,7 @@ function frame_table_reset()
   frame_table_in_hitstun = { p1 = false, p2 = false }
   frame_table_run_length = { p1 = 0, p2 = 0 }
   frame_table_prev_state = { p1 = nil, p2 = nil }
+  frame_table_prev_animation = { p1 = nil, p2 = nil }
 end
 
 -- label the end of each non-neutral run within [_from, _to] with its (true,
@@ -302,7 +295,7 @@ local function frame_table_draw_run_labels(_buffer, _run_lengths, _from, _to, _x
   local i = _from
   while i <= _to do
     local _state = _buffer[i] or "neutral"
-    if _state == "neutral" then
+    if _state == "neutral" or _state == "cancel" then
       i = i + 1
     else
       local _end = i
@@ -381,12 +374,13 @@ function frame_table_stats_parts(_key)
   return _prefix, _adv_str, _adv_color
 end
 
-frame_table_legend_order = { "neutral", "startup", "active", "recovery", "hitstun", "parry", "invincible" }
+frame_table_legend_order = { "neutral", "startup", "active", "recovery", "cancel", "hitstun", "parry", "invincible" }
 frame_table_legend_labels = {
   neutral    = "Neutral",
   startup    = "Startup",
   active     = "Active",
   recovery   = "Recovery",
+  cancel     = "Cancel",
   hitstun    = "Hitstun",
   parry      = "Parry",
   invincible = "Invincible",
