@@ -5,7 +5,6 @@ frame_table_colors = {
   startup    = 0x00FF00FF, -- startup (windup before hitbox)
   active     = 0xFF4040FF, -- active (hitbox active)
   recovery   = 0x4080FFFF, -- recovery (busy after active)
-  cancel     = 0xFF8800FF, -- cancel point marker (orange)
   hitstun    = 0xFFFF00FF, -- hitstun/blockstun/knockdown/wakeup/thrown
   parry      = 0xCC33FFFF, -- parry success
   invincible = 0xFFFFFFFF, -- invincible
@@ -191,21 +190,18 @@ function frame_table_update(_player1_obj, _player2_obj)
   }
   local _objs = { p1 = _player1_obj, p2 = _player2_obj }
 
-  -- detect cancel: active frame follows a recovery frame (1.26)
-  -- mark the first recovery frame as cancel, relabel the rest as startup
+  -- detect cancel: active frame follows recovery means previous move was cancelled;
+  -- relabel all recovery frames as startup so display shows green instead of blue
   for _, _key in ipairs({ "p1", "p2" }) do
     if _states[_key] == "active" and frame_table_prev_state[_key] == "recovery" then
       local _p = frame_table_players[_key]
       local _run = frame_table_run_length[_key]
       local _n = #_p.buffer
       local _cancel_start = math.max(_n - _run + 1, 1)
-      -- mark the first recovery frame as cancel, relabel the rest as startup
-      _p.buffer[_cancel_start] = "cancel"
-      _p.run_lengths[_cancel_start] = 1
-      for i = _cancel_start + 1, _n do
+      for i = _cancel_start, _n do
         if _p.buffer[i] == "recovery" then
           _p.buffer[i] = "startup"
-          _p.run_lengths[i] = i - _cancel_start
+          _p.run_lengths[i] = i - _cancel_start + 1
         end
       end
     end
@@ -289,7 +285,7 @@ local function frame_table_draw_run_labels(_buffer, _run_lengths, _from, _to, _x
   local i = _from
   while i <= _to do
     local _state = _buffer[i] or "neutral"
-    if _state == "neutral" or _state == "cancel" then
+    if _state == "neutral" then
       i = i + 1
     else
       local _end = i
@@ -368,13 +364,12 @@ function frame_table_stats_parts(_key)
   return _prefix, _adv_str, _adv_color
 end
 
-frame_table_legend_order = { "neutral", "startup", "active", "recovery", "cancel", "hitstun", "parry", "invincible" }
+frame_table_legend_order = { "neutral", "startup", "active", "recovery", "hitstun", "parry", "invincible" }
 frame_table_legend_labels = {
   neutral    = "Neutral",
   startup    = "Startup",
   active     = "Active",
   recovery   = "Recovery",
-  cancel     = "Cancel",
   hitstun    = "Hitstun",
   parry      = "Parry",
   invincible = "Invincible",
