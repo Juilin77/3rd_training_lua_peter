@@ -274,7 +274,7 @@ end
 
 function checkbox_menu_item(_name, _object, _property_name, _default_value, _value_labels)
   if _default_value == nil then _default_value = false end
-  if _value_labels == nil then _value_labels = {"yes", "no"} end
+  if _value_labels == nil then _value_labels = {"Yes", "No"} end
   local _o = {}
   _o.name = _name
   _o.object = _object

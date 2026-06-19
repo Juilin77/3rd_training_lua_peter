@@ -2036,16 +2036,16 @@ end
 pattern_replay_mode_item = list_menu_item("Pattern Replay Mode", training_settings, "pattern_replay_mode", pattern_replay_mode_options)
 pattern_replay_mode_item.is_disabled = no_pattern_available
 
-direct_play_item = checkbox_menu_item("Pattern Replay", training_settings, "pattern_replay_on", nil, {"start", "stop"})
+direct_play_item = checkbox_menu_item("Pattern Replay", training_settings, "pattern_replay_on", nil, {"Start", "Stop"})
 direct_play_item.is_disabled = no_pattern_available
 
-replay_mission_item = checkbox_menu_item("Replay Mission", training_settings, "mission_replay_on", nil, {"start", "stop"})
+replay_mission_item = checkbox_menu_item("Replay Mission", training_settings, "mission_replay_on", nil, {"Start", "Stop"})
 replay_mission_item.is_disabled = function()
   if training_settings.recording_mission_mode then return true end
   return no_replay_slot_selected()
 end
 
-recording_mission_mode_item = checkbox_menu_item("Recording Mission Mode", training_settings, "recording_mission_mode", nil, {"on", "off"})
+recording_mission_mode_item = checkbox_menu_item("Recording Mission Mode", training_settings, "recording_mission_mode", nil, {"On", "Off"})
 
 change_characters_item = button_menu_item("Select Characters", start_character_select_sequence)
 change_characters_item.is_disabled = function()
