@@ -39,6 +39,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 5. **Lua 5.1 位元運算** → 不能用 `|` / `&` / `<<`，要用 `bit.bor()` / `bit.band()` / `bit.lshift()`
 
 ## Player 物件常用欄位（src/gamestate.lua read_player_vars）
+完整欄位參考：`../_reference/player_fields.md`（11 分類）
 ```
 pos_x, pos_y          — 遊戲空間座標（signed word，base+0x64/0x68）
 action                — 動作 ID（dword，base+0xAC）；43=defender tech throw，44=attacker tech throw

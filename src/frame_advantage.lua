@@ -145,11 +145,11 @@ function frame_advantage_display()
 
   local _startup = move_advantage.hitbox_start_frame - move_advantage.start_frame
 
-  display_line("startup: ", string.format("%d", _startup))
+  display_line("Startup: ", string.format("%d", _startup))
 
   if move_advantage.hit_frame ~= nil then
     local _hit_frame = move_advantage.hit_frame - move_advantage.start_frame + 1
-    display_line("hit frame: ", string.format("%d", _hit_frame))
+    display_line("Hit Frame: ", string.format("%d", _hit_frame))
   end
 
   if move_advantage.hit_frame ~= nil and move_advantage.end_frame ~= nil and move_advantage.opponent_end_frame ~= nil then
@@ -165,12 +165,12 @@ function frame_advantage_display()
       _color = 0x10FB00FF
     end
 
-    display_line("advantage: ", string.format("%s%d", _sign, _advantage), _color)
+    display_line("Advantage: ", string.format("%s%d", _sign, _advantage), _color)
   else
     if move_advantage.hitbox_start_frame ~= nil and move_advantage.hitbox_end_frame ~= nil then
-      display_line("active: ", string.format("%d", move_advantage.hitbox_end_frame - move_advantage.hitbox_start_frame))
+      display_line("Active: ", string.format("%d", move_advantage.hitbox_end_frame - move_advantage.hitbox_start_frame))
     end
-    display_line("duration: ", string.format("%d", move_advantage.end_frame - move_advantage.start_frame))
+    display_line("Duration: ", string.format("%d", move_advantage.end_frame - move_advantage.start_frame))
   end
 end
 

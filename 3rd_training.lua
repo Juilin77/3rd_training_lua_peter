@@ -555,6 +555,7 @@ special_training_mode = {
   "Hyakuretsu Kyaku (Chun Li)",
   "Juggle",
   "Tech Throw",
+  "720",
 }
 
 juggle_disp = { jc = 0, air_time = 0, expired = false, was_airborne = false }
@@ -578,9 +579,12 @@ throw_tech_disp = {
 }
 
 rot720_disp = {
-  history = {},
-  window = 90,
+  history = {},      -- {dir, frame} entries
+  window = 11,       -- 11 frame window
   success_flash = 0,
+  fail_reason = nil, -- "direction" or "time"
+  sequence = {},     -- 最多7個方向記錄，用於顯示
+  last_button = nil, -- "LP"/"MP"/"HP"/"LK"/"MK"/"HK"
 }
 
 function make_recording_slot()
@@ -2190,7 +2194,7 @@ main_menu = make_multitab_menu(
           local _item = checkbox_menu_item("Follow Character", training_settings, "special_training_follow_character")
           _item.is_disabled = function()
             local _m = training_settings.special_training_current_mode
-            return _m == 1 or special_training_mode[_m] == "Juggle" or special_training_mode[_m] == "720" or special_training_mode[_m] == "Tech Throw"
+            return _m == 1 or special_training_mode[_m] == "Juggle" or special_training_mode[_m] == "Tech Throw"
           end
           return _item
         end)(),
@@ -3404,6 +3408,7 @@ function on_gui()
       gui.text(_x - get_text_width(_reset_text), _y+24, _reset_text, text_default_color, text_default_border_color)
       if _legs_object.active ~= 0xFF then
         draw_gauge(_x + _margin, _y + 24, 99, _gauge_height + 1, _legs_object.reset_time / 99, _gauge_valid_fill_color, _gauge_background_color, nil, true)
+        gui.text(_x + _margin + 99 + 4, _y + 24, string.format("%dF", _legs_object.reset_time), text_default_color, text_default_border_color)
       end
       
       return 8 + 5 + (_gauge_height * 2)
@@ -3440,14 +3445,14 @@ function on_gui()
     local _gauge_w = 121
     local _gauge_h = 4
 
-    gui.text(_x + 1, _y, string.format("Juggle: %d", juggle_disp.air_time), text_default_color, text_default_border_color)
+    gui.text(_x + 1, _y, "Juggle", text_default_color, text_default_border_color)
     gui.text(_x + _gauge_w - 6, _y, "121", text_disabled_color, text_default_border_color)
     gui.box(_x, _y + 10, _x + _gauge_w, _y + 10 + _gauge_h, 0x00000000, 0x000000FF)
     if not juggle_disp.expired and juggle_disp.air_time > 0 then
       local _fill = math.min(juggle_disp.air_time, _gauge_w)
       gui.box(_x, _y + 10, _x + _fill, _y + 10 + _gauge_h, 0x00C080FF, 0x000000FF)
-      gui.text(_x + _fill + 2, _y + 10, tostring(juggle_disp.air_time), text_default_color, text_default_border_color)
     end
+    gui.text(_x + _gauge_w + 4, _y + 10, string.format("%dF", juggle_disp.air_time), text_default_color, text_default_border_color)
     for _, _tx in ipairs({1, 2, 5, 11, 21, 41, 61, 81, 101}) do
       gui.line(_x + _tx, _y + 10, _x + _tx, _y + 10 + _gauge_h, 0x000000FF)
     end
@@ -3578,109 +3583,177 @@ function on_gui()
   if is_in_match and not training_settings.recording_mission_mode
      and special_training_mode[training_settings.special_training_current_mode] == "720" then
 
-    -- 讀取目前方向輸入
-    local _input = joypad.get()
-    local _prefix = "P1 "  -- 訓練者為 P1
+    local HUGO_CHAR_ID = 6
+    local CARD720 = {8, 2, 4, 6}
+    local CARD_SYMBOL = {[8]="^", [2]="v", [4]="<", [6]=">"}
 
-    -- numpad notation 轉換（複用 input_history.lua 的邏輯）
-    local _up    = _input[_prefix .. "Up"]    or false
-    local _down  = _input[_prefix .. "Down"]  or false
-    local _left  = _input[_prefix .. "Left"]  or false
-    local _right = _input[_prefix .. "Right"] or false
-
-    -- 轉成 numpad (1-9)
-    local _numpad = 5
-    if     _up    and _right then _numpad = 9
-    elseif _up    and _left  then _numpad = 7
-    elseif _down  and _right then _numpad = 3
-    elseif _down  and _left  then _numpad = 1
-    elseif _up               then _numpad = 8
-    elseif _down             then _numpad = 2
-    elseif _right            then _numpad = 6
-    elseif _left             then _numpad = 4
-    end
-
-    -- numpad → sector index (0-7, clockwise from N)
-    local NUMPAD_TO_SECTOR = { [8]=0, [9]=1, [6]=2, [3]=3, [2]=4, [1]=5, [4]=6, [7]=7 }
-    local _sector = NUMPAD_TO_SECTOR[_numpad]
-
-    -- 記錄到 history（只記非中立方向）
-    if _sector ~= nil then
-      -- 避免同一 sector 連續重複記錄（持住方向）
-      local _last = rot720_disp.history[#rot720_disp.history]
-      if _last == nil or _last ~= _sector then
-        table.insert(rot720_disp.history, _sector)
-      end
-    end
-
-    -- 限制 history 長度（90 幀窗口 = 最多 90 個 sector 記錄）
-    while #rot720_disp.history > rot720_disp.window do
-      table.remove(rot720_disp.history, 1)
-    end
-
-    -- 計算是否完成 720（兩個不重疊的 360，各自蓋滿 8 sector）
-    local function check_720(_hist)
-      local ALL_8 = 0xFF
-      local _mask1 = 0
-      local _split = nil
-      for i = 1, #_hist do
-        _mask1 = bit.bor(_mask1, bit.lshift(1, _hist[i]))
-        if _mask1 == ALL_8 then _split = i; break end
-      end
-      if _split == nil then return false, 0, 0 end
-      local _mask2 = 0
-      for i = _split + 1, #_hist do
-        _mask2 = bit.bor(_mask2, bit.lshift(1, _hist[i]))
-        if _mask2 == ALL_8 then return true, ALL_8, ALL_8 end
-      end
-      return false, ALL_8, _mask2
-    end
-
-    local _done, _mask1, _mask2 = check_720(rot720_disp.history)
-
-    if _done then
-      rot720_disp.success_flash = 60
-      rot720_disp.history = {}
-      _mask1 = 0xFF
-      _mask2 = 0xFF
-    end
-
-    if rot720_disp.success_flash > 0 then
-      rot720_disp.success_flash = rot720_disp.success_flash - 1
-    end
-
-    -- === 繪圖 ===
+    -- Follow character 位置
     local _x = 170
     local _y = 82
-    local _cell = 8  -- 每格寬度
-    local _gap = 2
-
-    -- 標題
-    gui.text(_x, _y - 10, "720", 0xFFFFFFFF, 0x00000080)
-
-    -- 第一圈
-    for i = 0, 7 do
-      local _cx = _x + i * (_cell + _gap)
-      local _lit = bit.band(_mask1, bit.lshift(1, i)) ~= 0
-      local _color = _lit and 0xFFEB04FF or 0x444444FF
-      gui.box(_cx, _y, _cx + _cell, _y + _cell, _color, 0x000000FF)
+    if training_settings.special_training_follow_character then
+      local _px = player.pos_x - screen_x + emu.screenwidth()/2
+      local _py = emu.screenheight() - (player.pos_y - screen_y) - ground_offset
+      local _half_width = 36
+      _x = math.max(_px - _half_width, 4)
+      _x = math.min(_x, emu.screenwidth() - 80)
+      _y = _py - 100
     end
 
-    -- 第二圈
-    local _y2 = _y + _cell + 4
-    for i = 0, 7 do
-      local _cx = _x + i * (_cell + _gap)
-      local _lit = bit.band(_mask2, bit.lshift(1, i)) ~= 0
-      local _color = _lit and 0xFF6B00FF or 0x333333FF  -- 橙色為第二圈
-      gui.box(_cx, _y2, _cx + _cell, _y2 + _cell, _color, 0x000000FF)
-    end
+    -- 角色檢查
+    if player.char_id ~= HUGO_CHAR_ID then
+      gui.text(_x, _y, "720 Trainer: Hugo Only", 0xFFFFFFFF, 0x00000080)
+    else
 
-    -- 成功閃爍
-    if rot720_disp.success_flash > 0 and rot720_disp.success_flash % 8 < 4 then
-      gui.text(_x + 30, _y2 + _cell + 4, "720!", 0xFFEB04FF, 0x00000080)
-    end
+      -- 讀取輸入
+      local _input = joypad.get()
+      local _prefix = "P1 "
+      local _up    = _input[_prefix.."Up"]    or false
+      local _down  = _input[_prefix.."Down"]  or false
+      local _left  = _input[_prefix.."Left"]  or false
+      local _right = _input[_prefix.."Right"] or false
 
-  end
+      local _numpad = 5
+      if _up and _right then _numpad=9 elseif _up and _left then _numpad=7
+      elseif _down and _right then _numpad=3 elseif _down and _left then _numpad=1
+      elseif _up then _numpad=8 elseif _down then _numpad=2
+      elseif _right then _numpad=6 elseif _left then _numpad=4 end
+
+      local _cardinal_map = {[8]=8,[2]=2,[4]=4,[6]=6}
+      local _dir = _cardinal_map[_numpad]
+      if _dir ~= nil then
+        local _last = rot720_disp.history[#rot720_disp.history]
+        if _last == nil or _last.dir ~= _dir then
+          table.insert(rot720_disp.history, {dir=_dir, frame=frame_number})
+          rot720_disp.fail_reason = nil
+          rot720_disp.success_flash = 0
+          if #rot720_disp.sequence < 7 then
+            table.insert(rot720_disp.sequence, _dir)
+          end
+        end
+      end
+
+      -- 移除超過 11 幀的舊記錄
+      local _expired = false
+      while #rot720_disp.history > 0 and frame_number - rot720_disp.history[1].frame > 11 do
+        table.remove(rot720_disp.history, 1)
+        _expired = true
+      end
+      if _expired and #rot720_disp.history == 0 then
+        rot720_disp.fail_reason = "time"
+        rot720_disp.sequence = {}
+      end
+
+      -- check_720 Condition B
+      local function check_720_condB(hist)
+        local seen = {}
+        local seen_count = 0
+        local split_idx = nil
+        local x = nil
+        for i = 1, #hist do
+          local d = hist[i].dir
+          if not seen[d] then
+            seen[d] = true
+            seen_count = seen_count + 1
+            if seen_count == 4 then x = d; split_idx = i; break end
+          end
+        end
+        if split_idx == nil then return false end
+        local after = {}
+        for i = split_idx+1, #hist do after[hist[i].dir] = true end
+        for _, d in ipairs(CARD720) do
+          if d ~= x and not after[d] then return false end
+        end
+        return true
+      end
+
+      -- 偵測按拳 / 按腳
+      local _kick = _input[_prefix.."LK"] or _input[_prefix.."MK"] or _input[_prefix.."HK"]
+      if _kick then
+        if _input[_prefix.."LK"] then rot720_disp.last_button = "LK"
+        elseif _input[_prefix.."MK"] then rot720_disp.last_button = "MK"
+        else rot720_disp.last_button = "HK" end
+        rot720_disp.fail_reason = "wrong_button"
+      end
+      local _punch = _input[_prefix.."LP"] or _input[_prefix.."MP"] or _input[_prefix.."HP"]
+      if _punch then
+        if _input[_prefix.."LP"] then rot720_disp.last_button = "LP"
+        elseif _input[_prefix.."MP"] then rot720_disp.last_button = "MP"
+        else rot720_disp.last_button = "HP" end
+        if check_720_condB(rot720_disp.history) then
+          rot720_disp.success_flash = 60
+          rot720_disp.fail_reason = nil
+          rot720_disp.history = {}
+          rot720_disp.sequence = {}
+        else
+          rot720_disp.fail_reason = "direction"
+        end
+      end
+
+      if rot720_disp.success_flash > 0 then
+        rot720_disp.success_flash = rot720_disp.success_flash - 1
+      end
+
+      -- === 繪圖 ===
+      local _cell = 8   -- img_dir_small 每格 8px
+      local _gap = 2
+
+      -- 標題（Tech Throw 風格）
+      local _title = "720 Trainer: "
+      gui.text(_x, _y, _title, text_default_color, text_default_border_color)
+      local _title_w = get_text_width(_title)
+
+      -- 結果文字 inline 在標題右邊
+      if rot720_disp.success_flash > 0 and rot720_disp.success_flash % 8 < 4 then
+        gui.text(_x + _title_w, _y, "720!", 0x10FB00FF, text_default_border_color)
+      elseif rot720_disp.fail_reason == "time" then
+        gui.text(_x + _title_w, _y, "Too Late", 0xE70000FF, text_default_border_color)
+      elseif rot720_disp.fail_reason == "wrong_button" then
+        gui.text(_x + _title_w, _y, "Wrong Button", 0xE70000FF, text_default_border_color)
+      elseif rot720_disp.fail_reason == "direction" then
+        gui.text(_x + _title_w, _y, "少方向", 0xE70000FF, text_default_border_color)
+      end
+
+      -- 第一排：7 個格子顯示方向圖示（img_dir_small，8px 每格）
+      local _row_y = _y + 10
+      for i = 1, 7 do
+        local _cx = _x + (i-1) * (_cell + _gap)
+        local _dir_val = rot720_disp.sequence[i]
+        if _dir_val then
+          gui.image(_cx, _row_y, img_dir_small[_dir_val])
+        else
+          gui.box(_cx, _row_y, _cx+8, _row_y+8, 0x333333FF, 0x000000FF)
+        end
+      end
+
+      -- 第 8 格：按鍵圖示（空一格間距）
+      local _btn_cx = _x + 7 * (_cell + _gap) + _gap + 4
+      if rot720_disp.last_button == "LP" then
+        gui.image(_btn_cx, _row_y, img_LP_button_small)
+      elseif rot720_disp.last_button == "MP" then
+        gui.image(_btn_cx, _row_y, img_MP_button_small)
+      elseif rot720_disp.last_button == "HP" then
+        gui.image(_btn_cx, _row_y, img_HP_button_small)
+      elseif rot720_disp.last_button == "LK" then
+        gui.image(_btn_cx, _row_y, img_LK_button_small)
+      elseif rot720_disp.last_button == "MK" then
+        gui.image(_btn_cx, _row_y, img_MK_button_small)
+      elseif rot720_disp.last_button == "HK" then
+        gui.image(_btn_cx, _row_y, img_HK_button_small)
+      end
+
+      -- 第二排：right-to-left countdown bar
+      local _y2 = _row_y + _cell + 4
+      local _bar_w = 7 * (_cell + _gap) - _gap
+      local _elapsed = 0
+      if #rot720_disp.history > 0 then
+        _elapsed = frame_number - rot720_disp.history[1].frame
+      end
+      local _ratio = math.max(0, 1.0 - _elapsed / 11)
+      draw_gauge(_x, _y2, _bar_w, 4, _ratio, 0xFF6B00FF, 0x333333FF, nil, true)
+      gui.text(_x + _bar_w + 4, _y2, string.format("%dF", math.max(0, 11 - _elapsed)), text_default_color, text_default_border_color)
+
+    end -- char check
+  end -- mode check
 
   if is_in_match and current_recording_state ~= 1 then
     local _y = 5

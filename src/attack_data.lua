@@ -37,12 +37,12 @@ function attack_data_update(_attacker, _defender)
 end
 
 function attack_data_display()
-  local _text_width1 = get_text_width("damage: ")
-  local _text_width2 = get_text_width("stun: ")
-  local _text_width3 = get_text_width("combo: ")
-  local _text_width4 = get_text_width("total damage: ")
-  local _text_width5 = get_text_width("total stun: ")
-  local _text_width6 = get_text_width("max combo: ")
+  local _text_width1 = get_text_width("Damage: ")
+  local _text_width2 = get_text_width("Stun: ")
+  local _text_width3 = get_text_width("Combo: ")
+  local _text_width4 = get_text_width("Total Damage: ")
+  local _text_width5 = get_text_width("Total Stun: ")
+  local _text_width6 = get_text_width("Max Combo: ")
 
   local _x1 = 0
   local _x2 = 0
@@ -74,22 +74,22 @@ function attack_data_display()
     _x6 = _base2 - _text_width6
   end
 
-  gui.text(_x1, _y, string.format("damage: "))
+  gui.text(_x1, _y, string.format("Damage: "))
   gui.text(_x1 + _text_width1, _y, string.format("%d", attack_data.damage))
 
-  gui.text(_x2, _y + 10, string.format("stun: "))
+  gui.text(_x2, _y + 10, string.format("Stun: "))
   gui.text(_x2 + _text_width2, _y + 10, string.format("%d", attack_data.stun))
 
-  gui.text(_x3, _y + 20, string.format("combo: "))
+  gui.text(_x3, _y + 20, string.format("Combo: "))
   gui.text(_x3 + _text_width3, _y + 20, string.format("%d", attack_data.combo))
 
-  gui.text(_x4, _y, string.format("total damage: "))
+  gui.text(_x4, _y, string.format("Total Damage: "))
   gui.text(_x4 + _text_width4, _y, string.format("%d", attack_data.total_damage))
 
-  gui.text(_x5, _y + 10, string.format("total stun: "))
+  gui.text(_x5, _y + 10, string.format("Total Stun: "))
   gui.text(_x5 + _text_width5, _y + 10, string.format("%d", attack_data.total_stun))
 
-  gui.text(_x6, _y + 20, string.format("max combo: "))
+  gui.text(_x6, _y + 20, string.format("Max Combo: "))
   gui.text(_x6 + _text_width6, _y + 20, string.format("%d", attack_data.max_combo))
 end
 

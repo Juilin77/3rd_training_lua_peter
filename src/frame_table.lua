@@ -4,6 +4,7 @@ frame_table_colors = {
   neutral    = 0x444444FF, -- idle / empty
   startup    = 0x00FF00FF, -- startup (windup before hitbox)
   active     = 0xFF4040FF, -- active (hitbox active)
+  projectile = 0xCC7722FF, -- projectile active (hitbox on projectile object)
   recovery   = 0x4080FFFF, -- recovery (busy after active)
   hitstun    = 0xFFFF00FF, -- hitstun/blockstun/knockdown/wakeup/thrown
   parry      = 0xCC33FFFF, -- parry success
@@ -26,10 +27,23 @@ frame_table_in_hitstun = { p1 = false, p2 = false }
 -- (e.g. a combo's "active"/"hitstun" run lasting longer than FRAME_TABLE_LENGTH)
 frame_table_run_length = { p1 = 0, p2 = 0 }
 frame_table_prev_state = { p1 = nil, p2 = nil }
+frame_table_pending_adv = { p1 = nil, p2 = nil }
+-- each entry: { attacker_neutral_abs = N, expires = frame_N } or nil
+frame_table_pending_stats = { p1 = nil, p2 = nil }
+-- each entry: { startup=N, attacker_start_frame=N, active_end_abs=N, defender_key="p1"/"p2", defender_start_frame=N, expires=N } or nil
 
 local function has_hitbox(_player_obj)
   for _, _box in ipairs(_player_obj.boxes) do
     if _box.type == "attack" or _box.type == "throw" then
+      return true
+    end
+  end
+  return false
+end
+
+local function has_active_projectile(_player_obj)
+  for _, _proj in pairs(projectiles) do
+    if _proj.emitter_id == _player_obj.id and _proj.has_activated then
       return true
     end
   end
@@ -81,6 +95,11 @@ function frame_table_classify(_player_obj, _player_key)
   -- the game clears the attack hitbox from memory on the connect frame (and for the
   -- remaining active frames once it has hit), so also treat the connect frame and
   -- the following hitstop as active
+  if has_active_projectile(_player_obj) then
+    frame_table_has_been_active[_player_key] = true
+    return "projectile"
+  end
+
   if has_hitbox(_player_obj) or _player_obj.has_just_hit or _player_obj.has_just_been_blocked
     or (frame_table_has_been_active[_player_key] and _player_obj.remaining_freeze_frames > 0) then
     frame_table_has_been_active[_player_key] = true
@@ -103,7 +122,7 @@ function frame_table_classify(_player_obj, _player_key)
     return "hitstun"
   end
 
-  if not has_vulnerability_box(_player_obj) then
+  if not has_vulnerability_box(_player_obj) and not frame_table_has_been_active[_player_key] then
     return "invincible"
   end
 
@@ -117,19 +136,28 @@ end
 -- update Start/Total/Adv stats using the just-finished capture of _attacker_key
 -- (only if that capture actually contains an attack; cross-references the other
 -- player's independently-running buffer via absolute frame numbers)
+local function find_first_active(_buffer, _from)
+  for i = _from, #_buffer do
+    if _buffer[i] == "active" or _buffer[i] == "projectile" then
+      return i
+    end
+  end
+  return nil
+end
+
 function frame_table_update_stats(_attacker_key)
   local _attacker = frame_table_players[_attacker_key]
   local _defender_key = (_attacker_key == "p1") and "p2" or "p1"
   local _defender = frame_table_players[_defender_key]
 
-  local _active_start = find_first(_attacker.buffer, "active", 1)
+  local _active_start = find_first_active(_attacker.buffer, 1)
   if not _active_start then
     return -- this capture wasn't an attack, leave existing stats alone
   end
 
   local _active_end = _active_start
   for i = _active_start, #_attacker.buffer do
-    if _attacker.buffer[i] == "active" then
+    if _attacker.buffer[i] == "active" or _attacker.buffer[i] == "projectile" then
       _active_end = i
     else
       break
@@ -152,7 +180,21 @@ function frame_table_update_stats(_attacker_key)
     if _defender_neutral_idx then
       local _defender_neutral_abs = _defender.start_frame + _defender_neutral_idx - 1
       _advantage = _defender_neutral_abs - _attacker_neutral_abs
+    else
+      frame_table_pending_adv[_attacker_key] = {
+        attacker_neutral_abs = _attacker_neutral_abs,
+        expires = frame_number + 90,
+      }
     end
+  else
+    frame_table_pending_stats[_attacker_key] = {
+      startup              = _active_start - 1,
+      attacker_start_frame = _attacker.start_frame,
+      active_end_abs       = _attacker.start_frame + _active_end - 1,
+      defender_key         = _defender_key,
+      defender_start_frame = _defender.start_frame,
+      expires              = frame_number + 150,
+    }
   end
 
   frame_table_stats[_attacker_key] = {
@@ -162,7 +204,7 @@ function frame_table_update_stats(_attacker_key)
   }
 end
 
-local function frame_table_arm(_key, _preserve_as_dimmed)
+local function frame_table_arm(_key, _preserve_as_dimmed, _clear_stats)
   local _p = frame_table_players[_key]
   -- if this is a continuation re-arm (the previous capture filled the whole
   -- table while the action was still going), keep it as a dimmed overlay for
@@ -180,7 +222,11 @@ local function frame_table_arm(_key, _preserve_as_dimmed)
   _p.buffer = {}
   _p.run_lengths = {}
   _p.start_frame = frame_number
-  frame_table_stats[_key] = nil
+  if _clear_stats ~= false then
+    frame_table_stats[_key] = nil
+    frame_table_pending_adv[_key] = nil
+    frame_table_pending_stats[_key] = nil
+  end
 end
 
 function frame_table_update(_player1_obj, _player2_obj)
@@ -193,7 +239,7 @@ function frame_table_update(_player1_obj, _player2_obj)
   -- detect cancel: active frame follows recovery means previous move was cancelled;
   -- relabel all recovery frames as startup so display shows green instead of blue
   for _, _key in ipairs({ "p1", "p2" }) do
-    if _states[_key] == "active" and frame_table_prev_state[_key] == "recovery" then
+    if _states[_key] == "active" and frame_table_prev_state[_key] == "recovery" and _objs[_key].has_animation_just_changed then
       local _p = frame_table_players[_key]
       local _run = frame_table_run_length[_key]
       local _n = #_p.buffer
@@ -218,6 +264,62 @@ function frame_table_update(_player1_obj, _player2_obj)
     frame_table_prev_state[_key] = _state
   end
 
+  -- deferred total/adv: when attacker animation lasts >90F (e.g. Ken LP+LK, command grabs),
+  -- keep watching until attacker goes neutral or the search window expires
+  for _, _key in ipairs({ "p1", "p2" }) do
+    local _ps = frame_table_pending_stats[_key]
+    if _ps then
+      if frame_number > _ps.expires then
+        frame_table_pending_stats[_key] = nil
+      elseif _states[_key] == "neutral" then
+        local _total = frame_number - _ps.attacker_start_frame
+        local _attacker_neutral_abs = frame_number
+
+        local _defender = frame_table_players[_ps.defender_key]
+        local _from_idx = _ps.active_end_abs - _ps.defender_start_frame + 1
+        if _from_idx < 1 then _from_idx = 1 end
+
+        local _defender_neutral_idx = find_first(_defender.buffer, "neutral", _from_idx)
+        local _advantage = nil
+        if _defender_neutral_idx then
+          local _defender_neutral_abs = _ps.defender_start_frame + _defender_neutral_idx - 1
+          _advantage = _defender_neutral_abs - _attacker_neutral_abs
+        else
+          frame_table_pending_adv[_key] = {
+            attacker_neutral_abs = _attacker_neutral_abs,
+            expires = frame_number + 90,
+          }
+        end
+
+        if frame_table_stats[_key] then
+          frame_table_stats[_key].total     = _total
+          frame_table_stats[_key].advantage = _advantage
+        end
+        frame_table_pending_stats[_key] = nil
+      end
+    end
+  end
+
+  -- deferred advantage: when buffer filled before defender reached neutral (e.g. throws),
+  -- keep watching until defender goes neutral or the search window expires
+  for _, _key in ipairs({ "p1", "p2" }) do
+    local _pending = frame_table_pending_adv[_key]
+    if _pending then
+      if frame_number > _pending.expires then
+        frame_table_pending_adv[_key] = nil
+      else
+        local _other_key = (_key == "p1") and "p2" or "p1"
+        if _states[_other_key] == "neutral" then
+          local _advantage = frame_number - _pending.attacker_neutral_abs
+          if frame_table_stats[_key] then
+            frame_table_stats[_key].advantage = _advantage
+          end
+          frame_table_pending_adv[_key] = nil
+        end
+      end
+    end
+  end
+
   -- a fresh attack/parry on one side also arms the other side (if it isn't
   -- already capturing its own thing), with the same start_frame, so the
   -- defender's buffer starts with real neutral frames before the action lands.
@@ -230,7 +332,7 @@ function frame_table_update(_player1_obj, _player2_obj)
 
     if not _p.armed then
       local _fresh_trigger = _state == "parry" or has_just_attacked(_objs[_key])
-      local _continuation_trigger = _state == "startup" or _state == "active" or _state == "hitstun"
+      local _continuation_trigger = _state == "startup" or _state == "active" or _state == "projectile" or _state == "hitstun"
       -- a true continuation means the just-frozen buffer's last slot was already
       -- in this same state (the action carried straight through frame 90);
       -- otherwise this is a brand-new action (e.g. a jump starting right after
@@ -238,12 +340,12 @@ function frame_table_update(_player1_obj, _player2_obj)
       local _is_true_continuation = _continuation_trigger and _p.buffer[FRAME_TABLE_LENGTH] == _state
 
       if _fresh_trigger or _continuation_trigger then
-        frame_table_arm(_key, _is_true_continuation and not _fresh_trigger)
+        frame_table_arm(_key, _is_true_continuation and not _fresh_trigger, _fresh_trigger and _objs[_key].has_animation_just_changed)
 
         if _fresh_trigger then
           local _other_key = (_key == "p1") and "p2" or "p1"
           if not frame_table_players[_other_key].armed then
-            frame_table_arm(_other_key, false)
+            frame_table_arm(_other_key, false, false)
           end
         end
       end
@@ -275,6 +377,8 @@ function frame_table_reset()
   frame_table_in_hitstun = { p1 = false, p2 = false }
   frame_table_run_length = { p1 = 0, p2 = 0 }
   frame_table_prev_state = { p1 = nil, p2 = nil }
+  frame_table_pending_adv = { p1 = nil, p2 = nil }
+  frame_table_pending_stats = { p1 = nil, p2 = nil }
 end
 
 -- label the end of each non-neutral run within [_from, _to] with its (true,
@@ -294,8 +398,9 @@ local function frame_table_draw_run_labels(_buffer, _run_lengths, _from, _to, _x
       end
       local _length = _run_lengths[_end] or (_end - i + 1)
       local _digits = string.format("%d", _length)
+      local _num_width = get_text_width(_digits)
       local _right_edge = _x + _end * _block_width
-      gui.text(_right_edge - get_text_width(_digits), _y, _digits, _text_color, text_default_border_color)
+      gui.text(_right_edge - _num_width, _y, _digits, _text_color, text_default_border_color)
       i = _end + 1
     end
   end
@@ -364,11 +469,12 @@ function frame_table_stats_parts(_key)
   return _prefix, _adv_str, _adv_color
 end
 
-frame_table_legend_order = { "neutral", "startup", "active", "recovery", "hitstun", "parry", "invincible" }
+frame_table_legend_order = { "neutral", "startup", "active", "recovery", "hitstun", "projectile", "parry", "invincible" }
 frame_table_legend_labels = {
   neutral    = "Neutral",
   startup    = "Startup",
   active     = "Active",
+  projectile = "Projectile",
   recovery   = "Recovery",
   hitstun    = "Hitstun",
   parry      = "Parry",
