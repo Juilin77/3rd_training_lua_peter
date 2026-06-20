@@ -229,6 +229,13 @@ A: Install prerequires from [here](https://github.com/TASVideos/BizHawk-Prereqs/
 [Trello board](https://trello.com/b/UQ8ey2rQ/3rdtraining)
 
 ## Changelog
+### v0.21 (20/06/2026)
+- [Improvement] Capitalized on-screen labels in Display Damage Info (Damage/Stun/Combo etc.) and Display Frame Advantage (Startup/Hit Frame/Advantage etc.) popups (contribution of @Juilin77)
+- [Improvement] Frame Table cancel detection: when a move cancel is detected (active resumes after recovery with animation change), recovery frames are relabeled as startup, showing a cleaner green|red | green|red|blue pattern (contribution of @Juilin77)
+- [Feature] Frame Table: added "Projectile" state (coffee brown) for projectile moves; fixes all-green bug where fireball recovery was misclassified as startup (contribution of @Juilin77)
+- [Fix] Frame Table: throw moves (normal throws, command grabs, multi-hit throws) now correctly show blue recovery frames and calculate Total/Adv using deferred neutral tracking beyond the 90-frame buffer (contribution of @Juilin77)
+- [Feature] Added 720 Input Trainer (Special Training → Mode → 720, Hugo only): detects 720° rotation using SF3's 11-frame window (Condition A+B, confirmed from 3s-decomp); shows "720!" on success, "Too Late"/"Wrong Button" on failure with 3-second display (contribution of @Juilin77)
+
 ### v0.20 (18/06/2026)
 - [Feature] Throw Tech Training (Special Training → Mode → Tech Throw): shows a 5-frame throw tech window after being grabbed, with a delta marker showing when LP+LK was pressed and result feedback — Success (green), Too Late, Too Early, or Parry Active (red) (contribution of @Juilin77)
 - [Improvement] Tech Throw gauge extended timeout window to 6F to account for action propagation delay; validity bar freezes at input frame to eliminate off-by-one visual gap (contribution of @Juilin77)
