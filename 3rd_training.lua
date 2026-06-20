@@ -580,9 +580,10 @@ throw_tech_disp = {
 
 rot720_disp = {
   history = {},      -- {dir, frame} entries
-  window = 11,       -- 11 frame window
+  window = 11,       -- 11 frame window (confirmed from 3s-decomp)
   success_flash = 0,
-  fail_reason = nil, -- "direction" or "time"
+  fail_reason = nil, -- "incomplete" or "time" or "wrong_button"
+  fail_timer = 0,    -- counts down from 180 (3 seconds), clears fail_reason
   sequence = {},     -- 最多7個方向記錄，用於顯示
   last_button = nil, -- "LP"/"MP"/"HP"/"LK"/"MK"/"HK"
 }
@@ -3164,7 +3165,7 @@ function on_gui()
     -- do not show if special training not following character is on, otherwise it will overlap
     -- exception: juggle and tech throw have fixed-position gauges at y=82, no overlap with damage info at y=49
     local _st_mode = special_training_mode[training_settings.special_training_current_mode]
-    if training_settings.display_attack_data and (training_settings.special_training_current_mode == 1 or training_settings.special_training_follow_character or _st_mode == "Juggle" or _st_mode == "Tech Throw") then
+    if training_settings.display_attack_data and (training_settings.special_training_current_mode == 1 or training_settings.special_training_follow_character or _st_mode == "Juggle" or _st_mode == "Tech Throw" or _st_mode == "720") then
       attack_data_display()
     end
 
@@ -3587,8 +3588,8 @@ function on_gui()
     local CARD720 = {8, 2, 4, 6}
     local CARD_SYMBOL = {[8]="^", [2]="v", [4]="<", [6]=">"}
 
-    -- Follow character 位置
-    local _x = 170
+    -- Follow character 位置（預設對齊 Tech Throw）
+    local _x = screen_width - 138 - get_text_width("Juggle: ")
     local _y = 82
     if training_settings.special_training_follow_character then
       local _px = player.pos_x - screen_x + emu.screenwidth()/2
@@ -3632,14 +3633,12 @@ function on_gui()
         end
       end
 
-      -- 移除超過 11 幀的舊記錄
-      local _expired = false
-      while #rot720_disp.history > 0 and frame_number - rot720_disp.history[1].frame > 11 do
+      -- 移除超過 window 幀的舊記錄
+      while #rot720_disp.history > 0 and frame_number - rot720_disp.history[1].frame > rot720_disp.window do
         table.remove(rot720_disp.history, 1)
-        _expired = true
       end
-      if _expired and #rot720_disp.history == 0 then
-        rot720_disp.fail_reason = "time"
+      -- history 過期後清 sequence 顯示，不觸發 Too Late（Too Late 只在按 Punch 時判斷）
+      if #rot720_disp.history == 0 then
         rot720_disp.sequence = {}
       end
 
@@ -3667,30 +3666,56 @@ function on_gui()
       end
 
       -- 偵測按拳 / 按腳
-      local _kick = _input[_prefix.."LK"] or _input[_prefix.."MK"] or _input[_prefix.."HK"]
+      local _kick = _input[_prefix.."Weak Kick"] or _input[_prefix.."Medium Kick"] or _input[_prefix.."Strong Kick"]
       if _kick then
-        if _input[_prefix.."LK"] then rot720_disp.last_button = "LK"
-        elseif _input[_prefix.."MK"] then rot720_disp.last_button = "MK"
+        if _input[_prefix.."Weak Kick"] then rot720_disp.last_button = "LK"
+        elseif _input[_prefix.."Medium Kick"] then rot720_disp.last_button = "MK"
         else rot720_disp.last_button = "HK" end
         rot720_disp.fail_reason = "wrong_button"
+        rot720_disp.fail_timer = 180
       end
-      local _punch = _input[_prefix.."LP"] or _input[_prefix.."MP"] or _input[_prefix.."HP"]
+      local _punch = _input[_prefix.."Weak Punch"] or _input[_prefix.."Medium Punch"] or _input[_prefix.."Strong Punch"]
       if _punch then
-        if _input[_prefix.."LP"] then rot720_disp.last_button = "LP"
-        elseif _input[_prefix.."MP"] then rot720_disp.last_button = "MP"
+        if _input[_prefix.."Weak Punch"] then rot720_disp.last_button = "LP"
+        elseif _input[_prefix.."Medium Punch"] then rot720_disp.last_button = "MP"
         else rot720_disp.last_button = "HP" end
-        if check_720_condB(rot720_disp.history) then
-          rot720_disp.success_flash = 60
+        local function check_720_condA(hist)
+          local cnt = {[2]=0,[4]=0,[6]=0,[8]=0}
+          for _, e in ipairs(hist) do cnt[e.dir] = (cnt[e.dir] or 0) + 1 end
+          return cnt[2]>=2 and cnt[4]>=2 and cnt[6]>=2 and cnt[8]>=2
+        end
+        local function pre_filter(hist)
+          local unique = {}
+          local count = 0
+          local has_up = false
+          for _, e in ipairs(hist) do
+            if not unique[e.dir] then unique[e.dir] = true; count = count + 1 end
+            if e.dir == 8 then has_up = true end
+          end
+          return count >= 3 and has_up
+        end
+        if not pre_filter(rot720_disp.history) then
+          -- 靜默忽略：方向不夠或沒有 ↑，不顯示任何訊息
+        elseif check_720_condA(rot720_disp.history) or check_720_condB(rot720_disp.history) then
+          rot720_disp.success_flash = 180
           rot720_disp.fail_reason = nil
+          rot720_disp.fail_timer = 0
           rot720_disp.history = {}
           rot720_disp.sequence = {}
         else
-          rot720_disp.fail_reason = "direction"
+          rot720_disp.fail_reason = "time"
+          rot720_disp.fail_timer = 180
         end
       end
 
       if rot720_disp.success_flash > 0 then
         rot720_disp.success_flash = rot720_disp.success_flash - 1
+      end
+      if rot720_disp.fail_timer > 0 then
+        rot720_disp.fail_timer = rot720_disp.fail_timer - 1
+        if rot720_disp.fail_timer == 0 then
+          rot720_disp.fail_reason = nil
+        end
       end
 
       -- === 繪圖 ===
@@ -3709,8 +3734,8 @@ function on_gui()
         gui.text(_x + _title_w, _y, "Too Late", 0xE70000FF, text_default_border_color)
       elseif rot720_disp.fail_reason == "wrong_button" then
         gui.text(_x + _title_w, _y, "Wrong Button", 0xE70000FF, text_default_border_color)
-      elseif rot720_disp.fail_reason == "direction" then
-        gui.text(_x + _title_w, _y, "少方向", 0xE70000FF, text_default_border_color)
+      elseif rot720_disp.fail_reason == "incomplete" then
+        gui.text(_x + _title_w, _y, "Incomplete", 0xE70000FF, text_default_border_color)
       end
 
       -- 第一排：7 個格子顯示方向圖示（img_dir_small，8px 每格）
@@ -3748,9 +3773,9 @@ function on_gui()
       if #rot720_disp.history > 0 then
         _elapsed = frame_number - rot720_disp.history[1].frame
       end
-      local _ratio = math.max(0, 1.0 - _elapsed / 11)
+      local _ratio = math.max(0, 1.0 - _elapsed / rot720_disp.window)
       draw_gauge(_x, _y2, _bar_w, 4, _ratio, 0xFF6B00FF, 0x333333FF, nil, true)
-      gui.text(_x + _bar_w + 4, _y2, string.format("%dF", math.max(0, 11 - _elapsed)), text_default_color, text_default_border_color)
+      gui.text(_x + _bar_w + 4, _y2, string.format("%dF", math.max(0, rot720_disp.window - _elapsed)), text_default_color, text_default_border_color)
 
     end -- char check
   end -- mode check
