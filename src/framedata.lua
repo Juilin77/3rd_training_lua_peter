@@ -168,7 +168,9 @@ function record_framedata(_player_obj, _projectiles)
         local _range_end_frame = _hit_frame
         if _hit_frame < _range_limit_frame then
           for _j = (_hit_frame + 1), _range_limit_frame do
-            if #current_recording_animation.frames[_j].boxes > 0 then
+            local _fj = current_recording_animation.frames[_j]
+            if not _fj then break end
+            if #_fj.boxes > 0 then
               _range_end_frame = _j - 1
             else
               break
@@ -201,7 +203,7 @@ function record_framedata(_player_obj, _projectiles)
   if (current_recording_animation) then
 
     local _frame = frame_number - _player_obj.current_animation_freeze_frames - _player_obj.current_animation_start_frame
-    if _player_obj.has_just_acted then
+    if _player_obj.has_just_acted and _frame >= 0 then
       table.insert(current_recording_animation.hit_frames, _frame)
     end
 
@@ -229,7 +231,7 @@ function record_framedata(_player_obj, _projectiles)
         end
       end
 
-      local _move_framedata_meta = frame_data_meta[_player_obj.char_str].moves[current_recording_animation.id]
+      local _move_framedata_meta = frame_data_meta[_player_obj.char_str] and frame_data_meta[_player_obj.char_str].moves and frame_data_meta[_player_obj.char_str].moves[current_recording_animation.id] or nil
       if _move_framedata_meta and _move_framedata_meta.record_projectile then
         local _inserted_projectile = false
         for _id, _obj in pairs(_projectiles) do

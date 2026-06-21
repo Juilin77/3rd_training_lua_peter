@@ -841,7 +841,7 @@ function predict_hitboxes(_player_obj, _frames_prediction)
   local _frame_data = find_move_frame_data(_player_obj.char_str, _player_obj.relevant_animation)
   if not _frame_data then return _result end
 
-  local _frame_data_meta = frame_data_meta[_player_obj.char_str].moves[_player_obj.relevant_animation]
+  local _frame_data_meta = frame_data_meta[_player_obj.char_str] and frame_data_meta[_player_obj.char_str].moves[_player_obj.relevant_animation] or nil
 
   local _frame = _player_obj.relevant_animation_frame
   local _frame_to_check = _frame + _frames_prediction
@@ -906,7 +906,7 @@ function predict_hurtboxes(_player_obj, _frames_prediction)
   local _result = _player_obj.boxes
 
   -- If we wake up, we need to foresee the position of the hurtboxes in the frame data so we can block frame 1
-  if _player_obj.is_wakingup then
+  if _player_obj.is_wakingup and frame_data[_player_obj.char_str] then
     local _idle_startup_frame_data = frame_data[_player_obj.char_str].wakeup_to_idle
     local _idle_frame_data = frame_data[_player_obj.char_str].idle
     if _idle_startup_frame_data ~= nil and _idle_frame_data ~= nil then
@@ -1141,7 +1141,7 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
           --log(_dummy.prefix, "blocking", string.format("%d,%d", _predicted_hit.frame, _predicted_hit.hit_id))
 
           local _box_type_matches = {{{"vulnerability", "ext. vulnerability"}, {"attack"}}}
-          if frame_data_meta[_player.char_str].moves[_player.relevant_animation] and frame_data_meta[_player.char_str].moves[_player.relevant_animation].hit_throw then
+          if frame_data_meta[_player.char_str] and frame_data_meta[_player.char_str].moves and frame_data_meta[_player.char_str].moves[_player.relevant_animation] and frame_data_meta[_player.char_str].moves[_player.relevant_animation].hit_throw then
             table.insert(_box_type_matches, {{"throwable"}, {"throw"}})
           end
 
@@ -1227,7 +1227,7 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
 
           local _movement = nil
           local _lifetime = _projectile_obj.lifetime
-          local _projectile_meta_data = frame_data_meta[_player.char_str].projectiles[_projectile_obj.projectile_start_type]
+          local _projectile_meta_data = frame_data_meta[_player.char_str] and frame_data_meta[_player.char_str].projectiles and frame_data_meta[_player.char_str].projectiles[_projectile_obj.projectile_start_type] or nil
           if _projectile_meta_data ~= nil then
             _movement = _projectile_meta_data.movement
           end
@@ -1303,7 +1303,7 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
         _hit_type = _frame_data_meta.hits[_dummy.blocking.expected_attack_hit_id].type
       end
     elseif _dummy.blocking.should_block_projectile then
-      local _frame_data_meta = frame_data_meta[_player.char_str].projectiles[_dummy.blocking.expected_projectile.projectile_type]
+      local _frame_data_meta = frame_data_meta[_player.char_str] and frame_data_meta[_player.char_str].projectiles and frame_data_meta[_player.char_str].projectiles[_dummy.blocking.expected_projectile.projectile_type] or nil
       if _frame_data_meta then
         _hit_type = _frame_data_meta.type
       end
@@ -3027,7 +3027,8 @@ function before_frame()
 
       local _movement = nil
       local _lifetime = _obj.lifetime
-      local _projectile_meta_data = frame_data_meta[player_objects[_obj.emitter_id].char_str].projectiles[_obj.projectile_type]
+      local _emitter = player_objects[_obj.emitter_id]
+      local _projectile_meta_data = _emitter and frame_data_meta[_emitter.char_str] and frame_data_meta[_emitter.char_str].projectiles and frame_data_meta[_emitter.char_str].projectiles[_obj.projectile_type] or nil
       if _projectile_meta_data ~= nil then
         _movement = _projectile_meta_data.movement
       end

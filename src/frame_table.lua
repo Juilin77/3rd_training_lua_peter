@@ -36,6 +36,7 @@ frame_table_prev_action = { p1 = nil, p2 = nil }
 frame_table_just_cancelled = { p1 = false, p2 = false }
 
 local function has_hitbox(_player_obj)
+  if not _player_obj.boxes then return false end
   for _, _box in ipairs(_player_obj.boxes) do
     if _box.type == "attack" or _box.type == "throw" then
       return true
@@ -54,6 +55,7 @@ local function has_active_projectile(_player_obj)
 end
 
 local function has_vulnerability_box(_player_obj)
+  if not _player_obj.boxes then return false end
   for _, _box in ipairs(_player_obj.boxes) do
     if _box.type == "vulnerability" or _box.type == "ext. vulnerability" then
       return true
@@ -233,6 +235,7 @@ local function frame_table_arm(_key, _preserve_as_dimmed, _clear_stats)
 end
 
 function frame_table_update(_player1_obj, _player2_obj)
+  if not _player1_obj.boxes or not _player2_obj.boxes then return end
   local _objs = { p1 = _player1_obj, p2 = _player2_obj }
 
   -- reset has_been_active only when animation AND action both change (new move started):
