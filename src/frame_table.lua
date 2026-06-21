@@ -31,6 +31,9 @@ frame_table_pending_adv = { p1 = nil, p2 = nil }
 -- each entry: { attacker_neutral_abs = N, expires = frame_N } or nil
 frame_table_pending_stats = { p1 = nil, p2 = nil }
 -- each entry: { startup=N, attacker_start_frame=N, active_end_abs=N, defender_key="p1"/"p2", defender_start_frame=N, expires=N } or nil
+frame_table_prev_animation = { p1 = nil, p2 = nil }
+frame_table_prev_action = { p1 = nil, p2 = nil }
+frame_table_just_cancelled = { p1 = false, p2 = false }
 
 local function has_hitbox(_player_obj)
   for _, _box in ipairs(_player_obj.boxes) do
@@ -230,28 +233,28 @@ local function frame_table_arm(_key, _preserve_as_dimmed, _clear_stats)
 end
 
 function frame_table_update(_player1_obj, _player2_obj)
+  local _objs = { p1 = _player1_obj, p2 = _player2_obj }
+
+  -- reset has_been_active only when animation AND action both change (new move started):
+  -- same-move phase changes (e.g. active→recovery of a special) keep action constant,
+  -- so they no longer incorrectly clear has_been_active and show green.
+  -- when a cancel is confirmed, also retroactively fix any gap recovery frame to startup.
+  for _, _key in ipairs({ "p1", "p2" }) do
+    if _objs[_key].animation ~= (frame_table_prev_animation[_key] or "")
+       and frame_table_has_been_active[_key]
+       and frame_table_prev_action[_key] ~= nil
+       and _objs[_key].action ~= frame_table_prev_action[_key] then
+      frame_table_has_been_active[_key] = false
+      frame_table_just_cancelled[_key] = true
+    end
+    frame_table_prev_animation[_key] = _objs[_key].animation
+    frame_table_prev_action[_key] = _objs[_key].action
+  end
+
   local _states = {
     p1 = frame_table_classify(_player1_obj, "p1"),
     p2 = frame_table_classify(_player2_obj, "p2"),
   }
-  local _objs = { p1 = _player1_obj, p2 = _player2_obj }
-
-  -- detect cancel: active frame follows recovery means previous move was cancelled;
-  -- relabel all recovery frames as startup so display shows green instead of blue
-  for _, _key in ipairs({ "p1", "p2" }) do
-    if _states[_key] == "active" and frame_table_prev_state[_key] == "recovery" and _objs[_key].has_animation_just_changed then
-      local _p = frame_table_players[_key]
-      local _run = frame_table_run_length[_key]
-      local _n = #_p.buffer
-      local _cancel_start = math.max(_n - _run + 1, 1)
-      for i = _cancel_start, _n do
-        if _p.buffer[i] == "recovery" then
-          _p.buffer[i] = "startup"
-          _p.run_lengths[i] = i - _cancel_start + 1
-        end
-      end
-    end
-  end
 
   -- run-length tracking, independent of arming
   for _, _key in ipairs({ "p1", "p2" }) do
@@ -361,10 +364,22 @@ function frame_table_update(_player1_obj, _player2_obj)
       table.insert(_p.run_lengths, frame_table_run_length[_key])
       _p.count = _p.count + 1
 
+      -- retroactive cancel gap fix: the 1-frame gap between hitbox disappearing and
+      -- animation updating shows as recovery; relabel only that single frame to startup
+      if frame_table_just_cancelled[_key] and _state == "startup" then
+        local prev = #_p.buffer - 1
+        if prev >= 1 and _p.buffer[prev] == "recovery" then
+          _p.buffer[prev] = "startup"
+        end
+      end
+      frame_table_just_cancelled[_key] = false
+
       if _p.count >= FRAME_TABLE_LENGTH then
         _p.armed = false
         frame_table_update_stats(_key)
       end
+    else
+      frame_table_just_cancelled[_key] = false
     end
   end
 end
@@ -379,6 +394,9 @@ function frame_table_reset()
   frame_table_prev_state = { p1 = nil, p2 = nil }
   frame_table_pending_adv = { p1 = nil, p2 = nil }
   frame_table_pending_stats = { p1 = nil, p2 = nil }
+  frame_table_prev_animation = { p1 = nil, p2 = nil }
+  frame_table_prev_action = { p1 = nil, p2 = nil }
+  frame_table_just_cancelled = { p1 = false, p2 = false }
 end
 
 -- label the end of each non-neutral run within [_from, _to] with its (true,
