@@ -22,7 +22,6 @@ The right version of Fightcade can be downloaded [here](https://www.fightcade.co
 - [Display](docs/display.md)
 - [Rules](docs/rules.md)
 - [Special Training](docs/special_training.md)
-- [Guard Jump](docs/guard_jump.md)
 
 ## Bug reporting / Contribute
 If you want to be informed when a new version come out and/or discuss the current bugs and features, you can join the [Discord server](https://discord.gg/CDXQyFmcSe) of the project.
