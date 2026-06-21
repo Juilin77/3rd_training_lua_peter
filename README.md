@@ -266,7 +266,7 @@ Displays the dummy's remaining **air hitstun** (juggle frames) as a gauge with t
 
 #### Tech Throw Mode
 
-![Tech Throw Mode](screenshots/allopen.png)
+![Tech Throw Mode](screenshots/special_training_techthrow.png)
 
 Shows a timing gauge when you are grabbed. Input **LP+LK** within the green window to tech (escape) the throw.
 
