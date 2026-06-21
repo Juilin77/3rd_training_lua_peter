@@ -3,6 +3,8 @@ Training mode for Street Fighter III 3rd Strike (Japan 990512), on Fightcade v2.
 
 The right version of Fightcade can be downloaded [here](https://www.fightcade.com/)
 
+![All Features](screenshots/allopen.png)
+
 ## Main Features
 - Can set dummy to counter-attack with any move on frame 1 after any hit / block / parry / wake-up
 - Can record and replay sequences into 8 different slots
@@ -15,6 +17,8 @@ The right version of Fightcade can be downloaded [here](https://www.fightcade.co
 ---
 
 ### Dummy
+
+![Dummy](screenshots/dummy.png)
 
 Configure how the CPU-controlled dummy behaves during training. Set its default stance, blocking style, throw tech responses, and counter-attack options.
 
@@ -32,6 +36,8 @@ Configure how the CPU-controlled dummy behaves during training. Set its default 
 ---
 
 ### Recording
+
+![Recording](screenshots/recording.png)
 
 Record and manage input sequences across up to 8 slots. Control playback order, timing, and save/load sequences to files.
 
@@ -53,6 +59,8 @@ Record and manage input sequences across up to 8 slots. Control playback order, 
 
 ### Missions
 
+![Missions](screenshots/missions.png)
+
 Record and replay multi-step training scenarios (missions) across up to 10 dedicated slots. Also provides pattern import for replaying AI-analyzed combo patterns against the dummy.
 
 | Option | Description |
@@ -73,7 +81,7 @@ Record and replay multi-step training scenarios (missions) across up to 10 dedic
 
 ### Display
 
-![Display Gauges Numbers](screenshots/display_gauges.png)
+![Display](screenshots/display.png)
 
 Toggle various on-screen overlays to visualize game data in real time.
 
@@ -93,11 +101,85 @@ Toggle various on-screen overlays to visualize game data in real time.
 | P1 distance reference point | Distance measurement origin for P1: character origin or hurtbox edge. |
 | P2 distance reference point | Distance measurement origin for P2: character origin or hurtbox edge. |
 
+---
+
+#### Display Gauges Numbers
+
+![Display Gauges Numbers](screenshots/display_gauges.png)
+
+When enabled, shows numeric HP / stun / Super values for both players, plus a **Life Loss Indicator** — a red ㄇ-shaped bracket above the health bar showing how much HP was lost in the current round.
+
+---
+
+#### Display Damage Info
+
+![Display Damage Info](screenshots/display_damageinfo.png)
+
+Shows per-hit damage, stun, and combo count in real time. Displays both current-hit values and running totals (Total Damage / Total Stun / Max Combo).
+
+---
+
+#### Display P1 / P2 Input History
+
+![Input History](screenshots/display_inputhistory.png)
+
+Shows a scrolling input log on screen — P1 on the left, P2 on the right. Each row shows a direction and the frame count it was held. Enable **Dynamic P1 Input History** to auto-scroll so the most recent input always appears at the top.
+
+---
+
+#### Display Frame Advantage
+
+![Display Frame Advantage](screenshots/display_frameadv.png)
+
+After each hit or block, shows the move's **Startup**, **Active**, and **Duration** (total frames) on screen. Use this to quickly read frame data without leaving the game.
+
+---
+
+#### Frame Table
+
+![Frame Table](screenshots/frame_table.png)
+
+The Frame Table shows a real-time per-frame state bar for both P1 (top) and P2 (bottom). Each colored block represents one game frame. The header line shows **Start / Total / Adv** stats after each move.
+
+| Color | State | Meaning |
+|-------|-------|---------|
+| 🟩 Green | Startup | Frames before the first hitbox appears |
+| 🟥 Red | Active | Frames where the attack hitbox is active |
+| 🟫 Brown | Projectile | Frames where a projectile hitbox is active |
+| 🟦 Blue | Recovery | Frames after the active window until the character can act |
+| 🟨 Yellow | Hitstun / Blockstun | Frames the defender cannot act after being hit or blocking |
+| 🟪 Purple | Parry | Frames where a parry succeeded |
+| ⬜ White | Invincible | Frames where the character has no vulnerability box |
+| ⬛ Dark grey | Neutral | Idle / no action |
+
+---
+
+#### Display Hitboxes
+
 ![Display Hitboxes](screenshots/display_hitboxes.png)
+
+| Color | Box type |
+|-------|----------|
+| 🟥 Red | Attack box (hitbox) |
+| 🟦 Blue | Vulnerability box (hurtbox) |
+| 🟩 Green | Extended vulnerability box |
+| 🟨 Yellow | Throw box |
+| 🟧 Orange | Throwable box (can be grabbed) |
+| ⬜ White | Push box |
+
+---
+
+#### Display Distances
+
+![Display Distances](screenshots/display_distance.png)
+
+Shows real-time distance measurements between P1 and P2 as horizontal lines on screen. Three measurements are displayed: ground distance (at feet), mid-body distance (configurable height), and a second reference line. Configure the height and reference point (character origin or hurtbox edge) for each player.
 
 ---
 
 ### Rules
+
+![Rules](screenshots/rules.png)
 
 Adjust match conditions to suit your training goals — time, health recovery, stun behavior, meter, and miscellaneous options.
 
@@ -123,20 +205,85 @@ Adjust match conditions to suit your training goals — time, health recovery, s
 
 ### Special Training
 
-![Special Training](screenshots/special_training.png)
-![Tech Throw Training](screenshots/tech_throw.png)
+![Special Training Menu](screenshots/special_training_menu.png)
 
-Focused training tools for specific SF3 mechanics — parry timing, charge inputs, Chun-Li's Hyakuretsu Kyaku, juggle hitstun, and throw tech.
+Focused training tools for specific SF3 mechanics. Select a mode from **Special Training → Mode** and close the menu to activate.
 
 | Option | Description |
 |--------|-------------|
-| Mode | Training mode to activate: None (off), Parry (parry timing gauges with validity and cooldown windows), Charge (charge input timer for held-input normals and specials), Hyakuretsu Kyaku (Chun-Li rapid kick input trainer), Juggle (remaining air hitstun gauge for combo extensions), or Tech Throw (throw tech training — shows a 5-frame timing window with Success / Too Late / Too Early / Parry Active feedback and a delta marker showing input timing). |
-| Follow Character | When enabled, the special training gauge follows P1's position on screen. Grayed out in None, Juggle, and Tech Throw modes. |
-| Forward Parry Helper | Show a timing window for forward parry inputs. Active in parry mode only. |
-| Down Parry Helper | Show a timing window for down parry inputs. Active in parry mode only. |
-| Air Parry Helper | Show a timing window for air parry inputs. Active in parry mode only. |
-| Anti-Air Parry Helper | Show a timing window for anti-air parry inputs. Active in parry mode only. |
-| Display Overcharge | Highlight when a charge input has been held longer than the minimum required (overcharge). Active in charge mode only. |
+| Mode | Training mode: None / Parry / Charge / Hyakuretsu Kyaku / Juggle / Tech Throw / 720 |
+| Follow Character | Gauge follows P1's on-screen position. Grayed out in None, Juggle, Tech Throw, and 720 modes. |
+
+---
+
+#### Parry Mode
+
+![Parry Mode](screenshots/special_training_parry.png)
+
+Shows real-time timing gauges for all four parry types. Each gauge has two bars:
+- **Blue bar** — validity window (the frame window where a parry input is accepted)
+- **Orange bar** — cooldown window (frames before the next parry can be attempted)
+- **Green number** — delta: how many frames early (positive) or late (negative) the parry input was
+
+| Option | Description |
+|--------|-------------|
+| Forward Parry Helper | Show timing gauge for forward parry. |
+| Down Parry Helper | Show timing gauge for down parry. |
+| Air Parry Helper | Show timing gauge for air parry. |
+| Anti-Air Parry Helper | Show timing gauge for anti-air parry. |
+| Follow Character | Gauge follows P1's on-screen position. |
+
+---
+
+#### Charge Mode
+
+![Charge Mode](screenshots/special_training_charge.png)
+
+Shows charge timers for held-input special moves (e.g. Remy's LoV, Urien's Headbutt). Each gauge fills as you hold the required direction. The number on the right shows remaining frames to complete the charge.
+
+| Option | Description |
+|--------|-------------|
+| Display Overcharge | Highlight when charge exceeds the minimum required (overcharge indicator). |
+| Follow Character | Gauge follows P1's on-screen position. |
+
+---
+
+#### Hyakuretsu Kyaku Mode (Chun-Li only)
+
+![Hyakuretsu Kyaku Mode](screenshots/special_training_hyakuretsu.png)
+
+Tracks rapid kick button presses for Chun-Li's Hyakuretsu Kyaku. Shows input count for LK / MK / HK and a reset timer bar. The reset timer shows how long until the kick count resets if no button is pressed.
+
+---
+
+#### Juggle Mode
+
+![Juggle Mode](screenshots/special_training_juggle.png)
+
+Displays the dummy's remaining **air hitstun** (juggle frames) as a gauge with tick marks. Each tick corresponds to a juggle decay threshold — once the gauge drops past a tick, the next hit may not connect. Use this to find the optimal timing and limit for air combos.
+
+---
+
+#### Tech Throw Mode
+
+Shows a timing gauge when you are grabbed. Input **LP+LK** within the green window to tech (escape) the throw.
+
+- **Green bar** — 5-frame tech window (input LP+LK here)
+- **Orange bar** — Fwd/down parry validity (parry active = cannot tech throw)
+- **Delta marker** — shows how many frames early or late your LP+LK input was
+- **Result text** — Success (green) / Too Early / Too Late / Parry Active (red)
+
+---
+
+#### 720 Mode (Hugo only)
+
+![720 Mode](screenshots/special_training_720.png)
+
+Detects Hugo's 720° rotation input using SF3's 11-frame window. Shows an input display and result feedback.
+
+- **Result text** — 720! (green, success) / Too Late / Wrong Button
+- **Orange bar** — 11-frame input window
+- **Input squares** — direction inputs captured during the rotation
 
 ---
 
@@ -187,13 +334,32 @@ One such advanced use case example would be a Makoto player using the ability us
 
 Thank you for your support in this matter and please enjoy!
 
-## How to use
-* Download emulator from [here](https://www.fightcade.com/) and find the proper roms
-* Download the archive from [here](https://github.com/Grouflon/3rd_training_lua/archive/master.zip) or clone repository
-* Extract the archive anywhere on your computer
-* Start the emulator, load the rom, start a match with P1 and P2 (you will need to map input for both players)
-* Go to Game->Lua Scripting->New Lua Script Window and run the script **3rd_training.lua** from here
-* Follow instructions from the Output Console
+## How to Use
+
+### Requirements
+- **Fightcade v2** — download from [fightcade.com](https://www.fightcade.com/)
+- **ROMs** — `sfiii3.zip` (Japan) and `sfiii3a.zip` (USA) are both required. The script targets the `sfiii3nr1` ROM version.
+
+### Installation
+1. Download or clone this repository: [Juilin77/3rd_training_lua_peter](https://github.com/Juilin77/3rd_training_lua_peter)
+2. Extract the folder anywhere on your computer
+3. Launch Fightcade and start a match of Street Fighter III 3rd Strike (you will need controllers mapped for both P1 and P2)
+4. In FBNeo, go to **Game → Lua Scripting → New Lua Script Window**
+5. Run `3rd_training.lua` from the extracted folder
+
+### Training Menu
+- Press **Start** in-game to open or close the training menu
+- Navigate tabs with **Left / Right**, scroll options with **Up / Down**
+- Change values with **Left / Right**, confirm buttons with **LP**
+
+### Hotkeys
+| Hotkey | Action |
+|--------|--------|
+| Alt+1 | Return to character select screen |
+| Alt+5 | Start / stop Mission recording |
+| Coin (double-tap) | Enter / exit recording mode |
+| Coin (single, in recording mode) | Start / stop recording |
+| Coin (single, in normal mode) | Start / stop replay |
 
 ## Bug reporting / Contribute
 If you want to be informed when a new version come out and/or discuss the current bugs and features, you can join the [Discord server](https://discord.gg/CDXQyFmcSe) of the project.
