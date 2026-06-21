@@ -228,6 +228,9 @@ frame_data_meta["makoto"].moves["3a50"] = { hits = {{ type = 3 }}, movement_type
 frame_data_meta["makoto"].moves["3b10"] = { hits = {{ type = 3 }}, movement_type = 2 } -- Air MK
 frame_data_meta["makoto"].moves["3c00"] = { hits = {{ type = 3 }}, movement_type = 2 } -- Air HK
 
+-- SA1 Seichuusen Godanzuki: attack anim "1898" is sub-frame (invisible to Lua), blocking not possible with current hitbox-prediction system
+frame_data_meta["makoto"].moves["1898"] = { force_recording = true, hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }} } -- SA1 (reference only, cannot be blocked)
+
 frame_data_meta["makoto"].moves["2190"] = { hits = {{ type = 3 }}, movement_type = 2 } -- L Tsurugi
 frame_data_meta["makoto"].moves["2310"] = { hits = {{ type = 3 }}, movement_type = 2 } -- M Tsurugi
 frame_data_meta["makoto"].moves["2410"] = { hits = {{ type = 3 }}, movement_type = 2 } -- H Tsurugi
