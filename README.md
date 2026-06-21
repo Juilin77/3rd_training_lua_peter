@@ -397,6 +397,12 @@ A: Install prerequires from [here](https://github.com/TASVideos/BizHawk-Prereqs/
 [Trello board](https://trello.com/b/UQ8ey2rQ/3rdtraining)
 
 ## Changelog
+### v0.22 (22/06/2026)
+- [Fix] Frame Table: single-move specials no longer show green recovery frames — active-to-recovery phase changes within the same move are now correctly classified using the `action` field (contribution of @Juilin77)
+- [Fix] Frame Table: cancel gap frame (1-frame blue between cancel active and new startup) retroactively relabeled to startup (contribution of @Juilin77)
+- [Fix] Multiple nil-access crash guards added across frame_table, framedata, and blocking code (contribution of @Juilin77)
+- [Improvement] README: complete documentation overhaul — new How to Use section with hotkey table, screenshots for all menu tabs, Display sub-sections with color legends, Special Training sub-sections per mode with screenshots (contribution of @Juilin77)
+
 ### v0.21 (20/06/2026)
 - [Improvement] Capitalized on-screen labels in Display Damage Info (Damage/Stun/Combo etc.) and Display Frame Advantage (Startup/Hit Frame/Advantage etc.) popups (contribution of @Juilin77)
 - [Improvement] Frame Table cancel detection: when a move cancel is detected (active resumes after recovery with animation change), recovery frames are relabeled as startup, showing a cleaner green|red | green|red|blue pattern (contribution of @Juilin77)
