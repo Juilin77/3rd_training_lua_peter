@@ -9,6 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## 概覽
 - FightCade v2 / FBNeo 的 SF3 3rd Strike 訓練模式 Lua 腳本
 - GitHub：https://github.com/Juilin77/3rd_training_lua_peter
+- 目前版本：v0.22
 - 版本號在 `src/startup.lua`
 
 ## 執行方式
