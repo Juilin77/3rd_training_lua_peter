@@ -186,6 +186,33 @@ function predict_hurtboxes(_player_obj, _frames_prediction)
   return _result
 end
 
+local function _hurtbox_dist(_attacker, _defender)
+  local _near_x = nil
+  for _, _box in ipairs(_defender.boxes) do
+    if _box.type == "vulnerability" or _box.type == "ext. vulnerability" then
+      local _edge
+      if _defender.flip_x ~= 0 then
+        -- facing left: left_edge = pos_x - left - width, right_edge = pos_x - left
+        _edge = (_attacker.pos_x < _defender.pos_x)
+                and (_defender.pos_x - _box.left - _box.width)
+                or  (_defender.pos_x - _box.left)
+      else
+        -- facing right: left_edge = pos_x + left, right_edge = pos_x + left + width
+        _edge = (_attacker.pos_x < _defender.pos_x)
+                and (_defender.pos_x + _box.left)
+                or  (_defender.pos_x + _box.left + _box.width)
+      end
+      if _near_x == nil
+         or (_attacker.pos_x < _defender.pos_x and _edge < _near_x)
+         or (_attacker.pos_x >= _defender.pos_x and _edge > _near_x) then
+        _near_x = _edge
+      end
+    end
+  end
+  return _near_x ~= nil and math.abs(_attacker.pos_x - _near_x)
+                         or math.abs(_attacker.pos_x - _defender.pos_x)
+end
+
 function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_count)
 
   local _debug = false
@@ -201,6 +228,8 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
   _dummy.blocking.sa_preblock_anim = _dummy.blocking.sa_preblock_anim or nil
   _dummy.blocking.sa_preblock_expire = _dummy.blocking.sa_preblock_expire or nil
   _dummy.blocking.sa_preblock_triggered = _dummy.blocking.sa_preblock_triggered or nil
+  _dummy.blocking.carry_hold_remaining = _dummy.blocking.carry_hold_remaining or 0
+  _dummy.blocking.carry_global_expected = _dummy.blocking.carry_global_expected or nil
 
   function stop_listening_hits(_player_obj)
     _dummy.blocking.listening = false
@@ -377,11 +406,22 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
       _dummy.blocking.is_bypassing_freeze_frames = false
       log(_dummy.prefix, "blocking", string.format("bypassing end"))
     end
-    -- force_recording carry 鏈（如 SA2）：封鎖一擊後立即維持 block，防止 landing 第一下漏掉
-    if _dummy.blocking.block_string then
+    -- force_recording carry 鏈（如 SA2）：用 global frame_number 計時，不受動畫 loop reset 影響
+    -- carry_offset = 下一擊距現在的 frame 數（SA2 = 45）；省略則用 carry_hold_remaining 做短補位
+    do
       local _cur_meta = frame_data_meta[_player.char_str] and frame_data_meta[_player.char_str].moves and frame_data_meta[_player.char_str].moves[_player.relevant_animation]
       if _cur_meta and _cur_meta.force_recording and _cur_meta.hits then
-        _dummy.blocking.should_block = true
+        -- Phase 2 未觸發但 SA 走近打中時（has_just_been_hit），從被打那下開始 carry
+        if _dummy.has_just_been_hit then
+          _dummy.blocking.block_string = true
+        end
+        if _dummy.blocking.block_string then
+          _dummy.blocking.should_block = true
+          _dummy.blocking.carry_hold_remaining = 15
+          if _cur_meta.carry_offset then
+            _dummy.blocking.carry_global_expected = frame_number + _cur_meta.carry_offset
+          end
+        end
       end
     end
   elseif _dummy.blocking.last_attack_hit_id < _player.next_hit_id - 1 then
@@ -391,6 +431,19 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
     _dummy.blocking.expected_attack_hit_id = 0
     _dummy.blocking.should_block = false
     reset_parry_cooldowns(_dummy)
+  end
+
+  -- force_recording exit: SA 動畫結束（切換到非 force_recording）→ 清 block_string，停止 carry
+  -- 防止 SA2 結束後 dummy 繼續 hold back 往後走
+  do
+    local _cur_fdm  = frame_data_meta[_player.char_str] and frame_data_meta[_player.char_str].moves and frame_data_meta[_player.char_str].moves[_player.relevant_animation]
+    local _prev_fdm = _dummy.blocking.last_player_anim and frame_data_meta[_player.char_str] and frame_data_meta[_player.char_str].moves and frame_data_meta[_player.char_str].moves[_dummy.blocking.last_player_anim]
+    if _dummy.blocking.block_string and _prev_fdm and _prev_fdm.force_recording and not (_cur_fdm and _cur_fdm.force_recording) then
+      _dummy.blocking.block_string = false
+      _dummy.blocking.should_block = false
+      _dummy.blocking.carry_global_expected = nil
+    end
+    _dummy.blocking.last_player_anim = _player.relevant_animation
   end
 
   -- Super Freeze Pre-Block Phase 1 (TODO 1.33): freeze 期間 prime sa_preblock
@@ -518,8 +571,9 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
       -- 改用物理模擬對 attacker 當前 RAM boxes 做碰撞測試
       if not _dummy.blocking.should_block and _dummy.blocking.listening then
         local _sim_hits = predict_hits_simulation(_player, _dummy, _max_prediction_frames, _dummy.blocking.last_attack_hit_id)
-        if _sim_hits[1] then
-          local _sh = _sim_hits[1]
+        local _sh = nil
+        for _d = 1, _max_prediction_frames do if _sim_hits[_d] then _sh = _sim_hits[_d]; break end end
+        if _sh then
           _dummy.blocking.expected_attack_animation_hit_frame = _sh.frame
           _dummy.blocking.expected_attack_hit_id = (_sh.hit_id or 0) > 0 and _sh.hit_id or (_dummy.blocking.last_attack_hit_id + 1)
           _dummy.blocking.should_block = true
@@ -567,8 +621,9 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
   -- No-frame-data fallback：animation 不在 frame_data，但 attacker 有 RAM attack boxes
   if not _dummy.blocking.should_block and not _dummy.blocking.listening and sim_has_attack_boxes(_player.boxes) then
     local _sim_hits = predict_hits_simulation(_player, _dummy, 3, _dummy.blocking.last_attack_hit_id)
-    if _sim_hits[1] then
-      local _sh = _sim_hits[1]
+    local _sh = nil
+    for _d = 1, 3 do if _sim_hits[_d] then _sh = _sim_hits[_d]; break end end
+    if _sh then
       _dummy.blocking.expected_attack_animation_hit_frame = _sh.frame
       _dummy.blocking.expected_attack_hit_id = (_sh.hit_id or 0) > 0 and _sh.hit_id or (_dummy.blocking.last_attack_hit_id + 1)
       _dummy.blocking.should_block = true
@@ -677,6 +732,7 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
     _dummy.blocking.sa_preblock_anim = nil
     _dummy.blocking.sa_preblock_expire = nil
     _dummy.blocking.sa_preblock_triggered = nil
+    _dummy.blocking.carry_global_expected = nil
   end
 
   -- Super Freeze Pre-Block Phase 2 (TODO 1.33): 所有預測跑完後的最後手段
@@ -684,24 +740,24 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
   -- Ken SA1 等 projectile SA 由 should_block_projectile 處理，這裡不介入
   if _dummy.blocking.sa_preblock then
     if _dummy.has_just_blocked or _dummy.has_just_parried or _dummy.has_just_been_hit then
-      -- 防禦/被打：清 blocking 狀態；anim 和 triggered 留著，等動畫結束才清（防止 block stun 期間重觸發）
+      -- 防禦/被打：只清 sa_preblock 機制本身；should_block 和 block_string 不動
+      -- should_block 已由 L365-371 清掉；若有 force_recording carry，L380-386 會在 Branch 1 之前把它設回 true
+      -- 不在這裡清，避免覆蓋掉 carry 的設定，造成多段 SA 第二下空一幀
       _dummy.blocking.sa_preblock = false
-      _dummy.blocking.should_block = false
-      _dummy.blocking.block_string = false
       _dummy.blocking.sa_preblock_expire = nil
     elseif _dummy.blocking.sa_preblock_expire and frame_number >= _dummy.blocking.sa_preblock_expire then
-      -- 超時（空揮）：清 blocking 狀態；anim 和 triggered 留著，等動畫結束才清
+      -- 超時（空揮）：清 sa_preblock 機制；block_string 交給正常邏輯清（dummy idle 後自然歸零）
       _dummy.blocking.sa_preblock = false
       _dummy.blocking.should_block = false
-      _dummy.blocking.block_string = false
       _dummy.blocking.sa_preblock_expire = nil
+      _dummy.blocking.carry_global_expected = nil
     elseif _player.superfreeze_decount <= 1
        and not _dummy.blocking.should_block
        and not _dummy.blocking.should_block_projectile then
       -- proxy_max_dist 存在時，做簡單距離判斷：距離 <= 閾值才觸發 should_block（空揮距離遠，自然跳過）
       -- 若無 proxy_max_dist，則無條件觸發（不分距離的 SA）
       local _ph_fdm = frame_data_meta[_player.char_str] and frame_data_meta[_player.char_str].moves and frame_data_meta[_player.char_str].moves[_player.relevant_animation]
-      local _dist = math.abs(_player.pos_x - _dummy.pos_x)
+      local _dist = _hurtbox_dist(_player, _dummy)
       local _p2_trigger
       if _ph_fdm and _ph_fdm.proxy_max_dist then
         _p2_trigger = _dist <= _ph_fdm.proxy_max_dist
@@ -716,7 +772,14 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
         _dummy.blocking.block_string          = true
         _dummy.blocking.last_carry_frame      = frame_number
         _dummy.blocking.expected_attack_hit_id = _dummy.blocking.last_attack_hit_id + 1
-        _dummy.blocking.sa_preblock_expire    = frame_number + 55
+        -- first_hit_window: 只需涵蓋第一擊的等待時間（carry 接手後 Phase 2 就用不到了）
+        local _expire_window = (_ph_fdm and _ph_fdm.first_hit_window) or 55
+        _dummy.blocking.sa_preblock_expire    = frame_number + _expire_window
+        -- first_hit_offset: 第一擊距 Phase 2 的幀數 → 直接設 carry_global_expected
+        -- dummy 在第一擊前 2f 才開始 hold back，揮空退後幅度從 55f 降到 ~8f
+        if _ph_fdm and _ph_fdm.first_hit_offset then
+          _dummy.blocking.carry_global_expected = frame_number + _ph_fdm.first_hit_offset
+        end
       else
         -- 距離太遠：清 sa_preblock，讓 Phase 2 外層 if 下次不再進入
         _dummy.blocking.sa_preblock = false
@@ -751,6 +814,9 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
     local _animation_frame_delta = 0
     if _dummy.blocking.should_block_projectile then
       _animation_frame_delta = _dummy.blocking.projectile_hit_frame - frame_number
+    elseif _dummy.blocking.carry_global_expected then
+      -- carry 用 global frame 計時，不受動畫 loop reset 影響
+      _animation_frame_delta = _dummy.blocking.carry_global_expected - frame_number
     else
       _animation_frame_delta = _dummy.blocking.expected_attack_animation_hit_frame - _player_relevant_animation_frame
     end
@@ -760,7 +826,11 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
       if _dummy.blocking.is_precise_timing then
         _blocking_delta_threshold = 1
       end
-      if _animation_frame_delta <= _blocking_delta_threshold then
+      local _carry_hold = _dummy.blocking.carry_hold_remaining and _dummy.blocking.carry_hold_remaining > 0
+      if _carry_hold then
+        _dummy.blocking.carry_hold_remaining = _dummy.blocking.carry_hold_remaining - 1
+      end
+      if _animation_frame_delta <= _blocking_delta_threshold or _carry_hold then
         log(_dummy.prefix, "blocking", string.format("dummy block %d %d %d", _dummy.blocking.expected_attack_hit_id, to_bit(_dummy.blocking.should_block_projectile), _animation_frame_delta))
         if _debug then
           print(string.format("%d - %s blocking", frame_number, _dummy.prefix))

@@ -252,7 +252,7 @@ frame_data_meta["makoto"].moves["1438"] = {
   hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }},
   -- proxy_max_dist：Phase 2 距離閾值（距離 <= 此值 → 觸發 should_block）
   -- 實測：dist=45 打中；dist=106/110 空揮；向下收窄中，目前測試值
-  proxy_max_dist = 104,
+  proxy_max_dist = 105,
   -- proxy_hits 保留供未來精確碰撞用（left 已修正為 Lua 世界座標正方向）
   proxy_hits = {
     [50] = { boxes = { { left=78, width=36, bottom=41, height=11, type="attack" }, { left=53, width=14, bottom=27, height=40, type="attack" } } },
@@ -432,8 +432,9 @@ frame_data_meta["ryu"].moves["7cbc"] = { movement_type = 2 } -- Air tatsu L
 frame_data_meta["ryu"].moves["7dfc"] = { movement_type = 2 } -- Air tatsu M
 frame_data_meta["ryu"].moves["7edc"] = { movement_type = 2 } -- Air tatsu H
 
-frame_data_meta["ryu"].moves["894c"] = { force_recording = true } -- SA2
-frame_data_meta["ryu"].moves["8be4"] = { force_recording = true } -- SA2
+-- SA2 Shinkuu Tatsumaki: carry_offset=45（inter-kick gap）; first_hit_window=20（Phase2 只需等第一擊，揮空最多退後 20f）
+frame_data_meta["ryu"].moves["894c"] = { force_recording = true, hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }}, carry_offset = 45, first_hit_offset = 44, first_hit_window = 50, proxy_max_dist = 65 } -- SA2
+frame_data_meta["ryu"].moves["8be4"] = { force_recording = true, hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }}, carry_offset = 45, first_hit_offset = 44, first_hit_window = 50, proxy_max_dist = 65 } -- SA2
 
 -- REMY
 frame_data_meta["remy"].moves["ab20"] = { hits = {{ type = 2 }} } -- Cr LK
