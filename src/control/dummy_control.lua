@@ -724,8 +724,6 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
     end
   end
 
-  if _style == 1 then return end -- Off: no blocking
-
   if (_dummy.blocking.should_block and not _dummy.blocking.randomized_out) or (_dummy.blocking.should_block_projectile and not _dummy.blocking.projectile_randomized_out) then
     local _hit_type = 1
     local _blocking_style = _style -- 2 is block, 3 is parry
