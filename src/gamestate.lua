@@ -549,7 +549,7 @@ function read_player_vars(_player_obj)
     end
 
     -- find current attack id
-    for _index, _hit_frame in ipairs(_player_obj.relevant_animation_frame_data.hit_frames) do
+    for _index, _hit_frame in ipairs(_player_obj.relevant_animation_frame_data.hit_frames or {}) do
       if type(_hit_frame) == "number" then
 
         if _player_obj.relevant_animation_frame >= _hit_frame then
@@ -1130,6 +1130,10 @@ function update_object_velocity(_object, _debug)
     x = (_velocity.x - _object.velocity_samples[1].x) / #_object.velocity_samples,
     y = (_velocity.y - _object.velocity_samples[1].y) / #_object.velocity_samples,
   }
+  _object.velocity_x = _velocity.x
+  _object.velocity_y = _velocity.y
+  _object.acceleration_x = _object.acc.x
+  _object.acceleration_y = _object.acc.y
 end
 
 
@@ -1150,3 +1154,124 @@ end
 
 -- # initialize player objects
 reset_player_objects()
+
+function write_player_vars(_player_obj)
+
+  -- P1: 0x02068C6C
+  -- P2: 0x02069104
+
+  local _wanted_meter = 0
+  if _player_obj.id == 1 then
+    _wanted_meter = training_settings.p1_meter
+  elseif _player_obj.id == 2 then
+    _wanted_meter = training_settings.p2_meter
+  end
+
+  -- LIFE
+  if is_in_match and not is_menu_open then
+    local _life = memory.readbyte(_player_obj.base + 0x9F)
+    if training_settings.life_mode == 2 then
+      if _player_obj.is_idle and _player_obj.idle_time > training_settings.life_refill_delay then
+        local _refill_rate = 6
+        _life = math.min(_life + _refill_rate, 160)
+      end
+    elseif training_settings.life_mode == 3 then
+      _life = 160
+    end
+    memory.writebyte(_player_obj.base + 0x9F, _life)
+    _player_obj.life = _life
+  end
+
+  -- METER
+  if is_in_match and not is_menu_open and not _player_obj.is_in_timed_sa then
+    -- If the SA is a timed SA, the gauge won't go back to 0 when it reaches max. We have to make special cases for it
+    local _is_timed_sa = character_specific[_player_obj.char_str].timed_sa[_player_obj.selected_sa]
+
+    if training_settings.meter_mode == 3 then
+      local _previous_meter_count = memory.readbyte(_player_obj.meter_addr[2])
+      local _previous_meter_count_slave = memory.readbyte(_player_obj.meter_addr[1])
+      if _previous_meter_count ~= _player_obj.max_meter_count and _previous_meter_count_slave ~= _player_obj.max_meter_count then
+        local _gauge_value = 0
+        if _is_timed_sa then
+          _gauge_value = _player_obj.max_meter_gauge
+        end
+        memory.writebyte(_player_obj.gauge_addr, _gauge_value)
+        memory.writebyte(_player_obj.meter_addr[2], _player_obj.max_meter_count)
+        memory.writebyte(_player_obj.meter_update_flag, 0x01)
+      end
+    elseif training_settings.meter_mode == 2 then
+      if _player_obj.is_idle and _player_obj.idle_time > training_settings.meter_refill_delay then
+        local _previous_gauge = memory.readbyte(_player_obj.gauge_addr)
+        local _previous_meter_count = memory.readbyte(_player_obj.meter_addr[2])
+        local _previous_meter_count_slave = memory.readbyte(_player_obj.meter_addr[1])
+
+        if _previous_meter_count == _previous_meter_count_slave then
+          local _meter = 0
+          -- If the SA is a timed SA, the gauge won't go back to 0 when it reaches max
+          if _is_timed_sa then
+            _meter = _previous_gauge
+          else
+             _meter = _previous_gauge + _player_obj.max_meter_gauge * _previous_meter_count
+          end
+
+          if _meter > _wanted_meter then
+            _meter = _meter - 6
+            _meter = math.max(_meter, _wanted_meter)
+          elseif _meter < _wanted_meter then
+            _meter = _meter + 6
+            _meter = math.min(_meter, _wanted_meter)
+          end
+
+          local _wanted_gauge = _meter % _player_obj.max_meter_gauge
+          local _wanted_meter_count = math.floor(_meter / _player_obj.max_meter_gauge)
+          local _previous_meter_count = memory.readbyte(_player_obj.meter_addr[2])
+          local _previous_meter_count_slave = memory.readbyte(_player_obj.meter_addr[1])
+
+          if character_specific[_player_obj.char_str].timed_sa[_player_obj.selected_sa] and _wanted_meter_count == 1 and _wanted_gauge == 0 then
+            _wanted_gauge = _player_obj.max_meter_gauge
+          end
+
+          --if _player_obj.id == 1 then
+          --  print(string.format("%d: %d/%d/%d (%d/%d)", _wanted_meter, _wanted_gauge, _wanted_meter_count, _player_obj.max_meter_gauge, _previous_gauge, _previous_meter_count))
+          --end
+
+          if _wanted_gauge ~= _previous_gauge then
+            memory.writebyte(_player_obj.gauge_addr, _wanted_gauge)
+          end
+          if _previous_meter_count ~= _wanted_meter_count then
+            memory.writebyte(_player_obj.meter_addr[2], _wanted_meter_count)
+            memory.writebyte(_player_obj.meter_update_flag, 0x01)
+          end
+        end
+      end
+    end
+  end
+
+  if training_settings.infinite_sa_time and _player_obj.is_in_timed_sa then
+    memory.writebyte(_player_obj.gauge_addr, _player_obj.max_meter_gauge)
+  end
+
+  -- STUN
+  if training_settings.stun_mode == 2 then
+    memory.writebyte(_player_obj.stun_timer_addr, 0);
+    memory.writedword(_player_obj.stun_bar_addr, 0);
+  elseif training_settings.stun_mode == 3 then
+    if is_in_match and not is_menu_open and _player_obj.is_idle then
+      local _wanted_stun = 0
+      if _player_obj.id == 1 then
+        _wanted_stun = training_settings.p1_stun_reset_value
+      else
+        _wanted_stun = training_settings.p2_stun_reset_value
+      end
+      _wanted_stun = math.max(_wanted_stun, 0)
+
+      if _player_obj.stun_bar < _wanted_stun then
+        memory.writedword(_player_obj.stun_bar_addr, bit.lshift(_wanted_stun, 24));
+      elseif _player_obj.is_idle and _player_obj.idle_time > training_settings.stun_reset_delay then
+        local _stun = _player_obj.stun_bar
+        _stun = math.max(_stun - 1, _wanted_stun)
+        memory.writedword(_player_obj.stun_bar_addr, bit.lshift(_stun, 24));
+      end
+    end
+  end
+end

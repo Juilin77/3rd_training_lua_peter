@@ -751,7 +751,8 @@ function multitab_menu_draw(_menu)
   local _is_focused = _menu == menu_stack_top()
   for i = 1, #_menu.content[_menu.main_menu_selected_index].entries do
     if _menu.content[_menu.main_menu_selected_index].entries[i].is_disabled == nil or not _menu.content[_menu.main_menu_selected_index].entries[i].is_disabled() then
-      _menu.content[_menu.main_menu_selected_index].entries[i]:draw(_menu_x, _menu_y + menu_y_interval * _draw_index, not _menu.is_main_menu_selected and _is_focused and _menu.sub_menu_selected_index == i)
+      local _indent = _menu.content[_menu.main_menu_selected_index].entries[i].indent and 8 or 0
+      _menu.content[_menu.main_menu_selected_index].entries[i]:draw(_menu_x + _indent, _menu_y + menu_y_interval * _draw_index, not _menu.is_main_menu_selected and _is_focused and _menu.sub_menu_selected_index == i)
       _draw_index = _draw_index + 1
     end
   end

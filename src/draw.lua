@@ -281,3 +281,56 @@ function draw_vertical_line(_x, _y_start, _y_end, _color, _thickness)
   local _t = _y_start - 1
   gui.box(_l, _b, _r, _t, _color, 0x00000000)
 end
+
+function draw_parry_gauge_group(_x, _y, _parry_object, _scale)
+  local _gauge_height = 4
+  local _gauge_background_color = 0xD6E7EF77
+  local _gauge_valid_fill_color = 0x08CF00FF
+  local _gauge_cooldown_fill_color = 0xFF7939FF
+  local _success_color = 0x10FB00FF
+  local _miss_color = 0xE70000FF
+
+  local _validity_gauge_width = _parry_object.max_validity * _scale
+  local _cooldown_gauge_width = _parry_object.max_cooldown * _scale
+  local _validity_gauge_left = math.floor(_x + (_cooldown_gauge_width - _validity_gauge_width) * 0.5)
+  local _validity_gauge_right = _validity_gauge_left + _validity_gauge_width + 1
+  local _cooldown_gauge_left = _x
+  local _cooldown_gauge_right = _cooldown_gauge_left + _cooldown_gauge_width + 1
+  local _validity_time_text = string.format("%d", _parry_object.validity_time)
+  local _cooldown_time_text = string.format("%d", _parry_object.cooldown_time)
+  local _validity_text_color = text_default_color
+  local _validity_outline_color = text_default_border_color
+  if _parry_object.delta then
+    if _parry_object.success then
+      _validity_text_color = _success_color
+      _validity_outline_color = 0x00A200FF
+    else
+      _validity_text_color = _miss_color
+      _validity_outline_color = 0x840000FF
+    end
+    if _parry_object.delta >= 0 then
+      _validity_time_text = string.format("%d", -_parry_object.delta)
+    else
+      _validity_time_text = string.format("+%d", -_parry_object.delta)
+    end
+  end
+
+  gui.text(_x + 1, _y, _parry_object.name, _parry_object.name_color or text_default_color, text_default_border_color)
+  gui.box(_cooldown_gauge_left + 1, _y + 11, _validity_gauge_left, _y + 11, 0x00000000, 0xFFFFFF77)
+  gui.box(_cooldown_gauge_left, _y + 10, _cooldown_gauge_left, _y + 12, 0x00000000, 0xFFFFFF77)
+  gui.box(_validity_gauge_right, _y + 11, _cooldown_gauge_right - 1, _y + 11, 0x00000000, 0xFFFFFF77)
+  gui.box(_cooldown_gauge_right, _y + 10, _cooldown_gauge_right, _y + 12, 0x00000000, 0xFFFFFF77)
+  draw_gauge(_validity_gauge_left, _y + 8, _validity_gauge_width, _gauge_height + 1, _parry_object.validity_time / _parry_object.max_validity, _gauge_valid_fill_color, _gauge_background_color, nil, true)
+  draw_gauge(_cooldown_gauge_left, _y + 8 + _gauge_height + 2, _cooldown_gauge_width, _gauge_height, _parry_object.cooldown_time / _parry_object.max_cooldown, _gauge_cooldown_fill_color, _gauge_background_color, nil, true)
+
+  if _parry_object.delta then
+    local _marker_x = _validity_gauge_left + _parry_object.delta * _scale
+    _marker_x = math.min(math.max(_marker_x, _x), _cooldown_gauge_right)
+    gui.box(_marker_x, _y + 7, _marker_x + _scale, _y + 8 + _gauge_height + 2, _validity_text_color, _validity_outline_color)
+  end
+
+  gui.text(_cooldown_gauge_right + 4, _y + 7, " " .. _validity_time_text, _validity_text_color, text_default_border_color)
+  gui.text(_cooldown_gauge_right + 4, _y + 13, " " .. _cooldown_time_text, text_default_color, text_default_border_color)
+
+  return 8 + 5 + (_gauge_height * 2)
+end

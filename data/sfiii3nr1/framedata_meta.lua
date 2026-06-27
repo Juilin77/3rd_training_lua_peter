@@ -236,6 +236,34 @@ frame_data_meta["makoto"].moves["2310"] = { hits = {{ type = 3 }}, movement_type
 frame_data_meta["makoto"].moves["2410"] = { hits = {{ type = 3 }}, movement_type = 2 } -- H Tsurugi
 frame_data_meta["makoto"].moves["2510"] = { hits = {{ type = 3 }}, movement_type = 2 } -- EX Tsurugi
 
+-- SA2 Abare Tosanami (LK/MK/HK 共用)
+frame_data_meta["makoto"].moves["c044"] = { force_recording = true, hits = {{ type = 3 }} } -- super flash
+frame_data_meta["makoto"].moves["8ea4"] = { force_recording = true, hits = {{ type = 3 }} } -- SA2 kick (LK ×2, MK ×2, HK ×3)
+frame_data_meta["makoto"].moves["9284"] = { force_recording = true, hits = {{ type = 3 }} } -- SA2 kick transition
+frame_data_meta["makoto"].moves["94f4"] = { force_recording = true, hits = {{ type = 3 }} } -- SA2 kick transition
+frame_data_meta["makoto"].moves["8c14"] = { force_recording = true, hits = {{ type = 3 }} } -- SA2 kick (MK/HK only)
+frame_data_meta["makoto"].moves["9ec4"] = { force_recording = true, hits = {{ type = 3 }} } -- SA2 kick transition (MK/HK only)
+frame_data_meta["makoto"].moves["0088"] = { force_recording = true, hits = {{ type = 3 }} } -- SA2 final hit
+-- 1438: SA1 startup，sub-frame SA（Baston char17 iMove=053, active frames 52-54）
+-- proxy_hits 在 Phase 2 觸發時做距離型判斷（攻擊框能否打到 dummy）
+-- left 值：Baston 局部座標（面向方向為正）→ 取反 → Lua 世界座標（向右為正）
+frame_data_meta["makoto"].moves["1438"] = {
+  force_recording = true,
+  hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }},
+  -- proxy_max_dist：Phase 2 距離閾值（距離 <= 此值 → 觸發 should_block）
+  -- 實測：dist=45 打中；dist=106/110 空揮；向下收窄中，目前測試值
+  proxy_max_dist = 104,
+  -- proxy_hits 保留供未來精確碰撞用（left 已修正為 Lua 世界座標正方向）
+  proxy_hits = {
+    [50] = { boxes = { { left=78, width=36, bottom=41, height=11, type="attack" }, { left=53, width=14, bottom=27, height=40, type="attack" } } },
+    [51] = { boxes = { { left=78, width=36, bottom=41, height=11, type="attack" }, { left=53, width=14, bottom=27, height=40, type="attack" } } },
+    [52] = { boxes = { { left=78, width=36, bottom=41, height=11, type="attack" }, { left=53, width=14, bottom=27, height=40, type="attack" } } },
+    [53] = { boxes = { { left=78, width=36, bottom=41, height=11, type="attack" }, { left=53, width=14, bottom=27, height=40, type="attack" } } },
+    [54] = { boxes = { { left=78, width=36, bottom=41, height=11, type="attack" }, { left=53, width=14, bottom=27, height=40, type="attack" } } },
+  }
+}
+frame_data_meta["makoto"].moves["c824"] = { force_recording = true, hits = {{ type = 3 }} } -- SA2 jump startup (alt distance/strength)
+
 -- ORO
 frame_data_meta["oro"].moves["5c10"] = { hits = {{ type = 2 }} } -- Cr LK
 frame_data_meta["oro"].moves["5da0"] = { hits = {{ type = 2 }} } -- Cr MK
@@ -650,3 +678,374 @@ frame_data_meta["yun"].moves["9a3c"] = { hits = {{ type = 3 }}, movement_type = 
 frame_data_meta["yun"].moves["9f04"] = { proxy = { id = "920c", offset = 2 } } -- Genei Target Air HP
 
 frame_data_meta["yun"].moves["5c30"] = { hits = {{ bypass_freeze = true }, { bypass_freeze = true }, { bypass_freeze = true }}, movement_type = 2 } -- Genei QCF LP
+
+-- ALEX (effie3rd diff)
+frame_data_meta["alex"].moves["a534"] = { hits = {{ type = 3 }} } -- MP
+frame_data_meta["alex"].moves["b094"] = { hits = {{ type = 3 }} } -- MK
+frame_data_meta["alex"].moves["b224"] = { hits = {{ type = 3 }} } -- HK
+frame_data_meta["alex"].moves["af7c"] = { hits = {{ type = 3 }} } -- Cl MK
+frame_data_meta["alex"].moves["a694"] = { hits = {{ type = 3 }} } -- Forward MP
+frame_data_meta["alex"].moves["a9fc"] = { hits = {{ type = 3 }} } -- Forward HP
+frame_data_meta["alex"].moves["5944"] = { hits = {{ type = 3 }} } -- Flash Chop LP
+frame_data_meta["alex"].moves["5aec"] = { hits = {{ type = 3 }} } -- Flash Chop MP
+frame_data_meta["alex"].moves["5cac"] = { hits = {{ type = 3 }} } -- Flash Chop HP
+frame_data_meta["alex"].moves["5e54"] = { hits = {{ type = 3 }, { type = 3 }} } -- Flash Chop EXP
+frame_data_meta["alex"].moves["8294"] = { hits = {{ type = 3 }} } -- Slash Elbow LK
+frame_data_meta["alex"].moves["849c"] = { hits = {{ type = 3 }} } -- Slash Elbow MK
+frame_data_meta["alex"].moves["871c"] = { hits = {{ type = 3 }} } -- Slash Elbow HK
+frame_data_meta["alex"].moves["899c"] = { hits = {{ type = 3 }, { type = 3 }} } -- Slash Elbow EXK
+frame_data_meta["alex"].moves["531c"] = { hits = {{ type = 3 }}, hit_throw = true } -- Air Knee Smash LK
+frame_data_meta["alex"].moves["54ac"] = { hits = {{ type = 3 }}, hit_throw = true } -- Air Knee Smash MK
+frame_data_meta["alex"].moves["5624"] = { hits = {{ type = 3 }}, hit_throw = true } -- Air Knee Smash HK
+frame_data_meta["alex"].moves["579c"] = { hits = {{ type = 3 }}, hit_throw = true } -- Air Knee Smash EXK
+frame_data_meta["alex"].moves["7284"] = { hits = {{ type = 3 }} } -- Air Stampede EXK ext
+frame_data_meta["alex"].moves["64ec"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }} } -- Boomerang Raid
+
+-- CHUNLI (effie3rd diff)
+frame_data_meta["chunli"].moves["b78c"] = { hits = {{ type = 3 }} } -- MP
+frame_data_meta["chunli"].moves["baac"] = { hits = {{ type = 3 }} } -- HP
+frame_data_meta["chunli"].moves["c20c"] = { hits = {{ type = 3 }} } -- MK
+frame_data_meta["chunli"].moves["c674"] = { hits = {{ type = 3 }} } -- HK
+frame_data_meta["chunli"].moves["bf5c"] = { hits = {{ type = 3 }, { type = 3 }} } -- Cl MK
+frame_data_meta["chunli"].moves["e6c4"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }} } -- Cl MK ext
+frame_data_meta["chunli"].moves["c52c"] = { hits = {{ type = 3 }} } -- Cl HK
+frame_data_meta["chunli"].moves["c3b4"] = { hits = {{ type = 3 }} } -- Forward MK
+frame_data_meta["chunli"].moves["b8bc"] = { hits = {{ type = 3 }, { type = 3 }} } -- Back MP
+frame_data_meta["chunli"].moves["bc6c"] = { hits = {{ type = 3 }} } -- Back HP
+frame_data_meta["chunli"].moves["da2c"] = { hits = {{ type = 3 }}, movement_type = 2 } -- Air Down HP
+frame_data_meta["chunli"].moves["458c"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }} } -- Hyakuretsu LK ext
+frame_data_meta["chunli"].moves["42d4"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }} } -- Hyakuretsu MK ext
+frame_data_meta["chunli"].moves["41ec"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }} } -- Hyakuretsu LK ext2
+frame_data_meta["chunli"].moves["4644"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }} } -- Hyakuretsu MK ext2
+frame_data_meta["chunli"].moves["46fc"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }} } -- Hyakuretsu HK ext
+frame_data_meta["chunli"].moves["43bc"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }} } -- Hyakuretsu HK ext2
+frame_data_meta["chunli"].moves["44a4"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }} } -- Hyakuretsu EXK ext
+frame_data_meta["chunli"].moves["47b4"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }} } -- Hyakuretsu EXK ext2
+frame_data_meta["chunli"].moves["802c"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }} } -- Hyakuretsu HK fin
+frame_data_meta["chunli"].moves["7e5c"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }} } -- Hyakuretsu LK fin
+frame_data_meta["chunli"].moves["7f44"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }} } -- Hyakuretsu MK fin
+frame_data_meta["chunli"].moves["2c54"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }} } -- Spinning Bird LK
+frame_data_meta["chunli"].moves["2fac"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }} } -- Spinning Bird MK
+frame_data_meta["chunli"].moves["3334"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }} } -- Spinning Bird HK
+frame_data_meta["chunli"].moves["36bc"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }} } -- Spinning Bird EXK
+frame_data_meta["chunli"].moves["5f54"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }} } -- Houyokusen
+frame_data_meta["chunli"].moves["669c"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 4 }, { type = 4 }, { type = 4 }} } -- Tenseiranka
+
+-- DUDLEY (effie3rd diff)
+frame_data_meta["dudley"].moves["3914"] = { hits = {{ type = 3 }} } -- MP
+frame_data_meta["dudley"].moves["3b04"] = { hits = {{ type = 3 }} } -- HP
+frame_data_meta["dudley"].moves["3fd4"] = { hits = {{ type = 3 }} } -- MK
+frame_data_meta["dudley"].moves["4254"] = { hits = {{ type = 3 }} } -- HK
+frame_data_meta["dudley"].moves["39d4"] = { hits = {{ type = 3 }} } -- Forward MP
+frame_data_meta["dudley"].moves["3cdc"] = { hits = {{ type = 3 }} } -- Forward HP
+frame_data_meta["dudley"].moves["4124"] = { hits = {{ type = 3 }} } -- Forward MK
+frame_data_meta["dudley"].moves["6cc4"] = { hits = {{ type = 3 }} } -- TC 2
+frame_data_meta["dudley"].moves["7294"] = { hits = {{ type = 3 }} } -- TC 1 ext
+frame_data_meta["dudley"].moves["6be4"] = { hits = {{ type = 3 }, { type = 3 }} } -- TC 2 ext
+frame_data_meta["dudley"].moves["6064"] = { hits = {{ type = 3 }} } -- TC 3 ext
+frame_data_meta["dudley"].moves["6394"] = { hits = {{ type = 3 }} } -- TC 6
+frame_data_meta["dudley"].moves["70bc"] = { hits = {{ type = 3 }, { type = 3 }} } -- TC 5 ext
+frame_data_meta["dudley"].moves["61a4"] = { hits = {{ type = 3 }} } -- TC 6 ext
+frame_data_meta["dudley"].moves["6eb4"] = { hits = {{ type = 3 }, { type = 3 }} } -- TC 8 ext
+frame_data_meta["dudley"].moves["0080"] = { hits = {{ type = 3 }} } -- Ducking Straight
+frame_data_meta["dudley"].moves["0288"] = { hits = {{ type = 3 }, { type = 3 }} } -- Ducking Upper
+frame_data_meta["dudley"].moves["0550"] = { hits = {{ type = 3 }} } -- Punch Cross MP
+frame_data_meta["dudley"].moves["0640"] = { hits = {{ type = 3 }} } -- Punch Cross HP
+frame_data_meta["dudley"].moves["0878"] = { hits = {{ type = 3 }} } -- Punch Cross EXP
+frame_data_meta["dudley"].moves["c410"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }} } -- Machinegun LP
+frame_data_meta["dudley"].moves["c660"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }} } -- Machinegun MP
+frame_data_meta["dudley"].moves["c988"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }} } -- Machinegun HP
+frame_data_meta["dudley"].moves["ccc8"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }} } -- Machinegun EXP
+frame_data_meta["dudley"].moves["d170"] = { hits = {{ type = 3 }} } -- Short Swing LK
+frame_data_meta["dudley"].moves["d300"] = { hits = {{ type = 3 }} } -- Short Swing MK
+frame_data_meta["dudley"].moves["d490"] = { hits = {{ type = 3 }} } -- Short Swing HK
+frame_data_meta["dudley"].moves["d620"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }} } -- Short Swing EXK
+frame_data_meta["dudley"].moves["d910"] = { hits = {{ type = 1 }, { type = 1 }, { type = 1 }, { type = 1 }, { type = 1 }, { type = 1 }, { type = 1 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }} } -- Rocket Upper
+frame_data_meta["dudley"].moves["bc08"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }} } -- Rolling Thunder
+frame_data_meta["dudley"].moves["b958"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }} } -- Corkscrew Blow
+
+-- ELENA (effie3rd diff)
+frame_data_meta["elena"].moves["a978"] = { hits = {{ type = 3 }, { type = 3 }} } -- MP
+frame_data_meta["elena"].moves["ae18"] = { hits = {{ type = 3 }} } -- HP
+frame_data_meta["elena"].moves["b560"] = { hits = {{ type = 3 }, { type = 3 }} } -- HK
+frame_data_meta["elena"].moves["bb60"] = { hits = {{ type = 3 }} } -- Cr HP
+frame_data_meta["elena"].moves["b7e0"] = { hits = {{ type = 3 }} } -- Back HK
+frame_data_meta["elena"].moves["e620"] = { hits = {{ type = 3 }} } -- TC 1 ext
+frame_data_meta["elena"].moves["681c"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }} } -- Spin Sides LK
+frame_data_meta["elena"].moves["6e14"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }} } -- Spin Sides MK
+frame_data_meta["elena"].moves["740c"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }} } -- Spin Sides HK
+frame_data_meta["elena"].moves["7a04"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }} } -- Spin Sides EXK
+frame_data_meta["elena"].moves["8074"] = { hits = {{ type = 3 }} } -- Spin Sides EXK fin
+
+-- GOUKI (effie3rd diff)
+frame_data_meta["gouki"].moves["1598"] = { hits = {{ type = 3 }} } -- MP
+frame_data_meta["gouki"].moves["1818"] = { hits = {{ type = 3 }} } -- HP
+frame_data_meta["gouki"].moves["1a38"] = { hits = {{ type = 3 }} } -- MK
+frame_data_meta["gouki"].moves["1bf8"] = { hits = {{ type = 3 }} } -- HK
+frame_data_meta["gouki"].moves["14e8"] = { hits = {{ type = 3 }} } -- Cl MP
+frame_data_meta["gouki"].moves["1728"] = { hits = {{ type = 3 }} } -- Cl HP
+frame_data_meta["gouki"].moves["1988"] = { hits = {{ type = 3 }} } -- Cl MK
+frame_data_meta["gouki"].moves["9c98"] = { hits = {{ type = 3 }}, unparryable = true } -- KKZ
+frame_data_meta["gouki"].moves["86e8"] = { hits = {{ type = 3 }, { type = 3 }} } -- Tatsumaki LK
+frame_data_meta["gouki"].moves["87f8"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }} } -- Tatsumaki MK
+frame_data_meta["gouki"].moves["8968"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }} } -- Tatsumaki HK
+frame_data_meta["gouki"].moves["9618"] = { hits = {{ type = 3 }, { type = 3 }}, movement_type = 2 } -- Air Tatsumaki LK
+frame_data_meta["gouki"].moves["9738"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }}, movement_type = 2 } -- Air Tatsumaki MK
+frame_data_meta["gouki"].moves["9818"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }}, movement_type = 2 } -- Air Tatsumaki HK
+
+-- HUGO (effie3rd diff)
+frame_data_meta["hugo"].moves["40b0"] = { hits = {{ type = 3 }} } -- MP
+frame_data_meta["hugo"].moves["4420"] = { hits = {{ type = 3 }} } -- Forward HP
+frame_data_meta["hugo"].moves["efcc"] = { hits = {{ type = 3 }} } -- Giant Palm LP
+frame_data_meta["hugo"].moves["f1bc"] = { hits = {{ type = 3 }} } -- Giant Palm MP
+frame_data_meta["hugo"].moves["f3ac"] = { hits = {{ type = 3 }} } -- Giant Palm HP
+frame_data_meta["hugo"].moves["f59c"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }} } -- Giant Palm EXP
+frame_data_meta["hugo"].moves["f7a4"] = { hits = {{ type = 3 }} } -- Monster Lariat LK
+frame_data_meta["hugo"].moves["fa54"] = { hits = {{ type = 3 }} } -- Monster Lariat MK
+frame_data_meta["hugo"].moves["fd1c"] = { hits = {{ type = 3 }} } -- Monster Lariat HK
+frame_data_meta["hugo"].moves["0044"] = { hits = {{ type = 3 }} } -- Monster Lariat EXK
+frame_data_meta["hugo"].moves["ffe0"] = { hits = {{ type = 3 }} } -- Megaton Press ext
+frame_data_meta["hugo"].moves["15cc"] = { hits = {{ type = 1 }, { type = 3 }, { type = 3 }, { type = 3 }} } -- Hammer Mountain ext
+
+-- IBUKI (effie3rd diff)
+frame_data_meta["ibuki"].moves["f690"] = { hits = {{ type = 3 }, { type = 3 }} } -- MP
+frame_data_meta["ibuki"].moves["fc48"] = { hits = {{ type = 3 }, { type = 3 }} } -- HP
+frame_data_meta["ibuki"].moves["05d0"] = { hits = {{ type = 3 }} } -- MK
+frame_data_meta["ibuki"].moves["0b10"] = { hits = {{ type = 3 }} } -- HK
+frame_data_meta["ibuki"].moves["fa10"] = { hits = {{ type = 3 }, { type = 3 }} } -- Cl HP
+frame_data_meta["ibuki"].moves["0920"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }} } -- Cl HK
+frame_data_meta["ibuki"].moves["0d90"] = { hits = {{ type = 3 }} } -- Forward HK
+frame_data_meta["ibuki"].moves["f838"] = { hits = {{ type = 3 }, { type = 3 }} } -- Back MP
+frame_data_meta["ibuki"].moves["0398"] = { hits = {{ type = 3 }} } -- Back MK
+frame_data_meta["ibuki"].moves["9910"] = { hits = {{ type = 3 }, { type = 3 }} } -- Tsumuji LK
+frame_data_meta["ibuki"].moves["9de8"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }} } -- Tsumuji MK
+frame_data_meta["ibuki"].moves["a428"] = { hits = {{ type = 3 }, { type = 3 }} } -- Tsumuji HK
+frame_data_meta["ibuki"].moves["e490"] = { hits = {{ type = 3 }} } -- Tsumuji EXK
+frame_data_meta["ibuki"].moves["e988"] = { hits = {{ type = 3 }} } -- Tsumuji EXK 2
+frame_data_meta["ibuki"].moves["f980"] = { hits = {{ type = 3 }} } -- Tsumuji HK fin
+frame_data_meta["ibuki"].moves["e6f8"] = { hits = {{ type = 3 }, { type = 3 }} } -- Tsumuji EXK fin
+
+-- KEN (effie3rd diff)
+frame_data_meta["ken"].moves["a3d0"] = { hits = {{ type = 3 }} } -- MP
+frame_data_meta["ken"].moves["a560"] = { hits = {{ type = 3 }} } -- HP
+frame_data_meta["ken"].moves["a6b0"] = { hits = {{ type = 3 }} } -- MK
+frame_data_meta["ken"].moves["aa70"] = { hits = {{ type = 3 }} } -- HK
+frame_data_meta["ken"].moves["a320"] = { hits = {{ type = 3 }} } -- Cl MP
+frame_data_meta["ken"].moves["a470"] = { hits = {{ type = 3 }} } -- Cl HP
+frame_data_meta["ken"].moves["a870"] = { hits = {{ type = 3 }} } -- Forward MK
+frame_data_meta["ken"].moves["0c44"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }} } -- Tatsumaki LK
+frame_data_meta["ken"].moves["0d54"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }} } -- Tatsumaki MK
+frame_data_meta["ken"].moves["0ee4"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }} } -- Tatsumaki HK
+frame_data_meta["ken"].moves["1074"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }} } -- Tatsumaki EXK
+
+-- MAKOTO (effie3rd diff)
+frame_data_meta["makoto"].moves["1ec0"] = { hits = {{ type = 3 }} } -- MP
+frame_data_meta["makoto"].moves["2100"] = { hits = {{ type = 3 }} } -- HP
+frame_data_meta["makoto"].moves["25f0"] = { hits = {{ type = 3 }} } -- MK
+frame_data_meta["makoto"].moves["28c0"] = { hits = {{ type = 3 }} } -- HK
+frame_data_meta["makoto"].moves["30c0"] = { hits = {{ type = 3 }} } -- Cr HK
+frame_data_meta["makoto"].moves["1fc0"] = { hits = {{ type = 3 }} } -- Forward MP
+frame_data_meta["makoto"].moves["2720"] = { hits = {{ type = 3 }} } -- Forward MK
+frame_data_meta["makoto"].moves["2220"] = { hits = {{ type = 3 }} } -- TC 2
+frame_data_meta["makoto"].moves["4a68"] = { hits = {{ type = 3 }, { type = 3 }} } -- TC 1 ext
+frame_data_meta["makoto"].moves["48a8"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }} } -- TC 2 ext
+frame_data_meta["makoto"].moves["4ae8"] = { hits = {{ type = 3 }, { type = 3 }} } -- TC 3 ext
+frame_data_meta["makoto"].moves["e750"] = { hits = {{ type = 3 }} } -- Hayate EX active
+frame_data_meta["makoto"].moves["e520"] = { hits = {{ type = 3 }} } -- Hayate 2
+frame_data_meta["makoto"].moves["e638"] = { hits = {{ type = 3 }} } -- Hayate 3
+frame_data_meta["makoto"].moves["0290"] = { force_recording = true, hits = {{ type = 4 }, { type = 3 }, { type = 1 }} } -- Abare LK (SA2 landing 3-hit)
+frame_data_meta["makoto"].moves["fde8"] = { force_recording = true, hits = {{ type = 3 }} } -- SA2 LK landing
+frame_data_meta["makoto"].moves["fec8"] = { force_recording = true, hits = {{ type = 3 }} } -- SA2 MK landing
+frame_data_meta["makoto"].moves["ffa8"] = { force_recording = true, hits = {{ type = 3 }} } -- SA2 HK landing
+
+-- NECRO (effie3rd diff)
+frame_data_meta["necro"].moves["cc1c"] = { hits = {{ type = 3 }} } -- MP
+frame_data_meta["necro"].moves["cf84"] = { hits = {{ type = 3 }} } -- HP
+frame_data_meta["necro"].moves["d85c"] = { hits = {{ type = 3 }} } -- HK
+frame_data_meta["necro"].moves["cdc4"] = { hits = {{ type = 3 }} } -- Back MP
+frame_data_meta["necro"].moves["d6fc"] = { hits = {{ type = 3 }} } -- Back MK
+frame_data_meta["necro"].moves["dadc"] = { hits = {{ type = 3 }} } -- Back HK
+frame_data_meta["necro"].moves["fd04"] = { hits = {{ type = 3 }} } -- TC 1 ext
+frame_data_meta["necro"].moves["e9e4"] = { hits = {{ type = 1 }}, cooldown = 7 } -- Drill LK
+frame_data_meta["necro"].moves["f2cc"] = { hits = {{ type = 1 }}, cooldown = 7 } -- Drill MK
+frame_data_meta["necro"].moves["f51c"] = { hits = {{ type = 1 }}, cooldown = 7 } -- Drill HK
+frame_data_meta["necro"].moves["651c"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }} } -- Denji Blast LP
+frame_data_meta["necro"].moves["680c"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }} } -- Denji Blast MP
+frame_data_meta["necro"].moves["6b1c"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }} } -- Denji Blast HP
+frame_data_meta["necro"].moves["4fdc"] = { hits = {{ type = 3 }, { type = 3 }} } -- Tornado Hook LP
+frame_data_meta["necro"].moves["53dc"] = { hits = {{ type = 3 }, { type = 3 }} } -- Tornado Hook MP
+frame_data_meta["necro"].moves["5824"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }} } -- Tornado Hook HP
+frame_data_meta["necro"].moves["5e7c"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }} } -- Tornado Hook EXP
+
+-- ORO (effie3rd diff)
+frame_data_meta["oro"].moves["4c40"] = { hits = {{ type = 3 }} } -- MP
+frame_data_meta["oro"].moves["54f0"] = { hits = {{ type = 3 }} } -- MK
+frame_data_meta["oro"].moves["56b0"] = { hits = {{ type = 3 }} } -- HK
+frame_data_meta["oro"].moves["4a80"] = { hits = {{ type = 3 }, { type = 3 }} } -- Cl MP
+frame_data_meta["oro"].moves["5378"] = { hits = {{ type = 3 }} } -- Cl MK
+frame_data_meta["oro"].moves["4d30"] = { hits = {{ type = 3 }} } -- Forward MP
+
+-- Q (effie3rd diff)
+frame_data_meta["q"].moves["d304"] = { hits = {{ type = 3 }} } -- MP
+frame_data_meta["q"].moves["d72c"] = { hits = {{ type = 3 }} } -- HP
+frame_data_meta["q"].moves["df1c"] = { hits = {{ type = 3 }} } -- MK
+frame_data_meta["q"].moves["e01c"] = { hits = {{ type = 3 }} } -- HK
+frame_data_meta["q"].moves["ddfc"] = { hits = {{ type = 3 }} } -- Cl MK
+frame_data_meta["q"].moves["d524"] = { hits = {{ type = 3 }} } -- Back MP
+frame_data_meta["q"].moves["da24"] = { hits = {{ type = 3 }} } -- Back HP
+frame_data_meta["q"].moves["f494"] = { hits = {{ type = 3 }}, movement_type = 2 } -- Air UB MP
+frame_data_meta["q"].moves["f594"] = { hits = {{ type = 3 }}, movement_type = 2 } -- Air UB HP
+frame_data_meta["q"].moves["6414"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }} } -- High Speed Barrage LP
+frame_data_meta["q"].moves["685c"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }} } -- High Speed Barrage MP
+frame_data_meta["q"].moves["6c8c"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }} } -- High Speed Barrage HP
+frame_data_meta["q"].moves["70a4"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }} } -- High Speed Barrage EXP
+frame_data_meta["q"].moves["44d4"] = { hits = {{ type = 3 }} } -- Dashing Head LP
+frame_data_meta["q"].moves["47b4"] = { hits = {{ type = 3 }} } -- Dashing Head MP
+frame_data_meta["q"].moves["4ac4"] = { hits = {{ type = 3 }} } -- Dashing Head HP
+frame_data_meta["q"].moves["4e04"] = { hits = {{ type = 3 }} } -- Dashing Head EXP
+frame_data_meta["q"].moves["7dbc"] = { hits = {{ type = 3 }} } -- Critical Combo
+frame_data_meta["q"].moves["81a4"] = { hits = {{ type = 3 }, { type = 3 }} } -- Critical Combo ext
+
+-- REMY (effie3rd diff)
+frame_data_meta["remy"].moves["9f20"] = { hits = {{ type = 3 }} } -- MP
+frame_data_meta["remy"].moves["a100"] = { hits = {{ type = 3 }} } -- HP
+frame_data_meta["remy"].moves["a400"] = { hits = {{ type = 3 }} } -- MK
+frame_data_meta["remy"].moves["a6c0"] = { hits = {{ type = 3 }} } -- HK
+frame_data_meta["remy"].moves["9e50"] = { hits = {{ type = 3 }} } -- Cl MP
+frame_data_meta["remy"].moves["9ff0"] = { hits = {{ type = 3 }} } -- Cl HP
+frame_data_meta["remy"].moves["a330"] = { hits = {{ type = 3 }} } -- Cl MK
+frame_data_meta["remy"].moves["a5b0"] = { hits = {{ type = 3 }, { type = 3 }} } -- Cl HK
+frame_data_meta["remy"].moves["bbf0"] = { hits = {{ type = 3 }, { type = 3 }} } -- TC 1 ext
+frame_data_meta["remy"].moves["09f8"] = { hits = {{ type = 3 }} } -- Cold Blue Kick LK
+frame_data_meta["remy"].moves["0af8"] = { hits = {{ type = 3 }} } -- Cold Blue Kick MK
+frame_data_meta["remy"].moves["0c08"] = { hits = {{ type = 3 }} } -- Cold Blue Kick HK
+frame_data_meta["remy"].moves["0d18"] = { hits = {{ type = 3 }} } -- Cold Blue Kick EXK
+frame_data_meta["remy"].moves["1150"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }} } -- Blue Nocturne
+frame_data_meta["remy"].moves["16a0"] = { hits = {{ type = 3 }} } -- Blue Nocturne ext
+
+-- RYU (effie3rd diff)
+frame_data_meta["ryu"].moves["18e4"] = { hits = {{ type = 3 }} } -- MP
+frame_data_meta["ryu"].moves["1b44"] = { hits = {{ type = 3 }} } -- HP
+frame_data_meta["ryu"].moves["1eb4"] = { hits = {{ type = 3 }} } -- MK
+frame_data_meta["ryu"].moves["1f94"] = { hits = {{ type = 3 }} } -- HK
+frame_data_meta["ryu"].moves["1844"] = { hits = {{ type = 3 }} } -- Cl MP
+frame_data_meta["ryu"].moves["1a54"] = { hits = {{ type = 3 }} } -- Cl HP
+frame_data_meta["ryu"].moves["1e04"] = { hits = {{ type = 3 }} } -- Cl MK
+frame_data_meta["ryu"].moves["1c34"] = { hits = {{ type = 3 }, { type = 3 }} } -- Forward HP
+frame_data_meta["ryu"].moves["33fc"] = { hits = {{ type = 3 }, { type = 3 }} } -- TC 1 ext
+frame_data_meta["ryu"].moves["81dc"] = { hits = {{ type = 3 }} } -- Joudan LK
+frame_data_meta["ryu"].moves["8354"] = { hits = {{ type = 3 }} } -- Joudan MK
+frame_data_meta["ryu"].moves["84fc"] = { hits = {{ type = 3 }} } -- Joudan HK
+frame_data_meta["ryu"].moves["86bc"] = { hits = {{ type = 3 }} } -- Joudan EXK
+frame_data_meta["ryu"].moves["7034"] = { hits = {{ type = 3 }} } -- Tatsumaki LK
+frame_data_meta["ryu"].moves["7124"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }} } -- Tatsumaki MK
+frame_data_meta["ryu"].moves["72b4"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }} } -- Tatsumaki HK
+frame_data_meta["ryu"].moves["7444"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }} } -- Tatsumaki EXK
+frame_data_meta["ryu"].moves["7fbc"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }}, movement_type = 2 } -- Air Tatsumaki EXK
+
+-- SEAN (effie3rd diff)
+frame_data_meta["sean"].moves["bfcc"] = { hits = {{ type = 3 }} } -- MP
+frame_data_meta["sean"].moves["c14c"] = { hits = {{ type = 3 }} } -- HP
+frame_data_meta["sean"].moves["c5dc"] = { hits = {{ type = 3 }} } -- HK
+frame_data_meta["sean"].moves["bf1c"] = { hits = {{ type = 3 }} } -- Cl MP
+frame_data_meta["sean"].moves["c06c"] = { hits = {{ type = 3 }} } -- Cl HP
+frame_data_meta["sean"].moves["c50c"] = { hits = {{ type = 3 }} } -- Cl HK
+frame_data_meta["sean"].moves["c6ec"] = { hits = {{ type = 3 }} } -- Forward HK
+frame_data_meta["sean"].moves["2310"] = { hits = {{ type = 3 }, { type = 3 }} } -- Tornado LK
+frame_data_meta["sean"].moves["2470"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }} } -- Tornado MK
+frame_data_meta["sean"].moves["25b0"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }} } -- Tornado HK
+frame_data_meta["sean"].moves["2740"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }} } -- Tornado EXK
+frame_data_meta["sean"].moves["2dc8"] = { hits = {{ type = 2 }, { type = 2 }} } -- Hyper Tornado
+
+-- TWELVE (effie3rd diff)
+frame_data_meta["twelve"].moves["3484"] = { hits = {{ type = 3 }} } -- MP
+frame_data_meta["twelve"].moves["3584"] = { hits = {{ type = 3 }} } -- HP
+frame_data_meta["twelve"].moves["37e4"] = { hits = {{ type = 3 }} } -- MK
+frame_data_meta["twelve"].moves["3a64"] = { hits = {{ type = 3 }} } -- HK
+frame_data_meta["twelve"].moves["3394"] = { hits = {{ type = 3 }} } -- Cl MP
+frame_data_meta["twelve"].moves["5a6c"] = { hits = {{ type = 3 }}, movement_type = 2 } -- Air Dash LP
+frame_data_meta["twelve"].moves["5b2c"] = { hits = {{ type = 3 }}, movement_type = 2 } -- Air Dash MP
+frame_data_meta["twelve"].moves["5bec"] = { hits = {{ type = 3 }}, movement_type = 2 } -- Air Dash HP
+frame_data_meta["twelve"].moves["5d0c"] = { hits = {{ type = 3 }}, movement_type = 2 } -- Air Dash LK
+frame_data_meta["twelve"].moves["5ddc"] = { hits = {{ type = 3 }}, movement_type = 2 } -- Air Dash MK
+frame_data_meta["twelve"].moves["5edc"] = { hits = {{ type = 3 }}, movement_type = 2 } -- Air Dash HK
+frame_data_meta["twelve"].moves["b574"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }} } -- Axe LP
+frame_data_meta["twelve"].moves["b9c4"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }} } -- Axe MP
+frame_data_meta["twelve"].moves["bd94"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }} } -- Axe HP
+frame_data_meta["twelve"].moves["c174"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }} } -- Axe EXP
+frame_data_meta["twelve"].moves["cd94"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }}, movement_type = 2 } -- Air Axe LP
+frame_data_meta["twelve"].moves["d114"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }}, movement_type = 2 } -- Air Axe MP
+frame_data_meta["twelve"].moves["d494"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }}, movement_type = 2 } -- Air Axe HP
+frame_data_meta["twelve"].moves["d814"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }}, movement_type = 2 } -- Air Axe EXP
+frame_data_meta["twelve"].moves["ed84"] = { hits = {{ type = 3 }} } -- X-Flat
+
+-- URIEN (effie3rd diff)
+frame_data_meta["urien"].moves["d864"] = { hits = {{ type = 3 }} } -- MP
+frame_data_meta["urien"].moves["daa4"] = { hits = {{ type = 3 }} } -- HP
+frame_data_meta["urien"].moves["ddac"] = { hits = {{ type = 3 }} } -- MK
+frame_data_meta["urien"].moves["d994"] = { hits = {{ type = 3 }} } -- Forward MP
+frame_data_meta["urien"].moves["df0c"] = { hits = {{ type = 3 }} } -- Forward MK
+frame_data_meta["urien"].moves["fa84"] = { hits = {{ type = 3 }} } -- TC 1 ext
+frame_data_meta["urien"].moves["fbb4"] = { hits = {{ type = 4 }} } -- TC 2 ext (overhead)
+frame_data_meta["urien"].moves["6c1c"] = { hits = {{ type = 3 }} } -- Chariot Tackle LK
+frame_data_meta["urien"].moves["6dfc"] = { hits = {{ type = 3 }} } -- Chariot Tackle MK
+frame_data_meta["urien"].moves["6fec"] = { hits = {{ type = 3 }} } -- Chariot Tackle HK
+frame_data_meta["urien"].moves["720c"] = { hits = {{ type = 3 }, { type = 3 }} } -- Chariot Tackle EXK
+frame_data_meta["urien"].moves["6254"] = { hits = {{ type = 3 }} } -- Dangerous Headbutt LP
+frame_data_meta["urien"].moves["6314"] = { hits = {{ type = 3 }} } -- Dangerous Headbutt MP
+frame_data_meta["urien"].moves["63d4"] = { hits = {{ type = 3 }} } -- Dangerous Headbutt HP
+frame_data_meta["urien"].moves["6494"] = { hits = {{ type = 3 }, { type = 3 }} } -- Dangerous Headbutt EXP
+frame_data_meta["urien"].moves["79dc"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }} } -- Tyrant Slaughter
+
+-- YANG (effie3rd diff)
+frame_data_meta["yang"].moves["c2d4"] = { hits = {{ type = 3 }} } -- MP
+frame_data_meta["yang"].moves["c4c4"] = { hits = {{ type = 3 }} } -- HP
+frame_data_meta["yang"].moves["c89c"] = { hits = {{ type = 3 }} } -- MK
+frame_data_meta["yang"].moves["ce54"] = { hits = {{ type = 3 }} } -- HK
+frame_data_meta["yang"].moves["c224"] = { hits = {{ type = 3 }} } -- Cl MP
+frame_data_meta["yang"].moves["c3a4"] = { hits = {{ type = 3 }, { type = 3 }} } -- Cl HP
+frame_data_meta["yang"].moves["c79c"] = { hits = {{ type = 3 }, { type = 3 }} } -- Cl MK
+frame_data_meta["yang"].moves["f334"] = { hits = {{ type = 3 }} } -- TC 3 ext
+frame_data_meta["yang"].moves["ed34"] = { hits = {{ type = 4 }, { type = 4 }} } -- TC 4 ext (overhead)
+frame_data_meta["yang"].moves["94d8"] = { hits = {{ type = 3 }} } -- Byakko
+frame_data_meta["yang"].moves["a498"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }} } -- Tourou LP
+frame_data_meta["yang"].moves["aa18"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }} } -- Tourou MP
+frame_data_meta["yang"].moves["af98"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }} } -- Tourou HP
+frame_data_meta["yang"].moves["b518"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }} } -- Tourou EXP
+frame_data_meta["yang"].moves["f0a0"] = { hits = {{ type = 3 }} } -- Raishin
+
+-- YUN (effie3rd diff)
+frame_data_meta["yun"].moves["415c"] = { hits = {{ type = 3 }} } -- MP
+frame_data_meta["yun"].moves["447c"] = { hits = {{ type = 3 }} } -- HP
+frame_data_meta["yun"].moves["4b24"] = { hits = {{ type = 3 }} } -- MK
+frame_data_meta["yun"].moves["4ed4"] = { hits = {{ type = 3 }} } -- HK
+frame_data_meta["yun"].moves["402c"] = { hits = {{ type = 3 }} } -- Cl MP
+frame_data_meta["yun"].moves["42a4"] = { hits = {{ type = 3 }, { type = 3 }} } -- Cl HP
+frame_data_meta["yun"].moves["4a04"] = { hits = {{ type = 3 }} } -- Cl MK
+frame_data_meta["yun"].moves["4654"] = { hits = {{ type = 3 }} } -- Forward HP
+frame_data_meta["yun"].moves["6e14"] = { hits = {{ type = 3 }, { type = 3 }} } -- TC 2
+frame_data_meta["yun"].moves["6c24"] = { hits = {{ type = 3 }} } -- TC 2 ext
+frame_data_meta["yun"].moves["76a4"] = { hits = {{ type = 3 }, { type = 3 }} } -- TC 4 ext
+frame_data_meta["yun"].moves["9d14"] = { hits = {{ type = 3 }} } -- TC 5 ext
+frame_data_meta["yun"].moves["8564"] = { hits = {{ type = 3 }} } -- Genei HK
+frame_data_meta["yun"].moves["7bbc"] = { hits = {{ type = 3 }} } -- Genei HP
+frame_data_meta["yun"].moves["81fc"] = { hits = {{ type = 3 }} } -- Genei MK
+frame_data_meta["yun"].moves["78b4"] = { hits = {{ type = 3 }} } -- Genei MP
+frame_data_meta["yun"].moves["1e28"] = { hits = {{ type = 3 }} } -- Kobokushi
+frame_data_meta["yun"].moves["8ae4"] = { hits = {{ type = 2 }} } -- Genei Cr HK
+frame_data_meta["yun"].moves["8964"] = { hits = {{ type = 2 }} } -- Genei Cr LK
+frame_data_meta["yun"].moves["8a04"] = { hits = {{ type = 2 }} } -- Genei Cr MK
+frame_data_meta["yun"].moves["7d64"] = { hits = {{ type = 3 }} } -- Genei Forward HP
+frame_data_meta["yun"].moves["83ec"] = { hits = {{ type = 4 }} } -- Genei Forward MK (overhead)
+frame_data_meta["yun"].moves["7a2c"] = { hits = {{ type = 3 }, { type = 3 }} } -- Genei Cl HP
+frame_data_meta["yun"].moves["80b4"] = { hits = {{ type = 3 }} } -- Genei Cl MK
+frame_data_meta["yun"].moves["77b4"] = { hits = {{ type = 3 }} } -- Genei Cl MP
+frame_data_meta["yun"].moves["3620"] = { hits = {{ type = 3 }} } -- Zesshou LP
+frame_data_meta["yun"].moves["3840"] = { hits = {{ type = 3 }} } -- Zesshou MP
+frame_data_meta["yun"].moves["3a60"] = { hits = {{ type = 3 }} } -- Zesshou HP
+frame_data_meta["yun"].moves["3c98"] = { hits = {{ type = 3 }, { type = 3 }} } -- Zesshou EXP
+frame_data_meta["yun"].moves["59f8"] = { hits = {{ type = 3 }} } -- Kobokushi Genei
+frame_data_meta["yun"].moves["4390"] = { hits = {{ type = 3 }} } -- Youhou
+frame_data_meta["yun"].moves["7ba0"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }} } -- Youhou ext
+frame_data_meta["yun"].moves["48a0"] = { hits = {{ type = 3 }, { type = 3 }} } -- Sourairengeki
+frame_data_meta["yun"].moves["4be0"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }} } -- Sourairengeki ext
