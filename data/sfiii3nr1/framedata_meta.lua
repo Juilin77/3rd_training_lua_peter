@@ -443,6 +443,12 @@ frame_data_meta["ryu"].moves["7edc"] = { movement_type = 2 } -- Air tatsu H
 frame_data_meta["ryu"].moves["894c"] = { force_recording = true, hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }}, carry_offset = 45, first_hit_offset = 44, first_hit_window = 50, proxy_max_dist = 65 } -- SA2
 frame_data_meta["ryu"].moves["8be4"] = { force_recording = true, hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }}, carry_offset = 45, first_hit_offset = 44, first_hit_window = 50, proxy_max_dist = 65 } -- SA2
 
+-- SA3 Denjin Hadoken: single large electric fireball, multi-hit, UNBLOCKABLE
+-- sa_preblock correctly triggers (dummy detects SA activation and reacts)
+-- block mode: dummy holds back but takes full damage — expected, game mechanic
+-- parry mode: dummy perfectly parries all hits — correct response to SA3
+-- no dedicated entry needed
+
 -- REMY
 frame_data_meta["remy"].moves["ab20"] = { hits = {{ type = 2 }} } -- Cr LK
 frame_data_meta["remy"].moves["abf0"] = { hits = {{ type = 2 }} } -- Cr MK
