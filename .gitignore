@@ -9,3 +9,5 @@ saved/recording_missions/*
 *.fs
 .claude/
 _debug/
+
+CLAUDE.md
