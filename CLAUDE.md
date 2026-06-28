@@ -5,7 +5,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## 重要：Push 前必須讀 Release 文件
 - Peter 說「push」→ CC 必須先讀 `.claude/commands/release.md`，執行完整流程後才能跑 `git push`
 - **絕對不允許繞過 release 流程直接 push**
-- Release 流程包含：git log 掃所有 commits、版本號確認、startup.lua + 3rd_training.lua 更新、README changelog、gh release create（版本號、README changelog、startup.lua、gh release create）
+- Release 流程包含：git log 掃所有 commits、版本號確認、startup.lua + 3rd_training.lua 更新、README changelog、gh release create
+
+## 公開 Repo 英文規則
+這是公開的英文 open source 專案，以下內容**必須純英文，不能含任何中文字**：
+- README changelog 條目
+- GitHub release notes
+- Git commit messages
+- 程式碼內的 comments（`src/*.lua` 等）
+
+內部文件（TODO.md、CLAUDE.md）照常用中文。
 
 ## 概覽
 - FightCade v2 / FBNeo 的 SF3 3rd Strike 訓練模式 Lua 腳本
