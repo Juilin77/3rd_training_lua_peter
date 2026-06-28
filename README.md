@@ -53,14 +53,11 @@ A: Check video settings, you must use "Basic" blitter option with no scanlines i
 
 A: Install prerequires from [here](https://github.com/TASVideos/BizHawk-Prereqs/releases/latest/)
 
-## References & Inspirations
-- [Wonderful 3S frame data reference](http://baston.esn3s.com/)
-- [Hitbox display script by dammit](https://dammit.typepad.com/blog/2011/10/improved-3rd-strike-hitboxes.html)
-- [Trials mode script by c_cube](https://ameblo.jp/3fv/entry-12429961069.html)
-- [External C# training mode by furitiem](https://www.youtube.com/watch?v=vE27xe0QM64)
-- [3S InGame addresses spreadsheet](https://docs.google.com/spreadsheets/d/1eLi9phXMj18QGLfugrHhEQEjIVvSI2zbbUmDgPuLSf0/edit#gid=706955060)
-
 ## Changelog
+### v0.23 (29/06/2026)
+- [Fix] Dummy Blocking: Ryu SA2 (Shin Shoryuken) all chip hits now correctly blocked with visible neutral gaps between hits (分段擋); fixed carry_offset overwrite bug and moved carry_hold to fire-time instead of hit-event time (contribution of @Juilin77)
+- [Fix] Input History: frame hold count now starts from 1 instead of 0 (contribution of @Juilin77)
+
 ### v0.22 (22/06/2026)
 - [Fix] Frame Table: single-move specials no longer show green recovery frames — active-to-recovery phase changes within the same move are now correctly classified using the `action` field (contribution of @Juilin77)
 - [Fix] Frame Table: cancel gap frame (1-frame blue between cancel active and new startup) retroactively relabeled to startup (contribution of @Juilin77)
