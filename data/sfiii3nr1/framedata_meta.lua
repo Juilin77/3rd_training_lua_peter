@@ -440,8 +440,8 @@ frame_data_meta["ryu"].moves["7edc"] = { movement_type = 2 } -- Air tatsu H
 -- on hit: 4 hits; on block: 5 chip hits (approx 2+1+1+1+1)
 -- carry_offset=45 bridges inter-hit gaps; proxy_max_dist=65 skips Phase 2 on full whiff (>65 units away)
 -- confirmed working: close range blocks all 5 chip hits; far range no reaction (2026-06-28)
-frame_data_meta["ryu"].moves["894c"] = { force_recording = true, hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }}, carry_offset = 45, first_hit_offset = 44, first_hit_window = 50, proxy_max_dist = 65 } -- SA2
-frame_data_meta["ryu"].moves["8be4"] = { force_recording = true, hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }}, carry_offset = 45, first_hit_offset = 44, first_hit_window = 50, proxy_max_dist = 65 } -- SA2
+frame_data_meta["ryu"].moves["894c"] = { force_recording = true, hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }}, carry_offset = 50, carry_hold_short = 2, short_carry_offset = 5, p2_hit2_offset = 107, first_hit_offset = 47, first_hit_window = 50, proxy_max_dist = 65 } -- SA2
+frame_data_meta["ryu"].moves["8be4"] = { force_recording = true, hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }}, carry_offset = 50, carry_hold_short = 5, first_hit_window = 55, proxy_max_dist = 65 } -- SA2; no first_hit_offset: hit lands at animation frame 0, sub-frame fallback handles
 
 -- SA3 Denjin Hadoken: single large electric fireball, multi-hit, UNBLOCKABLE
 -- sa_preblock correctly triggers (dummy detects SA activation and reacts)

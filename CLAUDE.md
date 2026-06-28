@@ -109,6 +109,26 @@ draw_parry_gauge_group(_x, _y, _parry_object, _scale)
 - 存檔分兩個：`mission_slot_X.json`（metadata）+ `mission_slot_X.inputs.json`（inputs，lazy-load）
 - 回放用 `player_objects[mission_dummy_id]`，不用 `dummy`（`mission_dummy_id = 3 - mission_play_side`）
 
+## Blocking Debug Pattern
+
+When diagnosing SA blocking issues (carry_global, carry_hold, clear check), insert a print block
+inside the hit-event handler (`if has_just_blocked or has_just_been_hit` at line ~404):
+
+```lua
+if (_player.relevant_animation == "894c") and not _hit_expired then
+  local _evt = _dummy.has_just_blocked and "BLOCK" or (_dummy.has_just_been_hit and "HIT" or "PARRY")
+  local _p2 = _dummy.blocking.sa_p2_frame
+  print(string.format("[DBG] frame=%d anim_frame=%d event=%s p2_offset=%s carry_global=%s hold=%d",
+    frame_number, _player.relevant_animation_frame, _evt,
+    tostring(_p2 and (frame_number - _p2) or "?"),
+    tostring(_dummy.blocking.carry_global_expected),
+    _dummy.blocking.carry_hold_remaining or 0))
+end
+```
+
+Key: `hold` prints **before** force_recording runs. `carry_global=nil, hold=0` on HIT = clear check fired.
+Full pattern + interpretation: `../_reference/debug_blocking_pattern.md`
+
 ## 工作慣例
 - 手動在遊戲裡測試，沒有自動化測試
 - Bug 修復不需要重構周邊程式碼；不加多餘的 error handling

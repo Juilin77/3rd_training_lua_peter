@@ -85,7 +85,7 @@ function input_history_draw(_history, _x, _y, _is_right)
     if _i < #_history then
       _next_frame = _history[_i + 1].frame
     end
-    local _frame_diff = _next_frame - _entry.frame
+    local _frame_diff = _next_frame - _entry.frame + 1
     local _text = "-"
     if (_frame_diff < 999) then
       _text = string.format("%d", _frame_diff)

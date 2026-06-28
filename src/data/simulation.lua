@@ -71,8 +71,8 @@ function simulate_hit_collision(_attacker, _defender, _frames_prediction, _last_
     ) then
       local _hit_id = get_next_hit_id(_attacker.char_str, _attacker.relevant_animation, _last_hit_id or 0)
       _hits[1] = {
-        delta  = 0,
-        frame  = (_attacker.relevant_animation_frame or 0),
+        delta  = 1,  -- report as 1 even though detected now; gives 1 extra frame for input to take effect
+        frame  = (_attacker.relevant_animation_frame or 0) + 1,
         hit_id = _hit_id,
         pos_x  = _attacker.pos_x,
         pos_y  = _attacker.pos_y,

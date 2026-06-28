@@ -1,5 +1,5 @@
 -- src/control/dummy_control.lua
--- Dummy 控制邏輯：Pose、Blocking、Counter Attack、Tech Throw
+-- Dummy control logic: Pose, Blocking, Counter Attack, Tech Throw
 
 function update_pose(_input, _player_obj, _pose)
 
@@ -230,6 +230,8 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
   _dummy.blocking.sa_preblock_triggered = _dummy.blocking.sa_preblock_triggered or nil
   _dummy.blocking.carry_hold_remaining = _dummy.blocking.carry_hold_remaining or 0
   _dummy.blocking.carry_global_expected = _dummy.blocking.carry_global_expected or nil
+  _dummy.blocking.carry_offset_fired = _dummy.blocking.carry_offset_fired or false
+  _dummy.blocking.sa_p2_frame = _dummy.blocking.sa_p2_frame or nil
 
   function stop_listening_hits(_player_obj)
     _dummy.blocking.listening = false
@@ -270,7 +272,7 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
     _dummy.blocking.blocked_hit_count = 0
   end
 
-  local _pre_block_string = _dummy.blocking.block_string  -- 存在 block_string 可能被清掉之前
+  local _pre_block_string = _dummy.blocking.block_string  -- snapshot block_string before it may be cleared
 
   -- blockstring detection
   if ((_dummy.blocking.should_block and not _dummy.blocking.randomized_out) or (_dummy.blocking.should_block_projectile and not _dummy.blocking.projectile_randomized_out)) and _dummy.blocking.wait_for_block_string then
@@ -314,15 +316,23 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
       end
       _dummy.blocking.is_bypassing_freeze_frames = false
       _dummy.blocking.bypassed_freeze_frames = 0
-      _dummy.blocking.should_block = false
-      -- 在 combo 進行中（block_string=true 或 carry 寬容窗口內）且新動畫是 meta-only 攻擊，立即繼續擋
+      -- if mid-combo (block_string=true or within carry window) and new anim is a meta-only attack, continue blocking immediately
       local _in_carry_window = _dummy.blocking.last_carry_frame and (frame_number - _dummy.blocking.last_carry_frame <= 5)
+      local _new_meta = frame_data_meta[_player.char_str] and frame_data_meta[_player.char_str].moves and frame_data_meta[_player.char_str].moves[_player.relevant_animation]
+      -- on force_recording SA anim switch (e.g. SA2 894c→8be4), preserve should_block across the animation boundary
+      -- otherwise Phase 2's should_block=true gets cleared on the switch frame and the first hit goes unblocked
+      local _preserve_should_block = _pre_block_string and _new_meta and _new_meta.force_recording and _new_meta.hits
+      if not _preserve_should_block then
+        _dummy.blocking.should_block = false
+      end
       if _pre_block_string or _in_carry_window then
-        local _new_meta = frame_data_meta[_player.char_str] and frame_data_meta[_player.char_str].moves and frame_data_meta[_player.char_str].moves[_player.relevant_animation]
         if _new_meta and _new_meta.force_recording and _new_meta.hits then
-          _dummy.blocking.should_block = true
-          _dummy.blocking.block_string = true  -- carry 繼續中，維持 block_string 讓後續 chain 不斷
+          _dummy.blocking.block_string = true  -- carry still active, keep block_string so subsequent chain is unbroken
           _dummy.blocking.last_carry_frame = frame_number
+          if _new_meta.first_hit_offset and not _dummy.blocking.carry_global_expected then
+            _dummy.blocking.carry_global_expected = frame_number + _new_meta.first_hit_offset
+            _dummy.blocking.carry_offset_fired = false
+          end
         end
       end
       reset_parry_cooldowns(_dummy)
@@ -406,20 +416,43 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
       _dummy.blocking.is_bypassing_freeze_frames = false
       log(_dummy.prefix, "blocking", string.format("bypassing end"))
     end
-    -- force_recording carry 鏈（如 SA2）：用 global frame_number 計時，不受動畫 loop reset 影響
-    -- carry_offset = 下一擊距現在的 frame 數（SA2 = 45）；省略則用 carry_hold_remaining 做短補位
+    -- force_recording carry chain (e.g. SA2): uses global frame_number for timing, unaffected by animation loop resets
+    -- carry_offset = frames until next hit from now (SA2 = 45); omit to use carry_hold_remaining as short fallback
     do
       local _cur_meta = frame_data_meta[_player.char_str] and frame_data_meta[_player.char_str].moves and frame_data_meta[_player.char_str].moves[_player.relevant_animation]
       if _cur_meta and _cur_meta.force_recording and _cur_meta.hits then
-        -- Phase 2 未觸發但 SA 走近打中時（has_just_been_hit），從被打那下開始 carry
+        -- Phase 2 not triggered but SA hit close up (has_just_been_hit): start carry from the hit frame
         if _dummy.has_just_been_hit then
           _dummy.blocking.block_string = true
         end
         if _dummy.blocking.block_string then
           _dummy.blocking.should_block = true
-          _dummy.blocking.carry_hold_remaining = 15
-          if _cur_meta.carry_offset then
+          -- carry_hold_short: after first carry_offset fires, use short hold so hits 3+ are segmented via fallback
+          local _hold_val = (_cur_meta.carry_hold_short and _dummy.blocking.carry_offset_fired) and _cur_meta.carry_hold_short or 15
+          _dummy.blocking.carry_hold_remaining = _hold_val
+          -- SA2 segmented block: carry_hold set at carry fire time, not at hit event
+          if _dummy.blocking.sa_p2_frame then
+            _dummy.blocking.carry_hold_remaining = 0
+          end
+          if _cur_meta.carry_offset and not _dummy.blocking.carry_offset_fired then
             _dummy.blocking.carry_global_expected = frame_number + _cur_meta.carry_offset
+          end
+          -- in short carry mode: reset animation hit frame to prevent stale negative delta causing continuous blocking
+          -- also reset expected_attack_hit_id so sub-frame fallback can re-detect subsequent hits
+          -- (SA2 8be4 returns hit_id=0 for all hits, so last_attack_hit_id+1 would stay at 1 forever)
+          if _dummy.blocking.carry_offset_fired then
+            _dummy.blocking.expected_attack_animation_hit_frame = _player.relevant_animation_frame + 999
+            _dummy.blocking.expected_attack_hit_id = 0
+            -- segmented carry sequence: use p2_frame + offset to predict each chip hit timing
+            -- hit2 is at P2+107 (60f after hit1); hits3+ every 7f → short_carry_offset=5
+            if _dummy.blocking.sa_p2_frame and _cur_meta.p2_hit2_offset
+               and (frame_number - _dummy.blocking.sa_p2_frame) < 80 then
+              -- after hit1 block: set carry for hit2
+              _dummy.blocking.carry_global_expected = _dummy.blocking.sa_p2_frame + _cur_meta.p2_hit2_offset
+            elseif _cur_meta.short_carry_offset then
+              -- after hit2+ block: use short interval (hits every 7f)
+              _dummy.blocking.carry_global_expected = frame_number + _cur_meta.short_carry_offset
+            end
           end
         end
       end
@@ -433,8 +466,8 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
     reset_parry_cooldowns(_dummy)
   end
 
-  -- force_recording exit: SA 動畫結束（切換到非 force_recording）→ 清 block_string，停止 carry
-  -- 防止 SA2 結束後 dummy 繼續 hold back 往後走
+  -- force_recording exit: SA anim ends (switches to non-force_recording) → clear block_string, stop carry
+  -- prevents dummy from continuing to hold back after SA2 ends
   do
     local _cur_fdm  = frame_data_meta[_player.char_str] and frame_data_meta[_player.char_str].moves and frame_data_meta[_player.char_str].moves[_player.relevant_animation]
     local _prev_fdm = _dummy.blocking.last_player_anim and frame_data_meta[_player.char_str] and frame_data_meta[_player.char_str].moves and frame_data_meta[_player.char_str].moves[_dummy.blocking.last_player_anim]
@@ -442,13 +475,14 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
       _dummy.blocking.block_string = false
       _dummy.blocking.should_block = false
       _dummy.blocking.carry_global_expected = nil
+      _dummy.blocking.carry_offset_fired = false
     end
     _dummy.blocking.last_player_anim = _player.relevant_animation
   end
 
-  -- Super Freeze Pre-Block Phase 1 (TODO 1.33): freeze 期間 prime sa_preblock
-  -- 不設 should_block，dummy 保持中立不提前退後；Phase 2 在 prediction 全部跑完後才強制
-  -- sa_preblock_triggered（只有動畫結束才清）確保同一 SA 動畫只觸發一次
+  -- Super Freeze Pre-Block Phase 1 (TODO 1.33): prime sa_preblock during freeze
+  -- does not set should_block; dummy stays neutral; Phase 2 forces block only after all predictions fail
+  -- sa_preblock_triggered (cleared only on anim end) ensures Phase 2 fires at most once per SA anim
   if _player.superfreeze_decount > 0 and not _dummy.blocking.sa_preblock_triggered then
     _dummy.blocking.sa_preblock = true
     _dummy.blocking.sa_preblock_anim = _dummy.blocking.sa_preblock_anim or _player.relevant_animation
@@ -567,8 +601,8 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
         end
       end
 
-      -- Sub-frame fallback：frame data 查表全部失敗（動畫是 sub-frame，Lua 看不到）
-      -- 改用物理模擬對 attacker 當前 RAM boxes 做碰撞測試
+      -- Sub-frame fallback: all frame data lookups failed (animation is sub-frame, invisible to Lua)
+      -- use physics simulation to collision-test against attacker's current RAM boxes
       if not _dummy.blocking.should_block and _dummy.blocking.listening then
         local _sim_hits = predict_hits_simulation(_player, _dummy, _max_prediction_frames, _dummy.blocking.last_attack_hit_id)
         local _sh = nil
@@ -599,8 +633,8 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
     end
   end
 
-  -- pre_block_frame：startup 動畫到達指定幀才開始擋（避免提前太多幀 hold back）
-  -- proxy_hits 存在時讓位：距離型預測優先，pre_block_frame 只作 fallback
+  -- pre_block_frame: start blocking only when startup animation reaches the specified frame (prevents holding back too early)
+  -- yields to proxy_hits when present: distance-based prediction takes priority, pre_block_frame is fallback only
   if _dummy.blocking.listening and not _dummy.blocking.should_block then
     local _pre_meta = frame_data_meta[_player.char_str] and frame_data_meta[_player.char_str].moves and frame_data_meta[_player.char_str].moves[_player.relevant_animation]
     if _pre_meta and _pre_meta.pre_block_frame and _player.relevant_animation_frame >= _pre_meta.pre_block_frame then
@@ -613,7 +647,7 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
     end
   end
 
-  -- carry window 持續更新：block_string 期間每幀刷新，避免長 landing 動畫讓 carry 過期
+  -- carry window continuous update: refresh every frame during block_string to prevent long landing anims from expiring carry
   if _dummy.blocking.should_block and _dummy.blocking.block_string then
     _dummy.blocking.last_carry_frame = frame_number
   end
@@ -721,67 +755,78 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
     end
   end
 
-  -- Super Freeze Pre-Block: SA 動畫結束清除（獨立於 sa_preblock 狀態，expire 後仍可跑）
-  -- 只有這裡才清 sa_preblock_triggered，確保下次 SA 可正常觸發
+  -- Super Freeze Pre-Block: clear on SA anim end (independent of sa_preblock state, can run after expire)
+  -- only this block clears sa_preblock_triggered, ensuring the next SA can trigger Phase 2 normally
   if _dummy.blocking.sa_preblock_anim
      and _player.relevant_animation ~= _dummy.blocking.sa_preblock_anim
      and _player.superfreeze_decount == 0 then
-    _dummy.blocking.sa_preblock = false
-    _dummy.blocking.should_block = false
-    _dummy.blocking.block_string = false
-    _dummy.blocking.sa_preblock_anim = nil
-    _dummy.blocking.sa_preblock_expire = nil
-    _dummy.blocking.sa_preblock_triggered = nil
-    _dummy.blocking.carry_global_expected = nil
+    -- if transitioning to a force_recording attack animation (freeze → attack), preserve blocking state
+    -- this happens when the SA attack anim starts one frame after freeze ends (e.g. 8be4 vs 894c)
+    local _new_fdm = frame_data_meta[_player.char_str] and frame_data_meta[_player.char_str].moves and frame_data_meta[_player.char_str].moves[_player.relevant_animation]
+    if _new_fdm and _new_fdm.force_recording then
+      _dummy.blocking.sa_preblock_anim = _player.relevant_animation
+    else
+      _dummy.blocking.sa_preblock = false
+      _dummy.blocking.should_block = false
+      _dummy.blocking.block_string = false
+      _dummy.blocking.sa_preblock_anim = nil
+      _dummy.blocking.sa_preblock_expire = nil
+      _dummy.blocking.sa_preblock_triggered = nil
+      _dummy.blocking.carry_global_expected = nil
+      _dummy.blocking.sa_p2_frame = nil
+    end
   end
 
-  -- Super Freeze Pre-Block Phase 2 (TODO 1.33): 所有預測跑完後的最後手段
-  -- 只在 SA freeze 後、正常預測全部失敗（sub-frame 或無條目 SA）時觸發
-  -- Ken SA1 等 projectile SA 由 should_block_projectile 處理，這裡不介入
+  -- Super Freeze Pre-Block Phase 2 (TODO 1.33): last resort after all predictions have run
+  -- triggers only after SA freeze, when normal prediction fully fails (sub-frame or no-entry SA)
+  -- projectile SAs like Ken SA1 are handled by should_block_projectile; this block does not intervene
   if _dummy.blocking.sa_preblock then
     if _dummy.has_just_blocked or _dummy.has_just_parried or _dummy.has_just_been_hit then
-      -- 防禦/被打：只清 sa_preblock 機制本身；should_block 和 block_string 不動
-      -- should_block 已由 L365-371 清掉；若有 force_recording carry，L380-386 會在 Branch 1 之前把它設回 true
-      -- 不在這裡清，避免覆蓋掉 carry 的設定，造成多段 SA 第二下空一幀
+      -- blocked/hit: clear only the sa_preblock mechanism itself; leave should_block and block_string untouched
+      -- should_block is already cleared at L365-371; if force_recording carry is active, L380-386 restores it before Branch 1
+      -- do not clear here to avoid overwriting carry state, which would leave a gap before the second hit of a multi-hit SA
       _dummy.blocking.sa_preblock = false
       _dummy.blocking.sa_preblock_expire = nil
     elseif _dummy.blocking.sa_preblock_expire and frame_number >= _dummy.blocking.sa_preblock_expire then
-      -- 超時（空揮）：清 sa_preblock 機制；block_string 交給正常邏輯清（dummy idle 後自然歸零）
+      -- timeout (whiff): clear sa_preblock mechanism; block_string is left for normal logic to clear (resets when dummy returns to idle)
       _dummy.blocking.sa_preblock = false
       _dummy.blocking.should_block = false
       _dummy.blocking.sa_preblock_expire = nil
       _dummy.blocking.carry_global_expected = nil
     elseif _player.superfreeze_decount <= 1
        and not _dummy.blocking.should_block
-       and not _dummy.blocking.should_block_projectile then
-      -- proxy_max_dist 存在時，做簡單距離判斷：距離 <= 閾值才觸發 should_block（空揮距離遠，自然跳過）
-      -- 若無 proxy_max_dist，則無條件觸發（不分距離的 SA）
+       and not _dummy.blocking.should_block_projectile
+       and not _dummy.blocking.sa_preblock_triggered then
+      -- when proxy_max_dist is set, do a simple distance check: only trigger should_block if distance <= threshold (whiff at long range skips naturally)
+      -- without proxy_max_dist, trigger unconditionally (SA that hits regardless of distance)
       local _ph_fdm = frame_data_meta[_player.char_str] and frame_data_meta[_player.char_str].moves and frame_data_meta[_player.char_str].moves[_player.relevant_animation]
       local _dist = _hurtbox_dist(_player, _dummy)
       local _p2_trigger
       if _ph_fdm and _ph_fdm.proxy_max_dist then
         _p2_trigger = _dist <= _ph_fdm.proxy_max_dist
       else
-        _p2_trigger = true  -- 無距離資料 → 無條件觸發
+        _p2_trigger = true  -- no distance data → trigger unconditionally
       end
-      -- 無論 trigger 或 skip，都鎖 triggered+anim，避免 decount=0 後每幀重跑 Phase 2
+      -- whether triggered or skipped, lock triggered+anim to prevent Phase 2 from re-running every frame after decount=0
       _dummy.blocking.sa_preblock_triggered = true
       _dummy.blocking.sa_preblock_anim      = _player.relevant_animation
       if _p2_trigger then
         _dummy.blocking.should_block          = true
+        _dummy.blocking.sa_p2_frame           = frame_number
         _dummy.blocking.block_string          = true
         _dummy.blocking.last_carry_frame      = frame_number
         _dummy.blocking.expected_attack_hit_id = _dummy.blocking.last_attack_hit_id + 1
-        -- first_hit_window: 只需涵蓋第一擊的等待時間（carry 接手後 Phase 2 就用不到了）
+        -- first_hit_window: only needs to cover wait time for first hit (carry takes over after, Phase 2 is no longer needed)
         local _expire_window = (_ph_fdm and _ph_fdm.first_hit_window) or 55
         _dummy.blocking.sa_preblock_expire    = frame_number + _expire_window
-        -- first_hit_offset: 第一擊距 Phase 2 的幀數 → 直接設 carry_global_expected
-        -- dummy 在第一擊前 2f 才開始 hold back，揮空退後幅度從 55f 降到 ~8f
+        -- first_hit_offset: frames from Phase 2 to first hit → set carry_global_expected directly
+        -- dummy only starts holding back 2f before the first hit, reducing whiff retreat from 55f to ~8f
         if _ph_fdm and _ph_fdm.first_hit_offset then
           _dummy.blocking.carry_global_expected = frame_number + _ph_fdm.first_hit_offset
+          _dummy.blocking.carry_offset_fired = true
         end
       else
-        -- 距離太遠：清 sa_preblock，讓 Phase 2 外層 if 下次不再進入
+        -- out of range: clear sa_preblock so Phase 2's outer if does not re-enter on the next frame
         _dummy.blocking.sa_preblock = false
       end
     end
@@ -815,8 +860,26 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
     if _dummy.blocking.should_block_projectile then
       _animation_frame_delta = _dummy.blocking.projectile_hit_frame - frame_number
     elseif _dummy.blocking.carry_global_expected then
-      -- carry 用 global frame 計時，不受動畫 loop reset 影響
+      -- carry uses global frame timing, unaffected by animation loop resets
       _animation_frame_delta = _dummy.blocking.carry_global_expected - frame_number
+      -- when carry fires (delta <= 0), switch to short carry mode so subsequent hits are segmented
+      if _animation_frame_delta <= 0 then
+        _dummy.blocking.carry_global_expected = nil
+        _animation_frame_delta = 99
+        _dummy.blocking.should_block = true  -- ensure same-frame clear check does not clear should_block when carry fires
+        if not _dummy.blocking.carry_offset_fired then
+          -- Phase 2 carry expired; reset so sub-frame fallback can detect actual first hit
+          _dummy.blocking.carry_offset_fired = true
+          _dummy.blocking.expected_attack_hit_id = 0
+        end
+        -- SA2 segmented block: set carry_hold at fire time so neutral gap exists between hits
+        if _dummy.blocking.sa_p2_frame then
+          local _fm = frame_data_meta[_player.char_str] and frame_data_meta[_player.char_str].moves and frame_data_meta[_player.char_str].moves[_player.relevant_animation]
+          if _fm and _fm.carry_hold_short then
+            _dummy.blocking.carry_hold_remaining = _fm.carry_hold_short
+          end
+        end
+      end
     else
       _animation_frame_delta = _dummy.blocking.expected_attack_animation_hit_frame - _player_relevant_animation_frame
     end
@@ -829,6 +892,12 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
       local _carry_hold = _dummy.blocking.carry_hold_remaining and _dummy.blocking.carry_hold_remaining > 0
       if _carry_hold then
         _dummy.blocking.carry_hold_remaining = _dummy.blocking.carry_hold_remaining - 1
+      end
+      -- short carry mode: when carry expires, clear should_block so fallback can re-detect next hit
+      -- sa_preblock still active = waiting for first SA hit; don't clear or the hit lands unblocked
+      -- expected_attack_hit_id > 0 = sub-frame already found a target; don't clear or we lose blocking mid-hit
+      if not _carry_hold and _dummy.blocking.carry_offset_fired and not _dummy.blocking.carry_global_expected and _dummy.blocking.block_string and not _dummy.blocking.sa_preblock and _dummy.blocking.expected_attack_hit_id == 0 then
+        _dummy.blocking.should_block = false
       end
       if _animation_frame_delta <= _blocking_delta_threshold or _carry_hold then
         log(_dummy.prefix, "blocking", string.format("dummy block %d %d %d", _dummy.blocking.expected_attack_hit_id, to_bit(_dummy.blocking.should_block_projectile), _animation_frame_delta))

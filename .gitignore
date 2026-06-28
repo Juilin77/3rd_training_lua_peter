@@ -8,3 +8,4 @@ saved/recording_missions/*
 *.sublime-*
 *.fs
 .claude/
+_debug/
