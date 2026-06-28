@@ -139,6 +139,11 @@ end
 Key: `hold` prints **before** force_recording runs. `carry_global=nil, hold=0` on HIT = clear check fired.
 Full pattern + interpretation: `../_reference/debug_blocking_pattern.md`
 
+## Docs 寫作風格（docs/*.md）
+- 表格描述欄用**一段連續句子或逗號列舉**，不用分號分類（不寫 `Motions: ...; directional: ...; jumps: ...`）
+- 選項列舉用逗號隔開，結尾不加分號或分類標籤
+- 風格參考：`docs/recording.md`
+
 ## 工作慣例
 - 手動在遊戲裡測試，沒有自動化測試
 - Bug 修復不需要重構周邊程式碼；不加多餘的 error handling
