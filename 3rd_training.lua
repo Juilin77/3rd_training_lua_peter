@@ -1,6 +1,6 @@
 require("src/startup")
 
--- v0.22
+-- v0.23
 
 print("-----------------------------")
 print("  3rd_training.lua - "..script_version.."")
