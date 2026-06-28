@@ -432,7 +432,14 @@ frame_data_meta["ryu"].moves["7cbc"] = { movement_type = 2 } -- Air tatsu L
 frame_data_meta["ryu"].moves["7dfc"] = { movement_type = 2 } -- Air tatsu M
 frame_data_meta["ryu"].moves["7edc"] = { movement_type = 2 } -- Air tatsu H
 
--- SA2 Shinkuu Tatsumaki: carry_offset=45（inter-kick gap）; first_hit_window=20（Phase2 只需等第一擊，揮空最多退後 20f）
+-- SA1 Shinkuu Hadoken: single large fireball, 5 hits (multi-hit, not multiple projectiles)
+-- blocking handled by sa_preblock alone; carry window bridges inter-hit gaps via last_carry_frame refresh
+-- no dedicated entry needed (confirmed 2026-06-28)
+
+-- SA2 Shin Shoryuken: requires force_recording — sa_preblock alone is insufficient
+-- on hit: 4 hits; on block: 5 chip hits (approx 2+1+1+1+1)
+-- carry_offset=45 bridges inter-hit gaps; proxy_max_dist=65 skips Phase 2 on full whiff (>65 units away)
+-- confirmed working: close range blocks all 5 chip hits; far range no reaction (2026-06-28)
 frame_data_meta["ryu"].moves["894c"] = { force_recording = true, hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }}, carry_offset = 45, first_hit_offset = 44, first_hit_window = 50, proxy_max_dist = 65 } -- SA2
 frame_data_meta["ryu"].moves["8be4"] = { force_recording = true, hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }}, carry_offset = 45, first_hit_offset = 44, first_hit_window = 50, proxy_max_dist = 65 } -- SA2
 
