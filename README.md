@@ -58,7 +58,7 @@ A: Install prerequires from [here](https://github.com/TASVideos/BizHawk-Prereqs/
 - [Feature] Dummy Pose: added directional jump and dash options — Forward Jump, Neutral Jump, Back Jump, Super Fwd Jump, Super Jump, Super Back Jump, Forward Dash, Back Dash (contribution of @Juilin77)
 - [Feature] Dummy Blocking: SA pre-block state machine — dummy pre-blocks during super freeze and maintains block hold through SA chip hits; proxy_max_dist uses hurtbox edge distance for accuracy (contribution of @Juilin77)
 - [Fix] Dummy Blocking: removed blocking_style early-return that broke SA blocking for Ryu SA1 (Shinkuu Hadoken) and all non-force_recording supers (contribution of @Juilin77)
-- [Fix] Dummy Blocking: Ryu SA2 (Shin Shoryuken) all chip hits now correctly blocked with visible neutral gaps between hits (分段擋); fixed carry_offset overwrite bug and moved carry_hold to fire-time instead of hit-event time (contribution of @Juilin77)
+- [Fix] Dummy Blocking: Ryu SA2 (Shin Shoryuken) all chip hits now correctly blocked with visible neutral gaps between hits; fixed carry_offset overwrite bug and moved carry_hold to fire-time instead of hit-event time (contribution of @Juilin77)
 - [Fix] Input History: frame hold count now starts from 1 instead of 0 (contribution of @Juilin77)
 - [Improvement] Codebase modularized: dummy control, recording, missions, pattern replay, menu UI, and special training modes extracted into src/control/ and src/ui/; 3rd_training.lua reduced from ~12000 to ~9000 lines (contribution of @Juilin77)
 
