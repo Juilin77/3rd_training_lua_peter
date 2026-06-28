@@ -6,13 +6,32 @@ The right version of Fightcade can be downloaded [here](https://www.fightcade.co
 ![All Features](screenshots/allopen.png)
 
 ## Main Features
-- Can set dummy to counter-attack with any move on frame 1 after any hit / block / parry / wake-up
-- Can record and replay sequences into 8 different slots
-- Can replay sequences randomly and as counter-attack
-- Can save/load recorded sequences to/from files
-- Can display hit/hurt/throwboxes
-- Can display input history for both players
-- Special training mode to train parries and red parries
+
+**Dummy Control**
+- Counter-attack with any move on frame 1 after hit / block / parry / wake-up
+- Configurable pose: normal, crouching, directional jumps, dashes
+- Auto-block SA supers with pre-block state machine (super freeze detection)
+
+**Recording & Replay**
+- Record and replay input sequences across 8 slots
+- Random replay and counter-attack replay modes
+- Save / load slots to files; curated pattern replay
+
+**Frame Data**
+- Frame Table: startup / active / recovery / cancel frames with projectile and throw support
+- Damage info and frame advantage popup
+- Input history display for both players
+
+**Display**
+- Hit / hurt / throw box overlay
+- Life Loss Indicator above health bars
+
+**Special Training**
+- Parry and Red Parry training
+- Tech Throw training (5-frame window indicator)
+- Juggle Air Timer (remaining air hitstun gauge)
+- 720 Input Trainer (Hugo)
+- Charge training
 
 ## Documentation
 - [How to Use](docs/how_to_use.md)
