@@ -716,7 +716,7 @@ function before_frame()
 
   -- Log input
   if previous_input then
-    function log_input(_player_object, _name, _short_name)
+    local function log_input(_player_object, _name, _short_name)
       _short_name = _short_name or _name
       local _full_name = _player_object.prefix.." ".._name
       if not previous_input[_full_name] and _input[_full_name] then

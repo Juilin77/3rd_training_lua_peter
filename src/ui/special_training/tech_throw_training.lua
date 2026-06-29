@@ -37,7 +37,7 @@ function special_training_tech_throw_draw()
       else
         throw_tech_disp.pre_press_delta = nil
       end
-      throw_tech_disp.frozen_x = nil  -- 在 draw 時設定
+      throw_tech_disp.frozen_x = nil  -- set during draw
       throw_tech_disp.frozen_y = nil
     end
 
@@ -73,7 +73,7 @@ function special_training_tech_throw_draw()
     -- Draw parry-style gauge
     local _x = screen_width - 138 - get_text_width("Juggle: ")
     local _y = 82
-    -- TODO: Follow Character for tech throw — defer to next version (head position varies by character)
+    -- Follow Character for tech throw: not yet implemented; head position varies by character
     -- local _player = _target
     -- if not training_settings.special_training_follow_character then throw_tech_disp.frozen_x = nil end
     -- if training_settings.special_training_follow_character then

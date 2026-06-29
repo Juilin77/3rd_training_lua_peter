@@ -233,12 +233,12 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
   _dummy.blocking.carry_offset_fired = _dummy.blocking.carry_offset_fired or false
   _dummy.blocking.sa_p2_frame = _dummy.blocking.sa_p2_frame or nil
 
-  function stop_listening_hits(_player_obj)
+  local function stop_listening_hits(_player_obj)
     _dummy.blocking.listening = false
     _dummy.blocking.should_block = false
   end
 
-  function stop_listening_projectiles(_player_obj)
+  local function stop_listening_projectiles(_player_obj)
     if _dummy.blocking.listening_projectiles then
       log(_dummy.prefix, "blocking", "listening proj 0")
     end
@@ -250,7 +250,7 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
     _dummy.blocking.expected_projectile = nil
   end
 
-  function reset_parry_cooldowns(_player_obj)
+  local function reset_parry_cooldowns(_player_obj)
     memory.writebyte(_player_obj.parry_forward_cooldown_time_addr, 0)
     memory.writebyte(_player_obj.parry_down_cooldown_time_addr, 0)
     memory.writebyte(_player_obj.parry_air_cooldown_time_addr, 0)
@@ -359,7 +359,7 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
     return
   end
 
-  function get_meta_hit(_character_str, _move_id, _hit_id)
+  local function get_meta_hit(_character_str, _move_id, _hit_id)
     local _character_meta = frame_data_meta[_character_str]
     if _character_meta == nil then return nil end
     if _character_meta.moves == nil then return nil end
@@ -480,7 +480,7 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
     _dummy.blocking.last_player_anim = _player.relevant_animation
   end
 
-  -- Super Freeze Pre-Block Phase 1 (TODO 1.33): prime sa_preblock during freeze
+  -- Super Freeze Pre-Block Phase 1: prime sa_preblock during freeze
   -- does not set should_block; dummy stays neutral; Phase 2 forces block only after all predictions fail
   -- sa_preblock_triggered (cleared only on anim end) ensures Phase 2 fires at most once per SA anim
   if _player.superfreeze_decount > 0 and not _dummy.blocking.sa_preblock_triggered then
@@ -574,7 +574,7 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
             break
           end
         end
-        -- proxy_hits: SA sub-frame 距離型預測（sa_preblock primed + framedata_meta 有 proxy_hits 才生效）
+        -- proxy_hits: SA sub-frame distance-based prediction (requires sa_preblock primed + proxy_hits in framedata_meta)
         if not _dummy.blocking.should_block and _dummy.blocking.sa_preblock then
           local _proxy_fdm = frame_data_meta[_player.char_str] and frame_data_meta[_player.char_str].moves and frame_data_meta[_player.char_str].moves[_player.relevant_animation]
           if _proxy_fdm and _proxy_fdm.proxy_hits and _proxy_fdm.proxy_hits[predicted_frame_id] then
@@ -652,7 +652,7 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
     _dummy.blocking.last_carry_frame = frame_number
   end
 
-  -- No-frame-data fallback：animation 不在 frame_data，但 attacker 有 RAM attack boxes
+  -- no-frame-data fallback: animation not in frame_data, but attacker has live RAM attack boxes
   if not _dummy.blocking.should_block and not _dummy.blocking.listening and sim_has_attack_boxes(_player.boxes) then
     local _sim_hits = predict_hits_simulation(_player, _dummy, 3, _dummy.blocking.last_attack_hit_id)
     local _sh = nil
@@ -777,7 +777,7 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
     end
   end
 
-  -- Super Freeze Pre-Block Phase 2 (TODO 1.33): last resort after all predictions have run
+  -- Super Freeze Pre-Block Phase 2: last resort after all predictions have run
   -- triggers only after SA freeze, when normal prediction fully fails (sub-frame or no-entry SA)
   -- projectile SAs like Ken SA1 are handled by should_block_projectile; this block does not intervene
   if _dummy.blocking.sa_preblock then
@@ -970,7 +970,7 @@ function update_counter_attack(_input, _attacker, _defender, _stick, _button)
   if _stick == 1 and _button == 1 then return end
   if current_recording_state == 4 then return end
 
-  function handle_recording()
+  local function handle_recording()
     if button_gesture[_button] == "recording" and dummy.id == 2 then
       local _slot_index = training_settings.current_recording_slot
       if training_settings.replay_mode == 2 or training_settings.replay_mode == 5 then

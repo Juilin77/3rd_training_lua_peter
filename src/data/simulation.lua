@@ -1,10 +1,10 @@
 -- src/data/simulation.lua
--- 物理模擬核心，用於 sub-frame blocking fallback
--- 當 predict_hitboxes() 找不到 frame data（sub-frame 動畫）時使用
--- 依賴全域函數：predict_object_position(), test_collision(), predict_hurtboxes()
--- 依賴全域變數：frame_data, frame_data_meta
+-- physics simulation core, used for sub-frame blocking fallback
+-- used when predict_hitboxes() cannot find frame data (sub-frame animations)
+-- depends on globals: predict_object_position(), test_collision(), predict_hurtboxes()
+-- depends on globals: frame_data, frame_data_meta
 
--- 判斷一組 boxes 裡是否有 attack 類型的 box
+-- returns true if any box in the set is of attack type
 function sim_has_attack_boxes(_boxes)
   if not _boxes then return false end
   for _, _box in ipairs(_boxes) do
@@ -15,7 +15,7 @@ function sim_has_attack_boxes(_boxes)
   return false
 end
 
--- 從 frame_data 裡取出某 animation 的 hit_frames 結構，回傳最後一個 hit_frame max
+-- get hit_frames for an animation from frame_data; return the last hit_frame max
 local function get_last_hit_frame(_char_str, _animation)
   local _fd = frame_data[_char_str] and frame_data[_char_str][_animation]
   if not _fd or not _fd.hit_frames then return nil end
@@ -27,30 +27,30 @@ local function get_last_hit_frame(_char_str, _animation)
   return _last
 end
 
--- 計算 hit_id（從 hit_frames 結構推導出目前幀屬於第幾個 hit）
+-- calculate hit_id: derive which hit index the current frame belongs to from hit_frames
 local function get_next_hit_id(_char_str, _animation, _current_hit_id)
   local _fd = frame_data[_char_str] and frame_data[_char_str][_animation]
   if not _fd or not _fd.hit_frames then return _current_hit_id + 1 end
   return math.min(_current_hit_id + 1, #_fd.hit_frames)
 end
 
--- N 幀模擬，回傳 hits table（index = delta，即從現在算第幾幀後命中）
--- 策略：對 sub-frame 動畫（frame_data 查不到），直接用 attacker 當前的 boxes（從 RAM 讀到的）
---      預測 attacker 和 defender 的位置，測試碰撞
--- _attacker: player 物件（攻擊方）
--- _defender: player 物件（防禦方/dummy）
--- _frames_prediction: 要往前模擬幾幀（通常 3）
+-- simulate N frames; return hits table (index = delta frames from now)
+-- strategy: for sub-frame animations not in frame_data, use attacker's current live boxes from RAM
+--      predict attacker and defender positions, test collision
+-- _attacker: player object (attacking side)
+-- _defender: player object (defending side / dummy)
+-- _frames_prediction: how many frames to simulate ahead (typically 3)
 -- _last_hit_id: _dummy.blocking.last_attack_hit_id
 function simulate_hit_collision(_attacker, _defender, _frames_prediction, _last_hit_id)
   local _hits = {}
 
-  -- 只在 attacker 有 attack box 時才模擬（sub-frame 期間 RAM 有 attack boxes）
+  -- only simulate when attacker has attack boxes (RAM has live attack boxes during sub-frame window)
   if not sim_has_attack_boxes(_attacker.boxes) then
     return _hits
   end
 
   local _box_type_matches = {{{"vulnerability", "ext. vulnerability"}, {"attack"}}}
-  -- 如果有 hit_throw 特性，也加入投擲碰撞
+  -- if hit_throw property is set, also test throw collision
   if frame_data_meta[_attacker.char_str]
     and frame_data_meta[_attacker.char_str].moves
     and frame_data_meta[_attacker.char_str].moves[_attacker.relevant_animation]
@@ -60,7 +60,7 @@ function simulate_hit_collision(_attacker, _defender, _frames_prediction, _last_
 
   local _attacker_boxes = _attacker.boxes
 
-  -- delta=0：當前幀就已接觸，不做位置預測，直接測碰撞
+  -- delta=0: already in contact this frame; skip position prediction, test collision directly
   local _defender_boxes_now = predict_hurtboxes(_defender, 0)
   if _defender_boxes_now and #_defender_boxes_now > 0 then
     if test_collision(
@@ -81,16 +81,16 @@ function simulate_hit_collision(_attacker, _defender, _frames_prediction, _last_
     end
   end
 
-  -- 模擬 N 幀
+  -- simulate N frames
   for _i = 1, _frames_prediction do
-    -- 預測 attacker 位置（使用 Peter 版現有的速度模型）
+    -- predict attacker position using existing velocity model
     local _attacker_pos = predict_object_position(_attacker, _i)
 
-    -- 預測 defender 位置與 hurtboxes
+    -- predict defender position and hurtboxes
     local _defender_pos = predict_object_position(_defender, _i)
     local _defender_boxes = predict_hurtboxes(_defender, _i)
 
-    -- 使用 attacker 當前 boxes（sub-frame 期間 RAM 即時資料，無法從 frame_data 查）
+    -- use attacker's current boxes (live RAM data during sub-frame; not available in frame_data)
 
     if _defender_boxes and #_defender_boxes > 0 and _attacker_boxes and #_attacker_boxes > 0 then
       if test_collision(
@@ -110,7 +110,7 @@ function simulate_hit_collision(_attacker, _defender, _frames_prediction, _last_
           pos_x        = _attacker_pos[1],
           pos_y        = _attacker_pos[2],
         }
-        break -- MVP：找到第一個 hit 就停
+        break -- MVP: stop at first hit found
       end
     end
   end

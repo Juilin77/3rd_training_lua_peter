@@ -1,9 +1,9 @@
 -- src/ui/menu.lua
--- 選單定義：所有 tab widget 定義與 main_menu 建立
+-- menu definitions: all tab widget definitions and main_menu construction
 
 function create_main_menu()
 
-  -- ── Popup 選單 ────────────────────────────────────────────
+  -- ── popup menu ────────────────────────────────────────────
   save_file_name = ""
   save_recording_slot_popup = make_menu(71, 61, 312, 122, -- screen size 383,223
   {
@@ -38,7 +38,7 @@ function create_main_menu()
     _replay_file_item_orig_draw(self, _x, _y, _selected)
   end
 
-  -- ── Widget 物件定義 ────────────────────────────────────────
+  -- ── widget definitions ────────────────────────────────────────
   life_refill_delay_item = integer_menu_item("Life refill delay", training_settings, "life_refill_delay", 1, 100, false, 20)
   life_refill_delay_item.is_disabled = function()
     return training_settings.life_mode ~= 2
@@ -93,7 +93,7 @@ function create_main_menu()
   replay_slot_item = list_menu_item("Replay Mission for Slot", training_settings, "current_replay_mission_slot", mission_recording_slots_names)
 
   -- disable Replay Mission / Play Side when no non-empty replay slot is selected
-  function no_replay_slot_selected()
+  local function no_replay_slot_selected()
     if training_settings.current_replay_mission_slot == 1 then return true end
     local _slot = mission_slots[training_settings.current_replay_mission_slot - 1]
     return _slot == nil or _slot.name == "none"
@@ -133,7 +133,7 @@ function create_main_menu()
     return not training_settings.display_distances
   end
 
-  -- ── Main Menu 建立 ─────────────────────────────────────────
+  -- ── main menu construction ─────────────────────────────────────
   main_menu = make_multitab_menu(
     23, 15, 360, 195, -- screen size 383,223
     {
@@ -316,7 +316,7 @@ function create_main_menu()
     end
   )
 
-  -- ── 後處理：動態 disable 邏輯 ──────────────────────────────
+  -- ── post-processing: dynamic disable logic ──────────────────────────────
 
   -- Gray out Dummy (1), Recording (2), Rules (5), Special Training (6) when recording_mission_mode is ON
   for _, _tab_index in ipairs({1, 2, 5, 6}) do
@@ -353,7 +353,7 @@ function create_main_menu()
     end
   end
 
-  -- ── Debug Tab（developer_mode 才加）────────────────────────
+  -- ── debug tab (added only when developer_mode is enabled) ────────────────────────
   debug_move_menu_item = map_menu_item("Debug Move", debug_settings, "debug_move", frame_data, nil)
   if developer_mode then
     local _debug_settings_menu = {

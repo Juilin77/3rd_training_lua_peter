@@ -1,11 +1,11 @@
 -- src/prediction.lua
--- 進階預測函數，補強 predict_hitboxes() 無法處理的情況
+-- advanced prediction: handles cases predict_hitboxes() cannot cover
 
 local ok, prediction_module = pcall(require, "src/data/prediction")
 if not ok then prediction_module = nil end
 
 function predict_hits_simulation(_attacker, _defender, _frames, _last_hit_id)
-  -- 先試新的物理模擬（effie3rd prediction module）
+  -- try new physics simulation first (effie3rd prediction module)
   if prediction_module then
     local _ok, _new_hits = pcall(function()
       return prediction_module.predict_hits(_attacker, _defender, _frames)
@@ -23,13 +23,13 @@ function predict_hits_simulation(_attacker, _defender, _frames, _last_hit_id)
             pos_x  = _attacker.pos_x,
             pos_y  = _attacker.pos_y,
           }
-          return _result  -- 找到第一個 hit 就回傳
+          return _result  -- return on first hit found
         end
       end
-      -- 新模組沒找到，fallback
+      -- new module found nothing, fallback
     end
   end
 
-  -- Fallback：舊的 simulate_hit_collision
+  -- fallback: legacy simulate_hit_collision
   return simulate_hit_collision(_attacker, _defender, _frames, _last_hit_id)
 end

@@ -1,5 +1,5 @@
 -- src/control/missions.lua
--- Mission 系統：mission slots、錄製、回放
+-- mission system: mission slots, recording, playback
 
 mission_slot_count = 10
 

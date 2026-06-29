@@ -135,7 +135,7 @@ function gamestate_read()
     update_flip_input(player_objects[2], player_objects[1])
   end
 
-  function update_player_relationships(_self, _other)
+  local function update_player_relationships(_self, _other)
     -- Can't do this inside read_player_vars cause we need both players to have read their stuff
     if _self.has_just_started_wake_up or _self.has_just_started_fast_wake_up then
       _self.wakeup_other_last_act_animation = _other.last_act_animation
@@ -167,7 +167,7 @@ end
 
 function read_input(_player_obj)
 
-  function read_single_input(_input_object, _input_name, _input)
+  local function read_single_input(_input_object, _input_name, _input)
     _input_object.pressed[_input_name] = false
     _input_object.released[_input_name] = false
     if _input_object.down[_input_name] == false and _input then _input_object.pressed[_input_name] = true end
@@ -828,7 +828,7 @@ function read_player_vars(_player_obj)
   _player_obj.parry_air = _player_obj.parry_air or { name = "Air", max_validity = 7, max_cooldown = 20 }
   _player_obj.parry_antiair = _player_obj.parry_antiair or { name = "Anti-Air", max_validity = 5, max_cooldown = 18 }
 
-  function read_parry_state(_parry_object, _validity_addr, _cooldown_addr)
+  local function read_parry_state(_parry_object, _validity_addr, _cooldown_addr)
     -- read data
     _parry_object.last_hit_or_block_frame =  _parry_object.last_hit_or_block_frame or 0
     if _player_obj.has_just_blocked or _player_obj.has_just_been_hit then
@@ -902,7 +902,7 @@ function read_player_vars(_player_obj)
   _player_obj.charge_3 = _player_obj.charge_3 or { name = "Charge 3", max_charge = 43, max_reset = 43, enabled = false }
 
 
-  function read_charge_state(_charge_object, _valid_charge, _charge_addr, _reset_addr)
+  local function read_charge_state(_charge_object, _valid_charge, _charge_addr, _reset_addr)
     if _valid_charge == false then
       _charge_object.charge_time = 0
       _charge_object.reset_time = 0

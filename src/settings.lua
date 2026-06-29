@@ -1,5 +1,5 @@
 -- src/settings.lua
--- 訓練設定的存取與錄製槽備份/還原
+-- training settings: load/save and recording slot backup/restore
 
 function save_training_data()
   backup_recordings()

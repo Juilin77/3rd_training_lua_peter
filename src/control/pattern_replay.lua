@@ -1,5 +1,5 @@
 -- src/control/pattern_replay.lua
--- Pattern Replay 系統：掃描、回放 replay pattern 檔案
+-- pattern replay system: scan and replay pattern files
 
 replay_output_path = "../replay-pattern-trainer/patterns/"
 

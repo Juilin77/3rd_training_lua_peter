@@ -8,7 +8,7 @@ function special_training_720_draw()
     local CARD720 = {8, 2, 4, 6}
     local CARD_SYMBOL = {[8]="^", [2]="v", [4]="<", [6]=">"}
 
-    -- Follow character 位置（預設對齊 Tech Throw）
+    -- follow character position (default aligned to Tech Throw)
     local _x = screen_width - 138 - get_text_width("Juggle: ")
     local _y = 82
     if training_settings.special_training_follow_character then
@@ -20,12 +20,12 @@ function special_training_720_draw()
       _y = _py - 100
     end
 
-    -- 角色檢查
+    -- character check
     if player.char_id ~= HUGO_CHAR_ID then
       gui.text(_x, _y, "720 Trainer: Hugo Only", 0xFFFFFFFF, 0x00000080)
     else
 
-      -- 讀取輸入
+      -- read input
       local _input = joypad.get()
       local _prefix = "P1 "
       local _up    = _input[_prefix.."Up"]    or false
@@ -53,11 +53,11 @@ function special_training_720_draw()
         end
       end
 
-      -- 移除超過 window 幀的舊記錄
+      -- remove entries older than window frames
       while #rot720_disp.history > 0 and frame_number - rot720_disp.history[1].frame > rot720_disp.window do
         table.remove(rot720_disp.history, 1)
       end
-      -- history 過期後清 sequence 顯示，不觸發 Too Late（Too Late 只在按 Punch 時判斷）
+      -- clear sequence display after history expires; does not trigger Too Late (Too Late only fires on Punch press)
       if #rot720_disp.history == 0 then
         rot720_disp.sequence = {}
       end
@@ -85,7 +85,7 @@ function special_training_720_draw()
         return true
       end
 
-      -- 偵測按拳 / 按腳
+      -- detect punch / kick press
       local _kick = _input[_prefix.."Weak Kick"] or _input[_prefix.."Medium Kick"] or _input[_prefix.."Strong Kick"]
       if _kick then
         if _input[_prefix.."Weak Kick"] then rot720_disp.last_button = "LK"
@@ -115,7 +115,7 @@ function special_training_720_draw()
           return count >= 3 and has_up
         end
         if not pre_filter(rot720_disp.history) then
-          -- 靜默忽略：方向不夠或沒有 ↑，不顯示任何訊息
+          -- silent ignore: insufficient directions or no up input, show nothing
         elseif check_720_condA(rot720_disp.history) or check_720_condB(rot720_disp.history) then
           rot720_disp.success_flash = 180
           rot720_disp.fail_reason = nil
@@ -138,16 +138,16 @@ function special_training_720_draw()
         end
       end
 
-      -- === 繪圖 ===
-      local _cell = 8   -- img_dir_small 每格 8px
+      -- === draw ===
+      local _cell = 8   -- img_dir_small: 8px per cell
       local _gap = 2
 
-      -- 標題（Tech Throw 風格）
+      -- title (Tech Throw style)
       local _title = "720 Trainer: "
       gui.text(_x, _y, _title, text_default_color, text_default_border_color)
       local _title_w = get_text_width(_title)
 
-      -- 結果文字 inline 在標題右邊
+      -- result text inline to the right of title
       if rot720_disp.success_flash > 0 and rot720_disp.success_flash % 8 < 4 then
         gui.text(_x + _title_w, _y, "720!", 0x10FB00FF, text_default_border_color)
       elseif rot720_disp.fail_reason == "time" then
@@ -158,7 +158,7 @@ function special_training_720_draw()
         gui.text(_x + _title_w, _y, "Incomplete", 0xE70000FF, text_default_border_color)
       end
 
-      -- 第一排：7 個格子顯示方向圖示（img_dir_small，8px 每格）
+      -- row 1: 7 cells showing direction icons (img_dir_small, 8px each)
       local _row_y = _y + 10
       for i = 1, 7 do
         local _cx = _x + (i-1) * (_cell + _gap)
@@ -170,7 +170,7 @@ function special_training_720_draw()
         end
       end
 
-      -- 第 8 格：按鍵圖示（空一格間距）
+      -- cell 8: button icon (one cell gap)
       local _btn_cx = _x + 7 * (_cell + _gap) + _gap + 4
       if rot720_disp.last_button == "LP" then
         gui.image(_btn_cx, _row_y, img_LP_button_small)
@@ -186,7 +186,7 @@ function special_training_720_draw()
         gui.image(_btn_cx, _row_y, img_HK_button_small)
       end
 
-      -- 第二排：right-to-left countdown bar
+      -- row 2: right-to-left countdown bar
       local _y2 = _row_y + _cell + 4
       local _bar_w = 7 * (_cell + _gap) - _gap
       local _elapsed = 0

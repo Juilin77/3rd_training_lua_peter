@@ -1,5 +1,5 @@
 -- src/control/recording.lua
--- 錄製/回放系統：input sequence、recording slots、recording state machine
+-- recording/playback system: input sequences, recording slots, state machine
 
 -- players
 function queue_input_sequence(_player_obj, _sequence, _offset)
@@ -346,7 +346,7 @@ end
 
 -- swap inputs
 function swap_inputs(_out_input_table)
-  function swap(_input)
+  local function swap(_input)
     local carry = _out_input_table["P1 ".._input]
     _out_input_table["P1 ".._input] = _out_input_table["P2 ".._input]
     _out_input_table["P2 ".._input] = carry
