@@ -402,6 +402,7 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
 
   -- increment hit id
   if _dummy.has_just_blocked or _dummy.has_just_parried or _dummy.has_just_been_hit or _hit_expired then
+
     log(_dummy.prefix, "blocking", string.format("next hit %d>%d %d", _dummy.blocking.last_attack_hit_id, _dummy.blocking.expected_attack_hit_id, to_bit(_hit_expired)))
     _dummy.blocking.last_attack_hit_id = _dummy.blocking.expected_attack_hit_id
     _dummy.blocking.expected_attack_hit_id = 0
@@ -421,8 +422,8 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
     do
       local _cur_meta = frame_data_meta[_player.char_str] and frame_data_meta[_player.char_str].moves and frame_data_meta[_player.char_str].moves[_player.relevant_animation]
       if _cur_meta and _cur_meta.force_recording and _cur_meta.hits then
-        -- Phase 2 not triggered but SA hit close up (has_just_been_hit): start carry from the hit frame
-        if _dummy.has_just_been_hit then
+        -- Phase 2 not triggered but SA hit close up: start carry from the hit frame
+        if _dummy.has_just_been_hit or _dummy.has_just_blocked then
           _dummy.blocking.block_string = true
         end
         if _dummy.blocking.block_string then

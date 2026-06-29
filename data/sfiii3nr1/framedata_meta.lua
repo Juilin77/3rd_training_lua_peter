@@ -330,8 +330,8 @@ frame_data_meta["ken"].moves["2114"] = { hits = {{ type = 3 }, { type = 3 }, { t
 frame_data_meta["ken"].moves["21f4"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }}, movement_type = 2 } -- Air Tatsu H
 frame_data_meta["ken"].moves["22d4"] = { hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }}, movement_type = 2 } -- Air Tatsu Ex
 
-frame_data_meta["ken"].moves["1214"] = { force_recording = true } -- SA 1
-frame_data_meta["ken"].moves["15b4"] = { force_recording = true } -- SA 2
+frame_data_meta["ken"].moves["1214"] = { force_recording = true, hits = {}, carry_offset = 0, carry_hold_short = 2, short_carry_offset = 8 } -- SA 1
+frame_data_meta["ken"].moves["15b4"] = { force_recording = true, hits = {}, carry_offset = 0, carry_hold_short = 2, short_carry_offset = 3 } -- SA 2
 frame_data_meta["ken"].moves["1834"] = { force_recording = true } -- SA 3
 frame_data_meta["ken"].moves["1d24"] = { force_recording = true } -- SA 3
 
