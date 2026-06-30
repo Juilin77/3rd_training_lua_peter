@@ -1229,7 +1229,7 @@ local function apply_pushback(_gs)
       if _overlap > 1 then
          local _cspec1 = character_specific[_gs.P1.char_str] or {}
          local _cspec2 = character_specific[_gs.P2.char_str] or {}
-         local _push_value_max = math.ceil(((_cspec1._push_value or 0) + (_cspec2._push_value or 0)) / 2)
+         local _push_value_max = math.ceil(((_cspec1.push_value or 0) + (_cspec2.push_value or 0)) / 2)
          local _dist_from_pb_center = math.abs(_gs.P1.pos_x - _gs.P2.pos_x)
          local _pushbox_overlap_range = (_pushboxes[1].width + _pushboxes[2].width) / 2
          local _push_value = get_push_value(_dist_from_pb_center, _pushbox_overlap_range, _push_value_max)
