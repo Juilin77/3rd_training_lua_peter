@@ -236,7 +236,7 @@ frame_data_meta["makoto"].moves["2310"] = { hits = {{ type = 3 }}, movement_type
 frame_data_meta["makoto"].moves["2410"] = { hits = {{ type = 3 }}, movement_type = 2 } -- H Tsurugi
 frame_data_meta["makoto"].moves["2510"] = { hits = {{ type = 3 }}, movement_type = 2 } -- EX Tsurugi
 
--- SA2 Abare Tosanami (LK/MK/HK 共用)
+-- SA2 Abare Tosanami (shared by LK/MK/HK)
 frame_data_meta["makoto"].moves["c044"] = { force_recording = true, hits = {{ type = 3 }} } -- super flash
 frame_data_meta["makoto"].moves["8ea4"] = { force_recording = true, hits = {{ type = 3 }} } -- SA2 kick (LK ×2, MK ×2, HK ×3)
 frame_data_meta["makoto"].moves["9284"] = { force_recording = true, hits = {{ type = 3 }} } -- SA2 kick transition
@@ -244,16 +244,16 @@ frame_data_meta["makoto"].moves["94f4"] = { force_recording = true, hits = {{ ty
 frame_data_meta["makoto"].moves["8c14"] = { force_recording = true, hits = {{ type = 3 }} } -- SA2 kick (MK/HK only)
 frame_data_meta["makoto"].moves["9ec4"] = { force_recording = true, hits = {{ type = 3 }} } -- SA2 kick transition (MK/HK only)
 frame_data_meta["makoto"].moves["0088"] = { force_recording = true, hits = {{ type = 3 }} } -- SA2 final hit
--- 1438: SA1 startup，sub-frame SA（Baston char17 iMove=053, active frames 52-54）
--- proxy_hits 在 Phase 2 觸發時做距離型判斷（攻擊框能否打到 dummy）
--- left 值：Baston 局部座標（面向方向為正）→ 取反 → Lua 世界座標（向右為正）
+-- 1438: SA1 startup, sub-frame SA (Baston char17 iMove=053, active frames 52-54)
+-- proxy_hits performs a distance-based check at Phase 2 trigger (whether the attack box can reach the dummy)
+-- left value: Baston local coordinate (facing direction is positive) → negated → Lua world coordinate (right is positive)
 frame_data_meta["makoto"].moves["1438"] = {
   force_recording = true,
   hits = {{ type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }, { type = 3 }},
-  -- proxy_max_dist：Phase 2 距離閾值（距離 <= 此值 → 觸發 should_block）
-  -- 實測：dist=45 打中；dist=106/110 空揮；向下收窄中，目前測試值
+  -- proxy_max_dist: Phase 2 distance threshold (dist <= this value triggers should_block)
+  -- Measured: dist=45 hits; dist=106/110 whiffs; narrowing down, current test value
   proxy_max_dist = 105,
-  -- proxy_hits 保留供未來精確碰撞用（left 已修正為 Lua 世界座標正方向）
+  -- proxy_hits retained for future precise collision use (left already corrected to Lua world coordinate positive direction)
   proxy_hits = {
     [50] = { boxes = { { left=78, width=36, bottom=41, height=11, type="attack" }, { left=53, width=14, bottom=27, height=40, type="attack" } } },
     [51] = { boxes = { { left=78, width=36, bottom=41, height=11, type="attack" }, { left=53, width=14, bottom=27, height=40, type="attack" } } },

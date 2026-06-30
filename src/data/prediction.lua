@@ -9,20 +9,20 @@ local prediction = {}
 -- Peter uses global frame_data, frame_data_meta instead of fd module
 local fd = {}
 fd.get_first_hit_frame = function(_char_str, _anim)
-  local fdata = find_move_frame_data(_char_str, _anim)
-  if not fdata or not fdata.hit_frames then return nil end
-  return fdata.hit_frames[1]
+  local _fdata = find_move_frame_data(_char_str, _anim)
+  if not _fdata or not _fdata.hit_frames then return nil end
+  return _fdata.hit_frames[1]
 end
 fd.get_last_hit_frame = function(_char_str, _anim)
-  local fdata = find_move_frame_data(_char_str, _anim)
-  if not fdata or not fdata.hit_frames then return nil end
-  return fdata.hit_frames[#fdata.hit_frames]
+  local _fdata = find_move_frame_data(_char_str, _anim)
+  if not _fdata or not _fdata.hit_frames then return nil end
+  return _fdata.hit_frames[#_fdata.hit_frames]
 end
 fd.find_frame_data_by_name = function() return nil end
 fd.get_boxes = function(_char_str, _anim, _frame)
-  local fdata = find_move_frame_data(_char_str, _anim)
-  if not fdata then return nil end
-  return fdata.boxes and fdata.boxes[_frame] or nil
+  local _fdata = find_move_frame_data(_char_str, _anim)
+  if not _fdata then return nil end
+  return _fdata.boxes and _fdata.boxes[_frame] or nil
 end
 
 -- move_data not needed for blocking prediction
@@ -228,18 +228,18 @@ local function get_frames_until_idle(_obj, _anim, _frame, _frames_prediction, _r
    local _frame_to_check = math.min(_frame + 1, _max_frames)
 
    if _obj.is_airborne and _fdata.landing_anim then
-      local frames_until_landing = predict_frames_before_landing(_obj)
-      local adjustment = 0
+      local _frames_until_landing = predict_frames_before_landing(_obj)
+      local _adjustment = 0
       if _fdata.name == "uoh" and _obj.animation_connection_count > 0 then
-         adjustment = -1
+         _adjustment = -1
       end
       if _obj.is_in_air_reel then
-         adjustment = 20
+         _adjustment = 20
       end
       return _obj.remaining_freeze_frames
-         + frames_until_landing
+         + _frames_until_landing
          + get_frames_until_idle(_obj, _fdata.landing_anim, 0, _frames_prediction)
-         + adjustment
+         + _adjustment
    end
 
    if _fdata.idle_frames then
@@ -1783,22 +1783,22 @@ end
 
 -- ── Public API ───────────────────────────────────────────────────────────────
 
-function prediction.predict_hits(player1, player2, frames_prediction)
-  local gs = make_gs(player1, player2)
-  return predict_hits(gs, nil, frames_prediction or 3)
+function prediction.predict_hits(_player1, _player2, _frames_prediction)
+  local gs = make_gs(_player1, _player2)
+  return predict_hits(gs, nil, _frames_prediction or 3)
 end
 
-function prediction.predict_gamestate(player1, player2, frames_prediction)
-  local gs = make_gs(player1, player2)
-  return predict_gamestate(gs, nil, frames_prediction or 3)
+function prediction.predict_gamestate(_player1, _player2, _frames_prediction)
+  local gs = make_gs(_player1, _player2)
+  return predict_gamestate(gs, nil, _frames_prediction or 3)
 end
 
-function prediction.get_frame_advantage(player_obj)
-  return get_frame_advantage(make_player_gs(player_obj))
+function prediction.get_frame_advantage(_player_obj)
+  return get_frame_advantage(make_player_gs(_player_obj))
 end
 
-function prediction.predict_frames_before_landing(player_obj)
-  return predict_frames_before_landing(make_player_gs(player_obj))
+function prediction.predict_frames_before_landing(_player_obj)
+  return predict_frames_before_landing(make_player_gs(_player_obj))
 end
 
 return prediction
