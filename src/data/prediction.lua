@@ -8,21 +8,21 @@ local prediction = {}
 
 -- Peter uses global frame_data, frame_data_meta instead of fd module
 local fd = {}
-fd.get_first_hit_frame = function(char_str, anim)
-  local fdata = find_move_frame_data(char_str, anim)
+fd.get_first_hit_frame = function(_char_str, _anim)
+  local fdata = find_move_frame_data(_char_str, _anim)
   if not fdata or not fdata.hit_frames then return nil end
   return fdata.hit_frames[1]
 end
-fd.get_last_hit_frame = function(char_str, anim)
-  local fdata = find_move_frame_data(char_str, anim)
+fd.get_last_hit_frame = function(_char_str, _anim)
+  local fdata = find_move_frame_data(_char_str, _anim)
   if not fdata or not fdata.hit_frames then return nil end
   return fdata.hit_frames[#fdata.hit_frames]
 end
 fd.find_frame_data_by_name = function() return nil end
-fd.get_boxes = function(char_str, anim, frame)
-  local fdata = find_move_frame_data(char_str, anim)
+fd.get_boxes = function(_char_str, _anim, _frame)
+  local fdata = find_move_frame_data(_char_str, _anim)
   if not fdata then return nil end
-  return fdata.boxes and fdata.boxes[frame] or nil
+  return fdata.boxes and fdata.boxes[_frame] or nil
 end
 
 -- move_data not needed for blocking prediction
@@ -33,7 +33,7 @@ move_data.get_move_inputs_by_name = function() return nil end
 local stage_boundaries = { left = -27648, right = 27648 }
 
 -- debug stub
-local debug_on = false
+local _debug_on = false
 
 -- ── Peter's globals used directly ───────────────────────────────────────────
 -- frame_data, frame_data_meta, character_specific, next_animation,
@@ -42,8 +42,8 @@ local debug_on = false
 -- ── frame_data_meta access helper ───────────────────────────────────────────
 -- effie3rd: frame_data_meta[char][anim_id]
 -- Peter:    frame_data_meta[char].moves[anim_id]
-local function get_fdm(char_str, anim_id)
-  return frame_data_meta[char_str] and frame_data_meta[char_str].moves and frame_data_meta[char_str].moves[anim_id]
+local function get_fdm(_char_str, _anim_id)
+  return frame_data_meta[_char_str] and frame_data_meta[_char_str].moves and frame_data_meta[_char_str].moves[_anim_id]
 end
 
 -- ── Core prediction functions (filled in by Agent B) ─────────────────────────
@@ -69,121 +69,121 @@ local animations = {
    PARRY_AIR = 15,
 }
 
-local function predict_frames_branching(obj, anim, frame, frames_prediction, specify_frame, result)
-   local results = {}
-   result = result or {}
-   frame = frame or obj.animation_frame
-   local fdata
-   if obj.type == "player" then
-      anim = anim or obj.animation
-      fdata = find_move_frame_data(obj.char_str, anim)
+local function predict_frames_branching(_obj, _anim, _frame, _frames_prediction, _specify_frame, _result)
+   local _results = {}
+   _result = _result or {}
+   _frame = _frame or _obj.animation_frame
+   local _fdata
+   if _obj.type == "player" then
+      _anim = _anim or _obj.animation
+      _fdata = find_move_frame_data(_obj.char_str, _anim)
    else
-      anim = anim or obj.projectile_type
-      fdata = find_move_frame_data("projectiles", anim)
+      _anim = _anim or _obj.projectile_type
+      _fdata = find_move_frame_data("projectiles", _anim)
    end
-   if not fdata then
-      return results
+   if not _fdata then
+      return _results
    end
-   local max_frames = fdata.frames and #fdata.frames or 1
-   local frame_to_check = math.min(frame + 1, max_frames)
-   local delta = 0
-   if #result > 0 then
-      delta = result[#result].delta
-   end
-
-   if specify_frame then
-      delta = delta + 1
-      frames_prediction = frames_prediction - 1
-      result[#result + 1] = { animation = anim, frame = math.min(frame, max_frames - 1), delta = delta }
+   local _max_frames = _fdata.frames and #_fdata.frames or 1
+   local _frame_to_check = math.min(_frame + 1, _max_frames)
+   local _delta = 0
+   if #_result > 0 then
+      _delta = _result[#_result].delta
    end
 
-   local used_loop = false
-   local used_next_anim = false
+   if _specify_frame then
+      _delta = _delta + 1
+      _frames_prediction = _frames_prediction - 1
+      _result[#_result + 1] = { animation = _anim, frame = math.min(_frame, _max_frames - 1), delta = _delta }
+   end
 
-   for i = 1, frames_prediction do
-      if fdata and frame_to_check <= #fdata.frames and fdata.frames[frame_to_check] then
-         used_loop = false
-         used_next_anim = false
-         delta = delta + 1
-         if fdata.frames[frame_to_check].loop then
-            used_loop = true
-            frame_to_check = fdata.frames[frame_to_check].loop + 1
+   local _used_loop = false
+   local _used_next_anim = false
+
+   for i = 1, _frames_prediction do
+      if _fdata and _frame_to_check <= #_fdata.frames and _fdata.frames[_frame_to_check] then
+         _used_loop = false
+         _used_next_anim = false
+         _delta = _delta + 1
+         if _fdata.frames[_frame_to_check].loop then
+            _used_loop = true
+            _frame_to_check = _fdata.frames[_frame_to_check].loop + 1
          else
             for _, na in pairs(next_anim_types) do
-               if fdata.frames[frame_to_check][na] then
+               if _fdata.frames[_frame_to_check][na] then
                   if na == "next_anim" then
-                     used_next_anim = true
+                     _used_next_anim = true
                   end
-                  for __, next_anim in pairs(fdata.frames[frame_to_check][na]) do
-                     local current_res = copytable(result)
+                  for __, next_anim in pairs(_fdata.frames[_frame_to_check][na]) do
+                     local current_res = copytable(_result)
                      local next_anim_anim = next_anim[1]
                      local next_anim_frame = next_anim[2]
                      if next_anim_anim == "idle" then
-                        local pfd = frame_data[obj.char_str] or {}
-                        if obj.posture == 32 then
-                           next_anim_anim = pfd.crouching or obj.animation
+                        local pfd = frame_data[_obj.char_str] or {}
+                        if _obj.posture == 32 then
+                           next_anim_anim = pfd.crouching or _obj.animation
                            next_anim_frame = 0
                         else
-                           next_anim_anim = pfd.standing or obj.animation
+                           next_anim_anim = pfd.standing or _obj.animation
                            next_anim_frame = 0
                         end
                      end
                      current_res[#current_res + 1] = {
                         animation = next_anim_anim,
                         frame = next_anim_frame,
-                        delta = delta,
+                        delta = _delta,
                      }
                      local subres = predict_frames_branching(
-                        obj,
+                        _obj,
                         next_anim_anim,
                         next_anim_frame,
-                        frames_prediction - i,
+                        _frames_prediction - i,
                         false,
                         current_res
                      )
                      for ___, sr in pairs(subres) do
-                        results[#results + 1] = sr
+                        _results[#_results + 1] = sr
                      end
                   end
                end
             end
          end
-         if used_next_anim then
+         if _used_next_anim then
             break
          else
-            if not used_loop then
-               frame_to_check = frame_to_check + 1
-               if frame_to_check > #fdata.frames then
+            if not _used_loop then
+               _frame_to_check = _frame_to_check + 1
+               if _frame_to_check > #_fdata.frames then
                   break
                end
             end
-            result[#result + 1] = { animation = anim, frame = frame_to_check - 1, delta = delta }
+            _result[#_result + 1] = { animation = _anim, frame = _frame_to_check - 1, delta = _delta }
          end
       end
    end
 
-   if not used_next_anim then
-      results[#results + 1] = result
+   if not _used_next_anim then
+      _results[#_results + 1] = _result
    end
 
-   return results
+   return _results
 end
 
-local function predict_frames_before_landing(player)
-   if not player.is_airborne then
+local function predict_frames_before_landing(_player)
+   if not _player.is_airborne then
       return 0
    end
-   local frames_prediction = 20
-   local y = player.pos_y
-   local velocity = player.velocity_y
-   for i = 1, frames_prediction do
-      y = y + velocity
-      velocity = velocity + player.acceleration_y
-      if player.animation_frame_data and player.animation_frame_data.landing_height then
-         if y < player.animation_frame_data.landing_height then
+   local _frames_prediction = 20
+   local _y = _player.pos_y
+   local _velocity = _player.velocity_y
+   for i = 1, _frames_prediction do
+      _y = _y + _velocity
+      _velocity = _velocity + _player.acceleration_y
+      if _player.animation_frame_data and _player.animation_frame_data.landing_height then
+         if _y < _player.animation_frame_data.landing_height then
             return i
          end
-      elseif y < 0 then
+      elseif _y < 0 then
          return i
       end
    end
@@ -192,155 +192,155 @@ end
 
 -- ── Batch 2: get_frames_until_idle, get_frame_advantage, check_switch_sides ──
 
-local function get_frames_until_idle(obj, anim, frame, frames_prediction, result, depth)
-   if obj.is_idle then
+local function get_frames_until_idle(_obj, _anim, _frame, _frames_prediction, _result, _depth)
+   if _obj.is_idle then
       return 0
    end
-   if obj.remaining_freeze_frames == 0 and not obj.freeze_just_ended then
-      local recovery_time = obj.recovery_time + obj.additional_recovery_time
+   if _obj.remaining_freeze_frames == 0 and not _obj.freeze_just_ended then
+      local recovery_time = _obj.recovery_time + _obj.additional_recovery_time
       if recovery_time > 0 then
          return recovery_time + 1
       end
    end
 
-   depth = depth or 0
-   local results = {}
-   result = result or 0
-   anim = anim or obj.animation
-   frame = frame or obj.animation_frame
-   local fdata = find_move_frame_data(obj.char_str, anim)
+   _depth = _depth or 0
+   local _results = {}
+   _result = _result or 0
+   _anim = _anim or _obj.animation
+   _frame = _frame or _obj.animation_frame
+   local _fdata = find_move_frame_data(_obj.char_str, _anim)
 
-   local delta = 0
-   if result then
-      delta = result
+   local _delta = 0
+   if _result then
+      _delta = _result
    end
 
-   local used_loop = false
-   local used_next_anim = false
+   local _used_loop = false
+   local _used_next_anim = false
 
-   if not fdata then
-      if result == 0 then
-         return frames_prediction
+   if not _fdata then
+      if _result == 0 then
+         return _frames_prediction
       end
-      return delta, false
+      return _delta, false
    end
-   local max_frames = fdata.frames and #fdata.frames or 1
-   local frame_to_check = math.min(frame + 1, max_frames)
+   local _max_frames = _fdata.frames and #_fdata.frames or 1
+   local _frame_to_check = math.min(_frame + 1, _max_frames)
 
-   if obj.is_airborne and fdata.landing_anim then
-      local frames_until_landing = predict_frames_before_landing(obj)
+   if _obj.is_airborne and _fdata.landing_anim then
+      local frames_until_landing = predict_frames_before_landing(_obj)
       local adjustment = 0
-      if fdata.name == "uoh" and obj.animation_connection_count > 0 then
+      if _fdata.name == "uoh" and _obj.animation_connection_count > 0 then
          adjustment = -1
       end
-      if obj.is_in_air_reel then
+      if _obj.is_in_air_reel then
          adjustment = 20
       end
-      return obj.remaining_freeze_frames
+      return _obj.remaining_freeze_frames
          + frames_until_landing
-         + get_frames_until_idle(obj, fdata.landing_anim, 0, frames_prediction)
+         + get_frames_until_idle(_obj, _fdata.landing_anim, 0, _frames_prediction)
          + adjustment
    end
 
-   if fdata.idle_frames then
-      local diff = delta
-      for _, idle_frame in ipairs(fdata.idle_frames) do
-         if frame <= idle_frame[1] then
-            diff = idle_frame[1] - frame
+   if _fdata.idle_frames then
+      local diff = _delta
+      for _, idle_frame in ipairs(_fdata.idle_frames) do
+         if _frame <= idle_frame[1] then
+            diff = idle_frame[1] - _frame
             break
          end
       end
-      return delta + diff, true
+      return _delta + diff, true
    else
-      if fdata.loops then
-         for i = 1, #fdata.loops do
-            if frame_to_check >= fdata.loops[i][1] + 1 and frame_to_check <= fdata.loops[i][2] + 1 then
+      if _fdata.loops then
+         for i = 1, #_fdata.loops do
+            if _frame_to_check >= _fdata.loops[i][1] + 1 and _frame_to_check <= _fdata.loops[i][2] + 1 then
                break
             end
          end
       end
-      for i = 1, frames_prediction do
-         if fdata and frame_to_check <= #fdata.frames and fdata.frames[frame_to_check] then
-            used_loop = false
-            used_next_anim = false
-            delta = delta + 1
-            if fdata.frames[frame_to_check].loop then
-               used_loop = true
-               frame_to_check = fdata.frames[frame_to_check].loop + 1
+      for i = 1, _frames_prediction do
+         if _fdata and _frame_to_check <= #_fdata.frames and _fdata.frames[_frame_to_check] then
+            _used_loop = false
+            _used_next_anim = false
+            _delta = _delta + 1
+            if _fdata.frames[_frame_to_check].loop then
+               _used_loop = true
+               _frame_to_check = _fdata.frames[_frame_to_check].loop + 1
             else
                for _, na in pairs(next_anim_types) do
-                  if fdata.frames[frame_to_check][na] then
+                  if _fdata.frames[_frame_to_check][na] then
                      if na == "next_anim" then
-                        used_next_anim = true
+                        _used_next_anim = true
                      end
-                     for __, next_anim in pairs(fdata.frames[frame_to_check][na]) do
+                     for __, next_anim in pairs(_fdata.frames[_frame_to_check][na]) do
                         local next_anim_anim = next_anim[1]
                         local next_anim_frame = next_anim[2]
                         if next_anim_anim == "idle" then
-                           return delta, true
+                           return _delta, true
                         end
                         local subres, found = get_frames_until_idle(
-                           obj,
+                           _obj,
                            next_anim_anim,
                            next_anim_frame,
-                           frames_prediction - i,
-                           delta,
-                           depth + 1
+                           _frames_prediction - i,
+                           _delta,
+                           _depth + 1
                         )
                         if found then
-                           results[#results + 1] = subres
+                           _results[#_results + 1] = subres
                         end
                      end
                   end
                end
             end
-            if used_next_anim then
+            if _used_next_anim then
                break
             else
-               if not used_loop then
-                  frame_to_check = frame_to_check + 1
-                  if frame_to_check > #fdata.frames then
+               if not _used_loop then
+                  _frame_to_check = _frame_to_check + 1
+                  if _frame_to_check > #_fdata.frames then
                      break
                   end
                end
-               result = delta
+               _result = _delta
             end
          end
       end
-      if #results == 0 then
-         return frames_prediction, false
+      if #_results == 0 then
+         return _frames_prediction, false
       end
-      local res = math.min(unpack(results))
-      if depth == 0 then
-         res = res + obj.remaining_freeze_frames
+      local res = math.min(unpack(_results))
+      if _depth == 0 then
+         res = res + _obj.remaining_freeze_frames
       end
       return res, true
    end
 end
 
-local function get_frame_advantage(player)
+local function get_frame_advantage(_player)
    if
-      player.has_just_connected
-      or player.other.has_just_connected
-      or (player.character_state_byte == 1 and (player.freeze_just_ended or player.remaining_freeze_frames > 0))
+      _player.has_just_connected
+      or _player.other.has_just_connected
+      or (_player.character_state_byte == 1 and (_player.freeze_just_ended or _player.remaining_freeze_frames > 0))
       or (
-         player.other.character_state_byte == 1
-         and (player.other.freeze_just_ended or player.other.remaining_freeze_frames > 0)
+         _player.other.character_state_byte == 1
+         and (_player.other.freeze_just_ended or _player.other.remaining_freeze_frames > 0)
       )
    then
       return
    end
-   local recovery_times = { 0, 0 }
-   for _, p in ipairs({ player, player.other }) do
-      recovery_times[p.id] = get_frames_until_idle(p, nil, nil, 80)
+   local _recovery_times = { 0, 0 }
+   for _, p in ipairs({ _player, _player.other }) do
+      _recovery_times[p.id] = get_frames_until_idle(p, nil, nil, 80)
    end
-   return recovery_times[player.other.id] - recovery_times[player.id]
+   return _recovery_times[_player.other.id] - _recovery_times[_player.id]
 end
 
-local function check_switch_sides(player)
-   local previous_dist = math.floor(player.other.previous_pos_x) - math.floor(player.previous_pos_x)
-   local dist = math.floor(player.other.pos_x) - math.floor(player.pos_x)
-   if tools.sign(previous_dist) ~= tools.sign(dist) and dist ~= 0 then
+local function check_switch_sides(_player)
+   local _previous_dist = math.floor(_player.other.previous_pos_x) - math.floor(_player.previous_pos_x)
+   local _dist = math.floor(_player.other.pos_x) - math.floor(_player.pos_x)
+   if tools.sign(_previous_dist) ~= tools.sign(_dist) and _dist ~= 0 then
       return true
    end
    return false
@@ -348,217 +348,217 @@ end
 
 -- ── Batch 3: init_motion_data, create_line, update_player_animation, predict_next_animation, get_next_animation ──
 
-local function init_motion_data(obj)
-   local data = {
-      pos_x = obj.pos_x,
-      pos_y = obj.pos_y,
-      flip_x = obj.flip_x,
-      velocity_x = obj.velocity_x,
-      velocity_y = obj.velocity_y,
-      acceleration_x = obj.acceleration_x,
-      acceleration_y = obj.acceleration_y,
+local function init_motion_data(_obj)
+   local _data = {
+      pos_x = _obj.pos_x,
+      pos_y = _obj.pos_y,
+      flip_x = _obj.flip_x,
+      velocity_x = _obj.velocity_x,
+      velocity_y = _obj.velocity_y,
+      acceleration_x = _obj.acceleration_x,
+      acceleration_y = _obj.acceleration_y,
    }
-   if obj.type == "player" then
-      data.standing_state = obj.standing_state
-      if obj.is_in_pushback then
-         data.pushback_start_index = frame_number - obj.pushback_start_frame
+   if _obj.type == "player" then
+      _data.standing_state = _obj.standing_state
+      if _obj.is_in_pushback then
+         _data.pushback_start_index = frame_number - _obj.pushback_start_frame
       end
    end
-   return { [0] = data }
+   return { [0] = _data }
 end
 
-local function init_motion_data_zero(obj)
-   local data = {
-      pos_x = obj.pos_x,
-      pos_y = obj.pos_y,
-      flip_x = obj.flip_x,
+local function init_motion_data_zero(_obj)
+   local _data = {
+      pos_x = _obj.pos_x,
+      pos_y = _obj.pos_y,
+      flip_x = _obj.flip_x,
       velocity_x = 0,
       velocity_y = 0,
       acceleration_x = 0,
       acceleration_y = 0,
    }
-   if obj.type == "player" then
-      data.standing_state = obj.standing_state
-      if obj.is_in_pushback then
-         data.pushback_start_index = frame_number - obj.pushback_start_frame
+   if _obj.type == "player" then
+      _data.standing_state = _obj.standing_state
+      if _obj.is_in_pushback then
+         _data.pushback_start_index = frame_number - _obj.pushback_start_frame
       end
    end
-   return { [0] = data }
+   return { [0] = _data }
 end
 
-local function create_line(obj, n)
-   local line = {}
-   for i = 1, n do
-      line[#line + 1] = { animation = obj.animation or obj.projectile_type, frame = obj.animation_frame + i, delta = i }
+local function create_line(_obj, _n)
+   local _line = {}
+   for i = 1, _n do
+      _line[#_line + 1] = { animation = _obj.animation or _obj.projectile_type, frame = _obj.animation_frame + i, delta = i }
    end
-   return line
+   return _line
 end
 
-local function update_player_animation(previous_input, player)
-   if player.has_animation_just_changed then
-      next_animation[player.id] = animations.NONE
+local function update_player_animation(_previous_input, _player)
+   if _player.has_animation_just_changed then
+      next_animation[_player.id] = animations.NONE
    end
-   if player.has_just_blocked then
-      local pfd = frame_data[player.char_str] or {}
-      local cspec = character_specific[player.char_str] or {}
+   if _player.has_just_blocked then
+      local pfd = frame_data[_player.char_str] or {}
+      local cspec = character_specific[_player.char_str] or {}
       local height_min = cspec.height and cspec.height.standing and cspec.height.standing.min or 0
-      if not tools.is_pressing_down(player, previous_input) then
+      if not tools.is_pressing_down(_player, _previous_input) then
          if
-            not player.received_connection_is_projectile
-            and player.other.pos_y >= height_min - 56
+            not _player.received_connection_is_projectile
+            and _player.other.pos_y >= height_min - 56
          then
-            next_animation[player.id] = animations.BLOCK_HIGH_AIR
+            next_animation[_player.id] = animations.BLOCK_HIGH_AIR
          else
-            next_animation[player.id] = animations.BLOCK_HIGH
+            next_animation[_player.id] = animations.BLOCK_HIGH
          end
       else
-         next_animation[player.id] = animations.BLOCK_LOW
+         next_animation[_player.id] = animations.BLOCK_LOW
       end
-   elseif player.has_just_parried then
-      if player.parry_forward.success or player.parry_antiair.success then
-         next_animation[player.id] = animations.PARRY_HIGH
-      elseif player.parry_down.success then
-         next_animation[player.id] = animations.PARRY_LOW
-      elseif player.parry_air.success then
-         next_animation[player.id] = animations.PARRY_AIR
+   elseif _player.has_just_parried then
+      if _player.parry_forward.success or _player.parry_antiair.success then
+         next_animation[_player.id] = animations.PARRY_HIGH
+      elseif _player.parry_down.success then
+         next_animation[_player.id] = animations.PARRY_LOW
+      elseif _player.parry_air.success then
+         next_animation[_player.id] = animations.PARRY_AIR
       end
    end
-   local pfd = frame_data[player.char_str] or {}
-   if player.animation == pfd.parry_low and not tools.is_pressing_down(player, previous_input) then
-      if player.animation_frame == #player.animation_frame_data.frames - 1 then
-         next_animation[player.id] = animations.STANDING_BEGIN
+   local _pfd = frame_data[_player.char_str] or {}
+   if _player.animation == _pfd.parry_low and not tools.is_pressing_down(_player, _previous_input) then
+      if _player.animation_frame == #_player.animation_frame_data.frames - 1 then
+         next_animation[_player.id] = animations.STANDING_BEGIN
       end
-   elseif player.animation == pfd.parry_high and tools.is_pressing_down(player, previous_input) then
-      if player.animation_frame == #player.animation_frame_data.frames - 1 then
-         next_animation[player.id] = animations.CROUCHING_BEGIN
+   elseif _player.animation == _pfd.parry_high and tools.is_pressing_down(_player, _previous_input) then
+      if _player.animation_frame == #_player.animation_frame_data.frames - 1 then
+         next_animation[_player.id] = animations.CROUCHING_BEGIN
       end
    end
 end
 
-local function predict_next_animation(player, input)
-   local pfd = frame_data[player.char_str] or {}
-   local cspec = character_specific[player.char_str] or {}
-   local height_min = cspec.height and cspec.height.standing and cspec.height.standing.min or 0
-   local animation = animations.NONE
-   if player.is_standing then
-      if tools.is_pressing_down(player, input) then
-         if player.is_idle then
-            animation = animations.CROUCHING_BEGIN
+local function predict_next_animation(_player, _input)
+   local _pfd = frame_data[_player.char_str] or {}
+   local _cspec = character_specific[_player.char_str] or {}
+   local _height_min = _cspec.height and _cspec.height.standing and _cspec.height.standing.min or 0
+   local _animation = animations.NONE
+   if _player.is_standing then
+      if tools.is_pressing_down(_player, _input) then
+         if _player.is_idle then
+            _animation = animations.CROUCHING_BEGIN
          end
-      elseif tools.is_pressing_forward(player, input) then
-         if player.action == 0 or player.action == 23 or player.action == 29 or player.action == 30 then
-            animation = animations.WALK_FORWARD
-         elseif player.action == 3 then
-            animation = animations.WALK_TRANSITION
+      elseif tools.is_pressing_forward(_player, _input) then
+         if _player.action == 0 or _player.action == 23 or _player.action == 29 or _player.action == 30 then
+            _animation = animations.WALK_FORWARD
+         elseif _player.action == 3 then
+            _animation = animations.WALK_TRANSITION
          end
-      elseif tools.is_pressing_back(player, input) then
-         if player.is_idle then
+      elseif tools.is_pressing_back(_player, _input) then
+         if _player.is_idle then
             if
-               player.blocking
-               and player.blocking.last_block
-               and player.blocking.last_block.blocking_type == "player"
-               and player.pos_y >= height_min - 56
+               _player.blocking
+               and _player.blocking.last_block
+               and _player.blocking.last_block.blocking_type == "player"
+               and _player.pos_y >= _height_min - 56
             then
-               animation = animations.BLOCK_HIGH_AIR_PROXIMITY
+               _animation = animations.BLOCK_HIGH_AIR_PROXIMITY
             else
-               animation = animations.BLOCK_HIGH_PROXIMITY
+               _animation = animations.BLOCK_HIGH_PROXIMITY
             end
          end
       end
-   elseif player.is_crouching then
-      if not tools.is_pressing_down(player, input) then
-         if player.is_idle then
-            animation = animations.STANDING_BEGIN
+   elseif _player.is_crouching then
+      if not tools.is_pressing_down(_player, _input) then
+         if _player.is_idle then
+            _animation = animations.STANDING_BEGIN
          end
-      elseif tools.is_pressing_back(player, input) then
-         if player.is_idle then
-            animation = animations.BLOCK_LOW_PROXIMITY
+      elseif tools.is_pressing_back(_player, _input) then
+         if _player.is_idle then
+            _animation = animations.BLOCK_LOW_PROXIMITY
          end
       end
    end
-   local recovery_time = player.recovery_time + player.additional_recovery_time
-   if recovery_time > 0 and recovery_time <= 1 then
-      if player.animation == pfd.block_low and not tools.is_pressing_down(player, input) then
-         animation = animations.STANDING_BEGIN
+   local _recovery_time = _player.recovery_time + _player.additional_recovery_time
+   if _recovery_time > 0 and _recovery_time <= 1 then
+      if _player.animation == _pfd.block_low and not tools.is_pressing_down(_player, _input) then
+         _animation = animations.STANDING_BEGIN
       elseif
-         (player.animation == pfd.block_high or player.animation == pfd.block_high_air)
-         and tools.is_pressing_down(player, input)
+         (_player.animation == _pfd.block_high or _player.animation == _pfd.block_high_air)
+         and tools.is_pressing_down(_player, _input)
       then
-         animation = animations.CROUCHING_BEGIN
+         _animation = animations.CROUCHING_BEGIN
       end
    end
-   return animation
+   return _animation
 end
 
-local function get_next_animation(player, animation)
-   local pfd = frame_data[player.char_str] or {}
-   if animation == animations.WALK_FORWARD then
-      return pfd.walk_forward
-   elseif animation == animations.WALK_BACK then
-      return pfd.walk_back
-   elseif animation == animations.WALK_TRANSITION then
-      return pfd.walk_transition
-   elseif animation == animations.STANDING_BEGIN then
-      return pfd.standing_begin
-   elseif animation == animations.CROUCHING_BEGIN then
-      return pfd.crouching_begin
-   elseif animation == animations.BLOCK_HIGH_PROXIMITY then
-      return pfd.block_high_proximity
-   elseif animation == animations.BLOCK_HIGH then
-      return pfd.block_high
-   elseif animation == animations.BLOCK_HIGH_AIR_PROXIMITY then
-      return pfd.block_high_air_proximity
-   elseif animation == animations.BLOCK_HIGH_AIR then
-      return pfd.block_high_air
-   elseif animation == animations.BLOCK_LOW_PROXIMITY then
-      return pfd.block_low_proximity
-   elseif animation == animations.BLOCK_LOW then
-      return pfd.block_low
-   elseif animation == animations.PARRY_HIGH then
-      return pfd.parry_high
-   elseif animation == animations.PARRY_LOW then
-      return pfd.parry_low
-   elseif animation == animations.PARRY_AIR then
-      return pfd.parry_air
+local function get_next_animation(_player, _animation)
+   local _pfd = frame_data[_player.char_str] or {}
+   if _animation == animations.WALK_FORWARD then
+      return _pfd.walk_forward
+   elseif _animation == animations.WALK_BACK then
+      return _pfd.walk_back
+   elseif _animation == animations.WALK_TRANSITION then
+      return _pfd.walk_transition
+   elseif _animation == animations.STANDING_BEGIN then
+      return _pfd.standing_begin
+   elseif _animation == animations.CROUCHING_BEGIN then
+      return _pfd.crouching_begin
+   elseif _animation == animations.BLOCK_HIGH_PROXIMITY then
+      return _pfd.block_high_proximity
+   elseif _animation == animations.BLOCK_HIGH then
+      return _pfd.block_high
+   elseif _animation == animations.BLOCK_HIGH_AIR_PROXIMITY then
+      return _pfd.block_high_air_proximity
+   elseif _animation == animations.BLOCK_HIGH_AIR then
+      return _pfd.block_high_air
+   elseif _animation == animations.BLOCK_LOW_PROXIMITY then
+      return _pfd.block_low_proximity
+   elseif _animation == animations.BLOCK_LOW then
+      return _pfd.block_low
+   elseif _animation == animations.PARRY_HIGH then
+      return _pfd.parry_high
+   elseif _animation == animations.PARRY_LOW then
+      return _pfd.parry_low
+   elseif _animation == animations.PARRY_AIR then
+      return _pfd.parry_air
    else
-      return player.animation
+      return _player.animation
    end
 end
 
 -- ── Batch 4: insert_projectile, box overlap helpers, update_before/after, update_frame_data ──
 
-local function insert_projectile(gs, player, projectile_data)
-   local proj_fdata = find_move_frame_data("projectiles", projectile_data.type)
-   if proj_fdata then
+local function insert_projectile(_gs, _player, _projectile_data)
+   local _proj_fdata = find_move_frame_data("projectiles", _projectile_data.type)
+   if _proj_fdata then
       local obj = { base = 0, projectile = 99 }
-      obj.id = projectile_data.type .. "_" .. player.id .. tostring(gs.frame_number)
-      obj.emitter_id = player.id
+      obj.id = _projectile_data.type .. "_" .. _player.id .. tostring(_gs.frame_number)
+      obj.emitter_id = _player.id
       obj.alive = true
-      obj.projectile_type = projectile_data.type
+      obj.projectile_type = _projectile_data.type
       obj.projectile_start_type = obj.projectile_type
       obj.animation = obj.projectile_type
-      obj.pos_x = player.pos_x + projectile_data.offset[1] * tools.flip_to_sign(player.flip_x)
-      obj.pos_y = player.pos_y + projectile_data.offset[2]
+      obj.pos_x = _player.pos_x + _projectile_data.offset[1] * tools.flip_to_sign(_player.flip_x)
+      obj.pos_y = _player.pos_y + _projectile_data.offset[2]
       obj.velocity_x = 0
       obj.velocity_y = 0
       obj.acceleration_x = 0
       obj.acceleration_y = 0
-      if proj_fdata.frames[1].velocity then
-         obj.velocity_x = proj_fdata.frames[1].velocity[1]
-         obj.velocity_y = proj_fdata.frames[1].velocity[2]
+      if _proj_fdata.frames[1].velocity then
+         obj.velocity_x = _proj_fdata.frames[1].velocity[1]
+         obj.velocity_y = _proj_fdata.frames[1].velocity[2]
       end
-      if proj_fdata.frames[1].acceleration then
-         obj.acceleration_x = proj_fdata.frames[1].acceleration[1]
-         obj.acceleration_y = proj_fdata.frames[1].acceleration[2]
+      if _proj_fdata.frames[1].acceleration then
+         obj.acceleration_x = _proj_fdata.frames[1].acceleration[1]
+         obj.acceleration_y = _proj_fdata.frames[1].acceleration[2]
       end
-      obj.flip_x = player.flip_x
+      obj.flip_x = _player.flip_x
       obj.boxes = {}
       obj.expired = false
       obj.previous_remaining_hits = 99
       obj.remaining_hits = 99
       obj.is_forced_one_hit = false
       obj.has_activated = false
-      obj.animation_start_frame = gs.frame_number
+      obj.animation_start_frame = _gs.frame_number
       obj.animation_frame = 0
       obj.animation_freeze_frames = 0
       obj.remaining_freeze_frames = 0
@@ -566,94 +566,94 @@ local function insert_projectile(gs, player, projectile_data)
       obj.lifetime = 0
       obj.cooldown = 0
       obj.is_placeholder = true
-      gs.projectiles[obj.id] = obj
+      _gs.projectiles[obj.id] = obj
    end
 end
 
-local function get_horizontal_box_overlap(a_box, ax, ay, a_flip, b_box, bx, by, b_flip)
-   local a_l, b_l
-   if a_flip == 0 then
-      a_l = ax + a_box.left
+local function get_horizontal_box_overlap(_a_box, _ax, _ay, _a_flip, _b_box, _bx, _by, _b_flip)
+   local _a_l, _b_l
+   if _a_flip == 0 then
+      _a_l = _ax + _a_box.left
    else
-      a_l = ax - a_box.left - a_box.width
+      _a_l = _ax - _a_box.left - _a_box.width
    end
-   local a_r = a_l + a_box.width
-   local a_b = ay + a_box.bottom
-   local a_t = a_b + a_box.height
+   local _a_r = _a_l + _a_box.width
+   local _a_b = _ay + _a_box.bottom
+   local _a_t = _a_b + _a_box.height
 
-   if b_flip == 0 then
-      b_l = bx + b_box.left
+   if _b_flip == 0 then
+      _b_l = _bx + _b_box.left
    else
-      b_l = bx - b_box.left - b_box.width
+      _b_l = _bx - _b_box.left - _b_box.width
    end
-   local b_r = b_l + b_box.width
-   local b_b = by + b_box.bottom
-   local b_t = b_b + b_box.height
+   local _b_r = _b_l + _b_box.width
+   local _b_b = _by + _b_box.bottom
+   local _b_t = _b_b + _b_box.height
 
-   if (a_r >= b_l) and (a_l <= b_r) and (a_t >= b_b) and (a_b <= b_t) then
-      return math.min(a_r, b_r) - math.max(a_l, b_l)
+   if (_a_r >= _b_l) and (_a_l <= _b_r) and (_a_t >= _b_b) and (_a_b <= _b_t) then
+      return math.min(_a_r, _b_r) - math.max(_a_l, _b_l)
    end
    return 0
 end
 
-local function get_push_value(dist_from_pb_center, pushbox_overlap_range, push_value_max)
-   local p = dist_from_pb_center / pushbox_overlap_range
-   if p < 0.7 then
-      local range = math.floor(0.7 * pushbox_overlap_range)
-      return tools.round((range - dist_from_pb_center) / range * (push_value_max - 6) + 6)
-   elseif p < 0.76 then
+local function get_push_value(_dist_from_pb_center, _pushbox_overlap_range, _push_value_max)
+   local _p = _dist_from_pb_center / _pushbox_overlap_range
+   if _p < 0.7 then
+      local range = math.floor(0.7 * _pushbox_overlap_range)
+      return tools.round((range - _dist_from_pb_center) / range * (_push_value_max - 6) + 6)
+   elseif _p < 0.76 then
       return 4
-   elseif p < 0.82 then
+   elseif _p < 0.82 then
       return 3
-   elseif p < 0.86 then
+   elseif _p < 0.86 then
       return 2
-   elseif p < 0.98 then
+   elseif _p < 0.98 then
       return 1
    end
    return 0
 end
 
-local function update_before(previous_input, dummy)
-   local player = dummy.other
-   update_player_animation(previous_input, player)
-   update_player_animation(previous_input, dummy)
+local function update_before(_previous_input, _dummy)
+   local _player = _dummy.other
+   update_player_animation(_previous_input, _player)
+   update_player_animation(_previous_input, _dummy)
 end
 
-local function update_after(input, dummy)
-   local player = dummy.other
-   next_animation[player.id] = predict_next_animation(player, input)
-   next_animation[dummy.id] = predict_next_animation(dummy, input)
+local function update_after(_input, _dummy)
+   local _player = _dummy.other
+   next_animation[_player.id] = predict_next_animation(_player, _input)
+   next_animation[_dummy.id] = predict_next_animation(_dummy, _input)
 end
 
-local function update_frame_data(gs, obj, frame_data_entry)
-   obj.animation = frame_data_entry.animation
-   if obj.type == "projectile" then
-      obj.projectile_type = frame_data_entry.animation
+local function update_frame_data(_gs, _obj, _frame_data_entry)
+   _obj.animation = _frame_data_entry.animation
+   if _obj.type == "projectile" then
+      _obj.projectile_type = _frame_data_entry.animation
    end
-   obj.animation_frame = frame_data_entry.frame
-   if frame_data_entry.frame_data then
-      obj.animation_frame_data = frame_data_entry.frame_data
+   _obj.animation_frame = _frame_data_entry.frame
+   if _frame_data_entry.frame_data then
+      _obj.animation_frame_data = _frame_data_entry.frame_data
    else
       local new_fdata
-      if obj.type == "player" then
-         new_fdata = frame_data[obj.char_str] and frame_data[obj.char_str][obj.animation]
+      if _obj.type == "player" then
+         new_fdata = frame_data[_obj.char_str] and frame_data[_obj.char_str][_obj.animation]
       else
-         new_fdata = frame_data["projectiles"] and frame_data["projectiles"][obj.animation]
+         new_fdata = frame_data["projectiles"] and frame_data["projectiles"][_obj.animation]
       end
-      obj.animation_frame_data = new_fdata or obj.animation_frame_data
+      _obj.animation_frame_data = new_fdata or _obj.animation_frame_data
    end
-   obj.boxes = obj.animation_frame_data
-         and obj.animation_frame_data.frames
-         and obj.animation_frame_data.frames[obj.animation_frame + 1]
-         and obj.animation_frame_data.frames[obj.animation_frame + 1].boxes
-      or obj.boxes
-   obj.has_animation_just_changed = false
-   if obj.type == "player" and gs.previous_gamestate and obj.animation ~= gs.previous_gamestate[obj.prefix].animation then
-      obj.has_animation_just_changed = true
-      obj.current_hit_id = 0
-      obj.animation_action_count = 0
-      obj.animation_miss_count = 0
-      obj.animation_connection_count = 0
+   _obj.boxes = _obj.animation_frame_data
+         and _obj.animation_frame_data.frames
+         and _obj.animation_frame_data.frames[_obj.animation_frame + 1]
+         and _obj.animation_frame_data.frames[_obj.animation_frame + 1].boxes
+      or _obj.boxes
+   _obj.has_animation_just_changed = false
+   if _obj.type == "player" and _gs.previous_gamestate and _obj.animation ~= _gs.previous_gamestate[_obj.prefix].animation then
+      _obj.has_animation_just_changed = true
+      _obj.current_hit_id = 0
+      _obj.animation_action_count = 0
+      _obj.animation_miss_count = 0
+      _obj.animation_connection_count = 0
    end
 end
 
@@ -663,19 +663,19 @@ end
 local function get_additional_recovery_delay() return 0 end
 
 -- stub: simple side determination used by update_sides
-local function get_side_local(pos_x, other_pos_x)
-   return (pos_x < other_pos_x) and 1 or 2
+local function get_side_local(_pos_x, _other_pos_x)
+   return (_pos_x < _other_pos_x) and 1 or 2
 end
 
-local function update_variables(gs)
-   local previous_gs = gs.previous_gamestate
-   gs.frame_number = gs.frame_number + 1
-   for _, player in ipairs(gs.player_objects) do
-      player.previous_pos_x = previous_gs and previous_gs[player.prefix].pos_x or player.previous_pos_x
-      player.previous_pos_y = previous_gs and previous_gs[player.prefix].pos_y or player.previous_pos_y
+local function update_variables(_gs)
+   local _previous_gs = _gs.previous_gamestate
+   _gs.frame_number = _gs.frame_number + 1
+   for _, player in ipairs(_gs.player_objects) do
+      player.previous_pos_x = _previous_gs and _previous_gs[player.prefix].pos_x or player.previous_pos_x
+      player.previous_pos_y = _previous_gs and _previous_gs[player.prefix].pos_y or player.previous_pos_y
       player.previous_remaining_freeze_frames = player.remaining_freeze_frames or 0
       player.remaining_freeze_frames = math.max(player.remaining_freeze_frames - 1, 0)
-      if previous_gs and previous_gs[player.prefix].just_received_connection then
+      if _previous_gs and _previous_gs[player.prefix].just_received_connection then
          player.remaining_freeze_frames = player.other.remaining_freeze_frames
       end
       if player.freeze_just_ended and player.character_state_byte == 1 and player.recovery_time == 0 then
@@ -685,7 +685,7 @@ local function update_variables(gs)
          end
          player.is_in_recovery = true
          player.is_in_pushback = true
-         player.pushback_start_frame = gs.frame_number
+         player.pushback_start_frame = _gs.frame_number
       end
       player.freeze_just_began = false
       player.freeze_just_ended = false

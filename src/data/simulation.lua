@@ -1,8 +1,8 @@
 -- src/data/simulation.lua
 -- physics simulation core, used for sub-frame blocking fallback
 -- used when predict_hitboxes() cannot find frame data (sub-frame animations)
--- depends on globals: predict_object_position(), test_collision(), predict_hurtboxes()
--- depends on globals: frame_data, frame_data_meta
+-- depends on globals: predict_object_position(), predict_hurtboxes() (from src/data/prediction_helpers)
+-- depends on globals: test_collision(), frame_data, frame_data_meta
 
 -- returns true if any box in the set is of attack type
 function sim_has_attack_boxes(_boxes)

@@ -151,3 +151,31 @@ function update_mission_recording(_input)
     table.insert(mission_recording_inputs[_side], _frame)
   end
 end
+
+function hotkey5()
+  if not mission_recording_active then
+    mission_recording_active = true
+    mission_recording_inputs = {p1 = {}, p2 = {}}
+    mission_recording_start_frame = frame_number
+    local _slot_index = training_settings.current_mission_slot
+    mission_recording_savestate_path = string.format("%smission_slot_%d.fs", saved_missions_path, _slot_index)
+    savestate.save(savestate.create(mission_recording_savestate_path))
+  else
+    mission_recording_active = false
+    local _end_frame = frame_number
+    local _name = string.format("mission_%d-%d", mission_recording_start_frame, _end_frame)
+    local _slot_index = training_settings.current_mission_slot
+    mission_slots[_slot_index].name = _name
+    mission_slots[_slot_index].inputs = mission_recording_inputs
+    mission_slots[_slot_index].savestate_path = mission_recording_savestate_path
+    save_mission_to_file(_slot_index)
+    refresh_mission_recording_slots_names()
+    for _i = 1, mission_slot_count do
+      local _next = (_slot_index - 1 + _i) % mission_slot_count + 1
+      if mission_slots[_next].name == "none" then
+        training_settings.current_mission_slot = _next
+        break
+      end
+    end
+  end
+end

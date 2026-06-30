@@ -73,34 +73,6 @@ function special_training_tech_throw_draw()
     -- Draw parry-style gauge
     local _x = screen_width - 138 - get_text_width("Juggle: ")
     local _y = 82
-    -- Follow Character for tech throw: not yet implemented; head position varies by character
-    -- local _player = _target
-    -- if not training_settings.special_training_follow_character then throw_tech_disp.frozen_x = nil end
-    -- if training_settings.special_training_follow_character then
-    --   if throw_tech_disp.frozen_x then
-    --     _x = throw_tech_disp.frozen_x
-    --     _y = throw_tech_disp.frozen_y
-    --   else
-    --     local _px = _player.pos_x - screen_x + emu.screenwidth()/2
-    --     local _py = emu.screenheight() - (_player.pos_y - screen_y) - ground_offset
-    --     local _half_width = throw_tech_disp.max_cooldown * _gauge_x_scale / 2
-    --     _x = _px - _half_width
-    --     _x = math.max(_x, 4)
-    --     _x = math.min(_x, emu.screenwidth() - (_half_width * 2.0 + 14))
-    --     local _push_height = 90
-    --     for _, _box in ipairs(_player.boxes) do
-    --       if _box.type == "push" then
-    --         _push_height = _box.bottom + _box.height
-    --         break
-    --       end
-    --     end
-    --     _y = _py - _push_height - 16
-    --     if throw_tech_disp.armed then
-    --       throw_tech_disp.frozen_x = _x
-    --       throw_tech_disp.frozen_y = _y
-    --     end
-    --   end
-    -- end
     throw_tech_disp.name = "Tech Throw: "
     throw_tech_disp.name_color = nil
     draw_parry_gauge_group(_x, _y, throw_tech_disp, _gauge_x_scale)

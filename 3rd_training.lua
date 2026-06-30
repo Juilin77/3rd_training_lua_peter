@@ -69,6 +69,7 @@ recording_slot_count = 8
 
 require("src/ui/menu")
 require("src/settings")
+require("src/data/prediction_helpers")
 require("src/control/dummy_control")
 require("src/control/recording")
 require("src/control/missions")
@@ -279,7 +280,7 @@ rot720_disp = {
   success_flash = 0,
   fail_reason = nil, -- "incomplete" or "time" or "wrong_button"
   fail_timer = 0,    -- counts down from 180 (3 seconds), clears fail_reason
-  sequence = {},     -- 最多7個方向記錄，用於顯示
+  sequence = {},     -- up to 7 directional inputs, used for display
   last_button = nil, -- "LP"/"MP"/"HP"/"LK"/"MK"/"HK"
 }
 
@@ -492,34 +493,6 @@ function hotkey3()
   end
 end
 
-function hotkey5()
-  if not mission_recording_active then
-    mission_recording_active = true
-    mission_recording_inputs = {p1 = {}, p2 = {}}
-    mission_recording_start_frame = frame_number
-    local _slot_index = training_settings.current_mission_slot
-    mission_recording_savestate_path = string.format("%smission_slot_%d.fs", saved_missions_path, _slot_index)
-    savestate.save(savestate.create(mission_recording_savestate_path))
-  else
-    mission_recording_active = false
-    local _end_frame = frame_number
-    local _name = string.format("mission_%d-%d", mission_recording_start_frame, _end_frame)
-    local _slot_index = training_settings.current_mission_slot
-    mission_slots[_slot_index].name = _name
-    mission_slots[_slot_index].inputs = mission_recording_inputs
-    mission_slots[_slot_index].savestate_path = mission_recording_savestate_path
-    save_mission_to_file(_slot_index)
-    refresh_mission_recording_slots_names()
-    for _i = 1, mission_slot_count do
-      local _next = (_slot_index - 1 + _i) % mission_slot_count + 1
-      if mission_slots[_next].name == "none" then
-        training_settings.current_mission_slot = _next
-        break
-      end
-    end
-  end
-end
-
 input.registerhotkey(1, hotkey1)
 if rom_name == "sfiii3nr1" then
   input.registerhotkey(2, hotkey2)
@@ -650,54 +623,7 @@ function before_frame()
     end
   end
 
-  if pattern_defense_tracking then
-    local _p1 = player_objects[1]
-    if _p1.has_just_been_hit  then pattern_defense_hits    = pattern_defense_hits    + 1 end
-    if _p1.has_just_blocked   then pattern_defense_blocks  = pattern_defense_blocks  + 1 end
-    if _p1.has_just_parried   then pattern_defense_parries = pattern_defense_parries + 1 end
-    if _p1.is_being_thrown    then pattern_defense_thrown  = true end
-  end
-
-  if pattern_replay_trigger then
-    pattern_replay_trigger = false
-    direct_play_pattern()
-  end
-
-  if training_settings.pattern_replay_on and not is_menu_open and is_in_match then
-    if player_objects[2].pending_input_sequence == nil and not direct_play_pending then
-      if pattern_defense_tracking then
-        pattern_defense_tracking = false
-        local _dmg = pattern_defense_init_life - player_objects[1].life
-        local _parts = {}
-        if _dmg == 0 and not pattern_defense_thrown then
-          if pattern_defense_parries > 0 then
-            table.insert(_parts, string.format("PERFECT PARRY  Parried %d", pattern_defense_parries))
-          elseif pattern_defense_blocks > 0 then
-            table.insert(_parts, string.format("PERFECT BLOCK  Blocked %d", pattern_defense_blocks))
-          else
-            table.insert(_parts, "PERFECT BLOCK")
-          end
-        else
-          if _dmg > 0 then table.insert(_parts, string.format("HIT  -%d HP", _dmg)) end
-          if pattern_defense_thrown then table.insert(_parts, "THROWN") end
-          if pattern_defense_parries > 0 then table.insert(_parts, string.format("Parried %d", pattern_defense_parries)) end
-          if pattern_defense_blocks > 0 then table.insert(_parts, string.format("Blocked %d", pattern_defense_blocks)) end
-        end
-        pattern_defense_result = table.concat(_parts, "  ")
-        pattern_defense_result_timer = 180
-      end
-      local _mode = training_settings.pattern_replay_mode
-      if _mode == 1 then -- normal: play once then stop
-        training_settings.pattern_replay_on = false
-      elseif _mode == 2 then -- random
-        if pick_random_pattern_index() then direct_play_pattern() else training_settings.pattern_replay_on = false end
-      elseif _mode == 3 then -- ordered
-        if pick_next_ordered_pattern_index() then direct_play_pattern() else training_settings.pattern_replay_on = false end
-      else -- repeat
-        direct_play_pattern()
-      end
-    end
-  end
+  update_pattern_replay_before_frame()
 
   if is_in_match then
     input_history_update(input_history[1], "P1", _input)
