@@ -1,6 +1,8 @@
 -- src/control/blocking.lua
 -- Dummy blocking control: find_move_frame_data, predict_hitboxes, update_blocking, update_fast_wake_up.
 
+require("src/data/sa_offsets") -- Layer 0 per-SA hit timing tables (TODO 1.33)
+
 -- BLOCKING
 
 function find_move_frame_data(_char_str, _animation_id)
@@ -127,6 +129,13 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
   _dummy.blocking.carry_global_expected = _dummy.blocking.carry_global_expected or nil
   _dummy.blocking.carry_offset_fired = _dummy.blocking.carry_offset_fired or false
   _dummy.blocking.sa_p2_frame = _dummy.blocking.sa_p2_frame or nil
+  -- Layer 0 (TODO 1.33) state: t0-anchored SA blocking
+  _dummy.blocking.prev_superfreeze_decount = _dummy.blocking.prev_superfreeze_decount or 0
+  _dummy.blocking.sa_mode = _dummy.blocking.sa_mode or nil -- "schedule" | "fallback" | "suppress" | nil
+  _dummy.blocking.sa_t0 = _dummy.blocking.sa_t0 or nil
+  _dummy.blocking.sa_schedule = _dummy.blocking.sa_schedule or nil
+  _dummy.blocking.sa_schedule_index = _dummy.blocking.sa_schedule_index or nil
+  _dummy.blocking.sa_hit_type = _dummy.blocking.sa_hit_type or nil
 
   local function stop_listening_hits(_player_obj)
     _dummy.blocking.listening = false
@@ -316,7 +325,8 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
     -- carry_offset = frames until next hit from now (SA2 = 45); omit to use carry_hold_remaining as short fallback
     do
       local _cur_meta = frame_data_meta[_player.char_str] and frame_data_meta[_player.char_str].moves and frame_data_meta[_player.char_str].moves[_player.relevant_animation]
-      if _cur_meta and _cur_meta.force_recording and _cur_meta.hits then
+      -- Layer 0 owns the SA (sa_mode set) -> skip carry rescheduling to avoid double-driving should_block
+      if _cur_meta and _cur_meta.force_recording and _cur_meta.hits and not _dummy.blocking.sa_mode then
         -- Phase 2 not triggered but SA hit close up: start carry from the hit frame
         if _dummy.has_just_been_hit or _dummy.has_just_blocked then
           _dummy.blocking.block_string = true
@@ -376,6 +386,55 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
     _dummy.blocking.last_player_anim = _player.relevant_animation
   end
 
+  -- Layer 0 (TODO 1.33): super freeze rising edge anchor
+  -- t0 = the frame superfreeze_decount goes from 0 to positive (super flash start).
+  -- Dispatch on sa_offset_data[char_str][selected_sa] (see src/data/sa_offsets.lua):
+  --   table -> "schedule": block windows at t0 + offset per hit, neutral between windows
+  --   false -> passthrough: Layer 0 stays out, existing mechanisms (Phase 1/2, carry, projectile) own the SA
+  --   nil   -> "fallback": hold block from t0 until the attacker fully recovers
+  -- Runs before Phase 1 so sa_preblock_triggered set here suppresses Phase 1/2 for this SA.
+  do
+    local _sf_now = _player.superfreeze_decount
+    local _sf_rising = _dummy.blocking.prev_superfreeze_decount == 0 and _sf_now > 0
+    _dummy.blocking.prev_superfreeze_decount = _sf_now
+    if _sf_rising then
+      local _sa_char = sa_offset_data[_player.char_str]
+      local _sa_entry = _sa_char and _sa_char[_player.selected_sa]
+      if _sa_entry == false or _style ~= 2 then
+        -- explicit passthrough (false entry), or a non-block dummy style (parry / red parry):
+        -- Layer 0 only knows how to hold block, so leave prediction in charge of parry timing
+        _dummy.blocking.sa_mode = nil
+      else
+        _dummy.blocking.sa_t0 = frame_number
+        _dummy.blocking.sa_preblock_triggered = true -- suppress Phase 1/2 (re-armed at Layer 0 exit)
+        _dummy.blocking.randomized_out = false
+        _dummy.blocking.has_pre_parried = false
+        _dummy.blocking.is_precise_timing = false
+        -- clear any stale carry state so the carry timer cannot re-raise should_block between windows
+        _dummy.blocking.carry_global_expected = nil
+        _dummy.blocking.carry_offset_fired = false
+        _dummy.blocking.carry_hold_remaining = 0
+        _dummy.blocking.sa_p2_frame = nil
+        if type(_sa_entry) == "table" and _sa_entry.hits and #_sa_entry.hits > 0 then
+          if _sa_entry.max_dist and _hurtbox_dist(_player, _dummy) > _sa_entry.max_dist then
+            -- out of range at t0: SA will whiff; keep other SA mechanisms suppressed but do not block
+            _dummy.blocking.sa_mode = "suppress"
+            _dummy.blocking.sa_schedule = nil
+          else
+            _dummy.blocking.sa_mode = "schedule"
+            _dummy.blocking.sa_schedule = _sa_entry
+            _dummy.blocking.sa_schedule_index = 1
+          end
+        else
+          -- no data (or malformed entry): fallback hold from t0
+          _dummy.blocking.sa_mode = "fallback"
+          _dummy.blocking.sa_schedule = nil
+        end
+        log(_dummy.prefix, "blocking", string.format("sa layer0 %s t0=%d sa=%d", _dummy.blocking.sa_mode, frame_number, _player.selected_sa))
+      end
+    end
+  end
+
   -- Super Freeze Pre-Block Phase 1: prime sa_preblock during freeze
   -- does not set should_block; dummy stays neutral; Phase 2 forces block only after all predictions fail
   -- sa_preblock_triggered (cleared only on anim end) ensures Phase 2 fires at most once per SA anim
@@ -405,7 +464,8 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
     end
 
     --if (_dummy.blocking.expected_attack_animation_hit_frame < frame_number or _dummy.blocking.last_attack_hit_id == _dummy.blocking.expected_attack_hit_id) then
-    if (_dummy.blocking.expected_attack_hit_id == 0 and not _dummy.blocking.should_block) then
+    -- sa_mode set -> Layer 0 owns this SA: skip prediction / proxy_hits / sub-frame fallback entirely
+    if (_dummy.blocking.expected_attack_hit_id == 0 and not _dummy.blocking.should_block and not _dummy.blocking.sa_mode) then
       local _max_prediction_frames = 3
       for i = 1, _max_prediction_frames do
         local predicted_frame_id = i + _dummy.blocking.bypassed_freeze_frames
@@ -531,7 +591,8 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
 
   -- pre_block_frame: start blocking only when startup animation reaches the specified frame (prevents holding back too early)
   -- yields to proxy_hits when present: distance-based prediction takes priority, pre_block_frame is fallback only
-  if _dummy.blocking.listening and not _dummy.blocking.should_block then
+  -- skipped when Layer 0 owns the SA (sa_mode set)
+  if _dummy.blocking.listening and not _dummy.blocking.should_block and not _dummy.blocking.sa_mode then
     local _pre_meta = frame_data_meta[_player.char_str] and frame_data_meta[_player.char_str].moves and frame_data_meta[_player.char_str].moves[_player.relevant_animation]
     if _pre_meta and _pre_meta.pre_block_frame and _player.relevant_animation_frame >= _pre_meta.pre_block_frame then
       if not _pre_meta.proxy_hits then
@@ -549,7 +610,8 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
   end
 
   -- no-frame-data fallback: animation not in frame_data, but attacker has live RAM attack boxes
-  if not _dummy.blocking.should_block and not _dummy.blocking.listening and sim_has_attack_boxes(_player.boxes) then
+  -- skipped when Layer 0 owns the SA (sa_mode set)
+  if not _dummy.blocking.should_block and not _dummy.blocking.listening and not _dummy.blocking.sa_mode and sim_has_attack_boxes(_player.boxes) then
     local _sim_hits = predict_hits_simulation(_player, _dummy, 3, _dummy.blocking.last_attack_hit_id)
     local _sh = nil
     for _d = 1, 3 do if _sim_hits[_d] then _sh = _sim_hits[_d]; break end end
@@ -728,6 +790,68 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
     end
   end
 
+  -- Layer 0 driver (TODO 1.33): runs the t0-anchored schedule / fallback hold and handles exit.
+  -- Placed after the hit-event handler and Phase 2 so it re-raises should_block on the same frame
+  -- a hit event (or an animation switch) cleared it.
+  if _dummy.blocking.sa_mode then
+    -- attacker fully recovered = SA over (also covers whiff and getting hit out of the SA)
+    local _sa_over = not _player.is_attacking
+                     and _player.superfreeze_decount == 0
+                     and _player.remaining_freeze_frames == 0
+    local _schedule_done = false
+    if _dummy.blocking.sa_mode == "schedule" then
+      local _sched = _dummy.blocking.sa_schedule
+      local _hold = _sched.hold or 4
+      local _rel = frame_number - _dummy.blocking.sa_t0
+      local _idx = _dummy.blocking.sa_schedule_index
+      -- advance past windows that have fully elapsed (window = [offset - 2, offset + hold])
+      while _idx <= #_sched.hits and _rel > _sched.hits[_idx].offset + _hold do
+        _idx = _idx + 1
+      end
+      _dummy.blocking.sa_schedule_index = _idx
+      if _idx > #_sched.hits then
+        _schedule_done = true
+      else
+        local _hit = _sched.hits[_idx]
+        -- TODO(1.33): dispatch on _hit.action here ("parry" / "red_parry" per-hit actions);
+        -- for now every action is treated as "block" (fields reserved in src/data/sa_offsets.lua)
+        if _rel >= _hit.offset - 2 then
+          -- inside the block window
+          _dummy.blocking.should_block = true
+          _dummy.blocking.block_string = true
+          _dummy.blocking.last_carry_frame = frame_number
+          _dummy.blocking.randomized_out = false
+          _dummy.blocking.sa_hit_type = _hit.type or 1
+        else
+          -- between windows: return to neutral
+          _dummy.blocking.should_block = false
+        end
+      end
+    elseif _dummy.blocking.sa_mode == "fallback" then
+      if not _sa_over then
+        _dummy.blocking.should_block = true
+        _dummy.blocking.block_string = true
+        _dummy.blocking.last_carry_frame = frame_number
+        _dummy.blocking.randomized_out = false
+      end
+    end
+    -- "suppress" mode has no blocking action; it only waits here for the exit condition
+    if _sa_over or _schedule_done then
+      _dummy.blocking.sa_mode = nil
+      _dummy.blocking.sa_t0 = nil
+      _dummy.blocking.sa_schedule = nil
+      _dummy.blocking.sa_schedule_index = nil
+      _dummy.blocking.sa_hit_type = nil
+      _dummy.blocking.should_block = false
+      _dummy.blocking.block_string = false
+      -- re-arm Phase 1/2 for the next SA: Layer 0 sets sa_preblock_triggered without sa_preblock_anim,
+      -- so the anim-end cleanup above never clears it for us
+      _dummy.blocking.sa_preblock = false
+      _dummy.blocking.sa_preblock_triggered = nil
+      log(_dummy.prefix, "blocking", "sa layer0 exit")
+    end
+  end
+
   if (_dummy.blocking.should_block and not _dummy.blocking.randomized_out) or (_dummy.blocking.should_block_projectile and not _dummy.blocking.projectile_randomized_out) then
     local _hit_type = 1
     local _blocking_style = _style -- 2 is block, 3 is parry
@@ -752,8 +876,23 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
       end
     end
 
+    -- Layer 0 schedule: per-hit type comes from the offset table, not framedata_meta
+    if _dummy.blocking.sa_mode == "schedule" and _dummy.blocking.sa_hit_type then
+      _hit_type = _dummy.blocking.sa_hit_type
+    end
+
     local _animation_frame_delta = 0
-    if _dummy.blocking.should_block_projectile then
+    if _dummy.blocking.sa_mode == "schedule" and _dummy.blocking.should_block and _dummy.blocking.sa_schedule then
+      -- Layer 0 schedule: delta counts down to the next scheduled hit (t0 + offset);
+      -- the driver only sets should_block inside a window, so delta is always <= threshold here
+      local _hit = _dummy.blocking.sa_schedule.hits[_dummy.blocking.sa_schedule_index]
+      if _hit then
+        _animation_frame_delta = (_dummy.blocking.sa_t0 + _hit.offset) - frame_number
+      end
+    elseif _dummy.blocking.sa_mode == "fallback" and _dummy.blocking.should_block then
+      -- Layer 0 fallback: hold block every frame until the attacker recovers
+      _animation_frame_delta = 0
+    elseif _dummy.blocking.should_block_projectile then
       _animation_frame_delta = _dummy.blocking.projectile_hit_frame - frame_number
     elseif _dummy.blocking.carry_global_expected then
       -- carry uses global frame timing, unaffected by animation loop resets
