@@ -446,6 +446,9 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
           _dummy.blocking.sa_capture_sa = _player.selected_sa
           -- anim at t0 identifies hidden supers (SGS / KKZ) that ignore selected_sa
           _dummy.blocking.sa_capture_anim = _player.animation
+          -- dummy position at t0: the exit print reports the drift, i.e. how far the
+          -- dummy walked (negative toward its own corner) while guarding
+          _dummy.blocking.sa_capture_pos = _dummy.pos_x
         end
         _dummy.blocking.sa_preblock_triggered = true -- suppress Phase 1/2 (re-armed at Layer 0 exit)
         _dummy.blocking.randomized_out = false
@@ -902,9 +905,16 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
         local _cap_sa = _dummy.blocking.sa_capture_sa or _player.selected_sa
         local _cap_dist = _dummy.blocking.sa_capture_t0_dist or 0
         local _cap_anim = _dummy.blocking.sa_capture_anim or "?"
+        -- drift: dummy movement since t0, sign-normalized so negative = walked away
+        -- from the attacker (retreat while holding guard)
+        local _cap_drift = 0
+        if _dummy.blocking.sa_capture_pos then
+          _cap_drift = _dummy.pos_x - _dummy.blocking.sa_capture_pos
+          if _player.pos_x < _dummy.pos_x then _cap_drift = -_cap_drift end
+        end
         if _cap_hits and #_cap_hits > 0 then
-          print(string.format("[SA_CAPTURE] %s sa=%d anim=%s t0_dist=%d hits=%d mode=%s",
-            _cap_char, _cap_sa, _cap_anim, _cap_dist, #_cap_hits, tostring(_dummy.blocking.sa_mode)))
+          print(string.format("[SA_CAPTURE] %s sa=%d anim=%s t0_dist=%d hits=%d drift=%d mode=%s",
+            _cap_char, _cap_sa, _cap_anim, _cap_dist, #_cap_hits, _cap_drift, tostring(_dummy.blocking.sa_mode)))
           print("-- paste into src/data/sa_offsets.lua:")
           -- max_dist = t0 distance + 10 for margin; type defaults to 3 (high/mid), fix by hand if low
           print(string.format("-- %s = { [%d] = { max_dist = %d, hold = 4, hits = {", _cap_char, _cap_sa, _cap_dist + 10))
@@ -925,6 +935,7 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
         _dummy.blocking.sa_capture_char = nil
         _dummy.blocking.sa_capture_sa = nil
         _dummy.blocking.sa_capture_anim = nil
+        _dummy.blocking.sa_capture_pos = nil
       end
       _dummy.blocking.sa_mode = nil
       _dummy.blocking.sa_t0 = nil

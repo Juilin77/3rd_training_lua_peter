@@ -128,6 +128,51 @@ sa_offset_data = {
   },
   gouki = {
     [1] = false, -- SA1 Messatsu Gou Hadou: projectile system (projectiles 55/64)
+    [2] = { -- SA2 Messatsu Gou Shoryu, captured 2026-07-19 at dist 24 (two identical runs):
+            -- three shoryu clusters, 7 hits, real neutral gaps after clusters 1 and 2.
+            -- Cluster openers after a gap start early (offset -2 extra lead) because a
+            -- from-neutral re-block needs it. Third cluster hits are 20f apart --
+            -- borderline with blockstun, chained to be safe. He lunges forward, so at
+            -- range the timing shifts completely (dist 124 -> 91/111/132): far_mode.
+      max_dist = 50,
+      far_mode = "fallback",
+      hold = 4,
+      hits = {
+        { offset = 51, action = "block", type = 3, hold = 7 },
+        { offset = 60, action = "block", type = 3 },             -- neutral gap follows
+        { offset = 81, action = "block", type = 3, hold = 9 },   -- cluster 2 opener, early
+        { offset = 92, action = "block", type = 3 },             -- neutral gap follows
+        { offset = 115, action = "block", type = 3, hold = 6 }, -- cluster 3: 20f apart, trying
+        { offset = 135, action = "block", type = 3, hold = 6 }, -- individual early-open windows
+        { offset = 155, action = "block", type = 3, hold = 6 }, -- to cut walk-back drift; if any
+                                                                -- of these gets HIT, chain them
+                                                                -- back (hold 24/20)
+      },
+    },
+    [3] = { -- SA3 Messatsu Gou Rasen, captured 2026-07-19 at dist 23/27 (identical runs):
+            -- stationary rising hurricane, 3 hits chained, whiffs already at dist 123
+            -- so the default suppress handles range -- no far_mode needed. The schedule
+            -- exits right after the last window instead of holding through his long spin,
+            -- which is where most of the fallback drift (-128) came from.
+      max_dist = 80,
+      hold = 4,
+      hits = {
+        { offset = 54, action = "block", type = 3, hold = 6 },
+        { offset = 62, action = "block", type = 3 },
+        { offset = 68, action = "block", type = 3 },
+      },
+    },
+    anims = { -- hidden supers: super flash without changing selected_sa (see header)
+      ["9c18"] = { -- Kongou Kokuretsu Zan, captured 2026-07-19: ground quake, connects
+                   -- near full screen (hit recorded at dist 231), single hit at t0+76.
+                   -- No max_dist on purpose; wide early window since one measurement only.
+        hold = 8,
+        hits = {
+          { offset = 74, action = "block", type = 3 },
+        },
+      },
+      ["9c98"] = false, -- Shun Goku Satsu: unblockable command grab, nothing to schedule
+    },
   },
   q = {
     [1] = false, -- SA1 Critical Combo Attack: low hits (type 2), prediction loop blocks it crouching;
