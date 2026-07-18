@@ -67,7 +67,29 @@ sa_offset_data = {
     [3] = false, -- SA3 Denjin Hadoken: unblockable projectile, parry style handles it
   },
   ken = {
-    [1] = false, -- SA1 Shoryureppa: hand-tuned force_recording carry (framedata_meta 1214)
+    [1] = { -- SA1 Shoryureppa, captured 2026-07-19 at dist 20/24 (offsets steady within
+            -- 1 frame): 10 hits in three shoryu clusters. Clusters 1-2 chain into one
+            -- guard (gaps <= 14f, inside blockstun); the only real gap is before the
+            -- third shoryu (neutral ~100-112). Its first window opens early (offset 115
+            -- for a 117-118 arrival) because a from-neutral re-block needs more lead.
+            -- At range only the tail connects with shifted timing (dist 145 -> hit at 89),
+            -- so far_mode falls back to a proximity-gated hold.
+      max_dist = 60,
+      far_mode = "fallback",
+      hold = 4,
+      hits = {
+        { offset = 51, action = "block", type = 3, hold = 6 },
+        { offset = 58, action = "block", type = 3, hold = 7 },
+        { offset = 66, action = "block", type = 3, hold = 13 }, -- chains across the 14f gap
+        { offset = 80, action = "block", type = 3, hold = 6 },
+        { offset = 87, action = "block", type = 3, hold = 7 },
+        { offset = 95, action = "block", type = 3 },            -- neutral gap follows
+        { offset = 115, action = "block", type = 3, hold = 8 }, -- third shoryu, early open
+        { offset = 124, action = "block", type = 3, hold = 6 },
+        { offset = 131, action = "block", type = 3, hold = 7 },
+        { offset = 139, action = "block", type = 3 },
+      },
+    },
     [2] = false, -- SA2 Shinryuken: hand-tuned force_recording carry (framedata_meta 15b4)
     [3] = { -- SA3 Shippu Jinraikyaku, captured 2026-07-19 at dist 18 and 81 (offsets
             -- steady within 1 frame): 5 hits 14-16f apart -- one true blockstring, so
