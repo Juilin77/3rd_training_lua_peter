@@ -451,8 +451,14 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
         _dummy.blocking.sa_p2_frame = nil
         if type(_sa_entry) == "table" and _sa_entry.hits and #_sa_entry.hits > 0 then
           if _sa_entry.max_dist and _hurtbox_dist(_player, _dummy) > _sa_entry.max_dist then
-            -- out of range at t0: SA will whiff; keep other SA mechanisms suppressed but do not block
-            _dummy.blocking.sa_mode = "suppress"
+            -- beyond the measured range: "suppress" assumes the SA whiffs (stationary moves);
+            -- far_mode = "fallback" is for full-travel moves that still connect from any
+            -- range, just with shifted timing -- hold block instead of standing there
+            if _sa_entry.far_mode == "fallback" then
+              _dummy.blocking.sa_mode = "fallback"
+            else
+              _dummy.blocking.sa_mode = "suppress"
+            end
             _dummy.blocking.sa_schedule = nil
           else
             _dummy.blocking.sa_mode = "schedule"

@@ -32,7 +32,11 @@
 --              merge into a continuous hold. Layer 0 exits once the last window has elapsed
 --              or the attacker fully recovers, whichever comes first.
 --   max_dist = optional whiff check: at t0, if the hurtbox distance to the dummy is
---              greater than max_dist, the schedule is not activated (Layer 0 still
+--              greater than max_dist, the schedule is not activated
+--   far_mode = what happens beyond max_dist: default is suppress (assume the SA whiffs,
+--              right for stationary moves); "fallback" holds block until recovery instead,
+--              for full-travel moves (e.g. Ken SA3 crosses the whole screen) where the SA
+--              still connects from any range but arrives later than the measured offsets (Layer 0 still
 --              suppresses Phase 1/2 for that SA so the whiff does not trigger a hold)
 --   variant_anims = reserved for SAs whose hit count depends on button strength
 --                   (e.g. Makoto SA2 LK/MK/HK); not implemented yet. First version rule:
@@ -65,7 +69,24 @@ sa_offset_data = {
   ken = {
     [1] = false, -- SA1 Shoryureppa: hand-tuned force_recording carry (framedata_meta 1214)
     [2] = false, -- SA2 Shinryuken: hand-tuned force_recording carry (framedata_meta 15b4)
-    [3] = false, -- SA3 Shippu Jinraikyaku: existing force_recording entries (1834/1d24)
+    [3] = { -- SA3 Shippu Jinraikyaku, captured 2026-07-19 at dist 18 and 81 (offsets
+            -- steady within 1 frame): 5 hits 14-16f apart -- one true blockstring, so
+            -- every window chains via per-hit hold into a single continuous guard.
+            -- Replaces the hand-tuned force_recording entries (1834/1d24) which could
+            -- only hold until full recovery; this exits right after the last hit.
+            -- SA3 travels the full screen, so beyond the measured range it falls back
+            -- to a plain hold (far_mode) instead of assuming a whiff.
+      max_dist = 110,
+      far_mode = "fallback",
+      hold = 4,
+      hits = {
+        { offset = 52, action = "block", type = 3, hold = 14 },
+        { offset = 68, action = "block", type = 3, hold = 12 },
+        { offset = 82, action = "block", type = 3, hold = 14 },
+        { offset = 98, action = "block", type = 3, hold = 14 },
+        { offset = 114, action = "block", type = 3 },
+      },
+    },
   },
   gouki = {
     [1] = false, -- SA1 Messatsu Gou Hadou: projectile system (projectiles 55/64)
