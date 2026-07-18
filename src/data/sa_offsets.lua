@@ -24,7 +24,11 @@
 --              type:   1 = any (keep current stance), 2 = low (down-back), 3 = high/mid (back)
 --                      same convention as framedata_meta hits
 --   hold     = optional block window width in frames after the hit frame (default 4);
---              a window covers [t0 + offset - 2, t0 + offset + hold]; overlapping windows
+--              a window covers [t0 + offset - 2, t0 + offset + hold]. Each hit may carry
+--              its own hold override: set it to reach the next window (next offset - 2)
+--              to chain a true blockstring (gap shorter than blockstun) into one
+--              continuous guard -- dropping to neutral inside a blockstring breaks the
+--              game's guard chain and later hits connect; overlapping windows
 --              merge into a continuous hold. Layer 0 exits once the last window has elapsed
 --              or the attacker fully recovers, whichever comes first.
 --   max_dist = optional whiff check: at t0, if the hurtbox distance to the dummy is
@@ -101,10 +105,37 @@ sa_offset_data = {
                  -- system crouch-blocks them (verified in-game 2026-07-05, same as pre-1.33),
                  -- see necro SA3 note
   },
-  -- makoto is deliberately ABSENT (nil -> fallback): her hand-tuned entries (SA1 1438
-  -- force_recording + proxy_hits, SA2 force_recording group) never worked reliably --
-  -- that failure is why TODO 1.33 exists. Fallback hold overrides them on purpose.
-  -- Upgrade path: measure per-hit offsets in a debug session and add a schedule table here.
+  makoto = {
+    [1] = { -- SA1 Seichuusen Godanzuki, captured 2026-07-19: hit 1 lands at t0+51
+            -- (matches the startup measured for anim 1438). On block she stops after
+            -- hit 1, so a single window is the complete block schedule; hits 2-5 only
+            -- happen on hit. max_dist 105 comes from the old proxy_max_dist measurement.
+      max_dist = 105,
+      hold = 4,
+      hits = {
+        { offset = 51, action = "block", type = 3 },
+      },
+    },
+    [2] = { -- SA2 Abare Tosanami, captured 2026-07-19 over 6 runs from point blank to
+            -- dist 214: always 4 blocked hits (kick series + landing hit after the jump).
+            -- Hits 1-3 are a true blockstring (20f apart, inside blockstun), so their
+            -- windows chain via per-hit hold into one continuous guard -- dropping to
+            -- neutral there breaks the game's guard chain and hits 2-3 connect.
+            -- The only real gap is her jump before the landing hit (window 98-128).
+            -- Arrival shifts up to +4 frames at long range, covered by the chained hold.
+      max_dist = 224,
+      hold = 4,
+      hits = {
+        { offset = 52, action = "block", type = 3, hold = 19 }, -- chains into hit 2 window
+        { offset = 73, action = "block", type = 3, hold = 18 }, -- chains into hit 3 window
+        { offset = 93, action = "block", type = 3 },            -- neutral gap follows (her jump)
+        { offset = 127, action = "block", type = 3, hold = 8 }, -- landing hit, arrives 128-133 by
+                                                                -- range; wider window [125,135]
+                                                                -- because 2f lead proved too tight
+                                                                -- for a from-neutral re-block here
+      },
+    },
+  },
   elena = {
     [2] = false, -- SA2 Brave Dance: existing force_recording entries with per-hit low types (4dc4/5074)
   },

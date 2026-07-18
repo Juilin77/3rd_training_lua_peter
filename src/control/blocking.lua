@@ -3,6 +3,14 @@
 
 require("src/data/sa_offsets") -- Layer 0 per-SA hit timing tables (TODO 1.33)
 
+-- SA offset capture tool (measurement helper for src/data/sa_offsets.lua):
+-- while Layer 0 is engaged, record every dummy hit event relative to the super freeze
+-- anchor t0, then print a ready-to-paste sa_offsets.lua entry at Layer 0 exit.
+-- Pure observation: never alters blocking behavior. Works in every sa_mode, so running
+-- it against an existing "schedule" entry doubles as a verification pass.
+-- Keep true while farming offset tables; set back to false before release.
+local SA_OFFSET_CAPTURE = true
+
 -- BLOCKING
 
 function find_move_frame_data(_char_str, _animation_id)
@@ -304,6 +312,24 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
     _hit_expired = true
   end
 
+  -- SA offset capture: log hit events while Layer 0 owns the SA (observation only).
+  -- Runs before the Layer 0 driver, so a hit landing on the exit frame is still recorded.
+  -- Note: the event flags are per-frame booleans, so two hits connecting on the exact
+  -- same frame collapse into a single recorded event.
+  if SA_OFFSET_CAPTURE and _dummy.blocking.sa_mode and _dummy.blocking.sa_t0
+     and (_dummy.has_just_blocked or _dummy.has_just_been_hit or _dummy.has_just_parried) then
+    local _evt = _dummy.has_just_blocked and "BLOCK" or (_dummy.has_just_been_hit and "HIT" or "PARRY")
+    local _stance = _dummy.is_crouched and "crouch" or "stand"
+    _dummy.blocking.sa_capture_hits = _dummy.blocking.sa_capture_hits or {}
+    table.insert(_dummy.blocking.sa_capture_hits, {
+      rel = frame_number - _dummy.blocking.sa_t0,
+      event = _evt,
+      crouched = _dummy.is_crouched,
+    })
+    print(string.format("[SA_CAPTURE] hit #%d rel=%d event=%s stance=%s",
+      #_dummy.blocking.sa_capture_hits, frame_number - _dummy.blocking.sa_t0, _evt, _stance))
+  end
+
   -- increment hit id
   if _dummy.has_just_blocked or _dummy.has_just_parried or _dummy.has_just_been_hit or _hit_expired then
 
@@ -406,6 +432,14 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
         _dummy.blocking.sa_mode = nil
       else
         _dummy.blocking.sa_t0 = frame_number
+        if SA_OFFSET_CAPTURE then
+          -- capture: snapshot the hurtbox distance at t0 and start a fresh hit list;
+          -- char/sa are stored now so the exit print cannot be polluted by later state
+          _dummy.blocking.sa_capture_t0_dist = _hurtbox_dist(_player, _dummy)
+          _dummy.blocking.sa_capture_hits = {}
+          _dummy.blocking.sa_capture_char = _player.char_str
+          _dummy.blocking.sa_capture_sa = _player.selected_sa
+        end
         _dummy.blocking.sa_preblock_triggered = true -- suppress Phase 1/2 (re-armed at Layer 0 exit)
         _dummy.blocking.randomized_out = false
         _dummy.blocking.has_pre_parried = false
@@ -804,8 +838,10 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
       local _hold = _sched.hold or 4
       local _rel = frame_number - _dummy.blocking.sa_t0
       local _idx = _dummy.blocking.sa_schedule_index
-      -- advance past windows that have fully elapsed (window = [offset - 2, offset + hold])
-      while _idx <= #_sched.hits and _rel > _sched.hits[_idx].offset + _hold do
+      -- advance past windows that have fully elapsed (window = [offset - 2, offset + hold]);
+      -- a per-hit hold overrides the schedule-level one, letting windows chain into a
+      -- continuous hold across true blockstrings (gap shorter than blockstun)
+      while _idx <= #_sched.hits and _rel > _sched.hits[_idx].offset + (_sched.hits[_idx].hold or _hold) do
         _idx = _idx + 1
       end
       _dummy.blocking.sa_schedule_index = _idx
@@ -837,6 +873,35 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
     end
     -- "suppress" mode has no blocking action; it only waits here for the exit condition
     if _sa_over or _schedule_done then
+      -- SA offset capture: dump a ready-to-paste sa_offsets.lua entry at the unified exit
+      if SA_OFFSET_CAPTURE then
+        local _cap_hits = _dummy.blocking.sa_capture_hits
+        local _cap_char = _dummy.blocking.sa_capture_char or _player.char_str
+        local _cap_sa = _dummy.blocking.sa_capture_sa or _player.selected_sa
+        local _cap_dist = _dummy.blocking.sa_capture_t0_dist or 0
+        if _cap_hits and #_cap_hits > 0 then
+          print(string.format("[SA_CAPTURE] %s sa=%d t0_dist=%d hits=%d mode=%s",
+            _cap_char, _cap_sa, _cap_dist, #_cap_hits, tostring(_dummy.blocking.sa_mode)))
+          print("-- paste into src/data/sa_offsets.lua:")
+          -- max_dist = t0 distance + 10 for margin; type defaults to 3 (high/mid), fix by hand if low
+          print(string.format("-- %s = { [%d] = { max_dist = %d, hold = 4, hits = {", _cap_char, _cap_sa, _cap_dist + 10))
+          for _, _h in ipairs(_cap_hits) do
+            local _note = string.format(" -- %s %s", _h.event, _h.crouched and "crouch" or "stand")
+            if _h.event == "HIT" then
+              _note = _note .. ", was HIT in capture, check if low (type 2)"
+            end
+            print(string.format("--   { offset = %d, action = \"block\", type = 3 },%s", _h.rel, _note))
+          end
+          print("-- }}},")
+        else
+          print(string.format("[SA_CAPTURE] %s sa=%d t0_dist=%d no hits recorded (whiff or grab)",
+            _cap_char, _cap_sa, _cap_dist))
+        end
+        _dummy.blocking.sa_capture_hits = nil
+        _dummy.blocking.sa_capture_t0_dist = nil
+        _dummy.blocking.sa_capture_char = nil
+        _dummy.blocking.sa_capture_sa = nil
+      end
       _dummy.blocking.sa_mode = nil
       _dummy.blocking.sa_t0 = nil
       _dummy.blocking.sa_schedule = nil
