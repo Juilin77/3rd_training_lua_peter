@@ -456,6 +456,9 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
             -- range, just with shifted timing -- hold block instead of standing there
             if _sa_entry.far_mode == "fallback" then
               _dummy.blocking.sa_mode = "fallback"
+              -- proximity gate: stay neutral until the traveling attacker closes in,
+              -- so the dummy does not walk backward during the whole approach
+              _dummy.blocking.sa_far_dist = _sa_entry.max_dist
             else
               _dummy.blocking.sa_mode = "suppress"
             end
@@ -871,10 +874,16 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
       end
     elseif _dummy.blocking.sa_mode == "fallback" then
       if not _sa_over then
-        _dummy.blocking.should_block = true
-        _dummy.blocking.block_string = true
-        _dummy.blocking.last_carry_frame = frame_number
-        _dummy.blocking.randomized_out = false
+        if _dummy.blocking.sa_far_dist and _hurtbox_dist(_player, _dummy) > _dummy.blocking.sa_far_dist then
+          -- traveling attacker still far away: wait in neutral instead of walking back
+          _dummy.blocking.should_block = false
+        else
+          _dummy.blocking.sa_far_dist = nil -- attacker arrived: hold until recovery from here on
+          _dummy.blocking.should_block = true
+          _dummy.blocking.block_string = true
+          _dummy.blocking.last_carry_frame = frame_number
+          _dummy.blocking.randomized_out = false
+        end
       end
     end
     -- "suppress" mode has no blocking action; it only waits here for the exit condition
@@ -913,6 +922,7 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
       _dummy.blocking.sa_schedule = nil
       _dummy.blocking.sa_schedule_index = nil
       _dummy.blocking.sa_hit_type = nil
+      _dummy.blocking.sa_far_dist = nil
       _dummy.blocking.should_block = false
       _dummy.blocking.block_string = false
       -- re-arm Phase 1/2 for the next SA: Layer 0 sets sa_preblock_triggered without sa_preblock_anim,
