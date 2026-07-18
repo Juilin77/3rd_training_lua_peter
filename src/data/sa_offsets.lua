@@ -4,6 +4,10 @@
 -- detected in src/control/blocking.lua.
 --
 -- Key: sa_offset_data[char_str][selected_sa]  (selected_sa = 1/2/3, read from RAM)
+-- Anim override: sa_offset_data[char_str].anims["<anim_id>"] takes priority over the
+-- selected_sa slot -- for hidden supers (Gouki SGS / KKZ) that flash without changing
+-- selected_sa. Same three-state semantics (table / false / nil falls through to the slot).
+-- The capture tool prints anim=<id> at t0 to identify them.
 --
 -- Entry semantics (three states):
 --   table -> offset schedule available: block windows are driven at t0 + offset per hit,
@@ -90,7 +94,19 @@ sa_offset_data = {
         { offset = 139, action = "block", type = 3 },
       },
     },
-    [2] = false, -- SA2 Shinryuken: hand-tuned force_recording carry (framedata_meta 15b4)
+    [2] = { -- SA2 Shinryuken, captured 2026-07-19 at dist 19/20/58: offsets identical at
+            -- every range (vertical move, no travel). 3 hits connect point blank, a 4th
+            -- at slight range (72) -- scheduled too, its window just passes unused when
+            -- it whiffs. All gaps 6-8f: one chained guard, no real segmentation point.
+      max_dist = 100,
+      hold = 4,
+      hits = {
+        { offset = 52, action = "block", type = 3 },
+        { offset = 58, action = "block", type = 3 },
+        { offset = 64, action = "block", type = 3, hold = 6 },
+        { offset = 72, action = "block", type = 3 },
+      },
+    },
     [3] = { -- SA3 Shippu Jinraikyaku, captured 2026-07-19 at dist 18 and 81 (offsets
             -- steady within 1 frame): 5 hits 14-16f apart -- one true blockstring, so
             -- every window chains via per-hit hold into a single continuous guard.

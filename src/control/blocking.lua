@@ -426,6 +426,11 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
     if _sf_rising then
       local _sa_char = sa_offset_data[_player.char_str]
       local _sa_entry = _sa_char and _sa_char[_player.selected_sa]
+      -- anim override: hidden supers (Gouki SGS / KKZ) trigger a super flash without
+      -- changing selected_sa, so an anim-keyed entry takes priority over the SA slot
+      if _sa_char and _sa_char.anims and _sa_char.anims[_player.animation] ~= nil then
+        _sa_entry = _sa_char.anims[_player.animation]
+      end
       if _sa_entry == false or _style ~= 2 then
         -- explicit passthrough (false entry), or a non-block dummy style (parry / red parry):
         -- Layer 0 only knows how to hold block, so leave prediction in charge of parry timing
@@ -439,6 +444,8 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
           _dummy.blocking.sa_capture_hits = {}
           _dummy.blocking.sa_capture_char = _player.char_str
           _dummy.blocking.sa_capture_sa = _player.selected_sa
+          -- anim at t0 identifies hidden supers (SGS / KKZ) that ignore selected_sa
+          _dummy.blocking.sa_capture_anim = _player.animation
         end
         _dummy.blocking.sa_preblock_triggered = true -- suppress Phase 1/2 (re-armed at Layer 0 exit)
         _dummy.blocking.randomized_out = false
@@ -894,9 +901,10 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
         local _cap_char = _dummy.blocking.sa_capture_char or _player.char_str
         local _cap_sa = _dummy.blocking.sa_capture_sa or _player.selected_sa
         local _cap_dist = _dummy.blocking.sa_capture_t0_dist or 0
+        local _cap_anim = _dummy.blocking.sa_capture_anim or "?"
         if _cap_hits and #_cap_hits > 0 then
-          print(string.format("[SA_CAPTURE] %s sa=%d t0_dist=%d hits=%d mode=%s",
-            _cap_char, _cap_sa, _cap_dist, #_cap_hits, tostring(_dummy.blocking.sa_mode)))
+          print(string.format("[SA_CAPTURE] %s sa=%d anim=%s t0_dist=%d hits=%d mode=%s",
+            _cap_char, _cap_sa, _cap_anim, _cap_dist, #_cap_hits, tostring(_dummy.blocking.sa_mode)))
           print("-- paste into src/data/sa_offsets.lua:")
           -- max_dist = t0 distance + 10 for margin; type defaults to 3 (high/mid), fix by hand if low
           print(string.format("-- %s = { [%d] = { max_dist = %d, hold = 4, hits = {", _cap_char, _cap_sa, _cap_dist + 10))
@@ -909,13 +917,14 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
           end
           print("-- }}},")
         else
-          print(string.format("[SA_CAPTURE] %s sa=%d t0_dist=%d no hits recorded (whiff or grab)",
-            _cap_char, _cap_sa, _cap_dist))
+          print(string.format("[SA_CAPTURE] %s sa=%d anim=%s t0_dist=%d no hits recorded (whiff or grab)",
+            _cap_char, _cap_sa, _cap_anim, _cap_dist))
         end
         _dummy.blocking.sa_capture_hits = nil
         _dummy.blocking.sa_capture_t0_dist = nil
         _dummy.blocking.sa_capture_char = nil
         _dummy.blocking.sa_capture_sa = nil
+        _dummy.blocking.sa_capture_anim = nil
       end
       _dummy.blocking.sa_mode = nil
       _dummy.blocking.sa_t0 = nil
