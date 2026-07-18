@@ -95,6 +95,11 @@ function clamp01(_number)
   return math.max(math.min(_number, 1.0), 0.0)
 end
 
+function float_to_byte(_n)
+  local _mantissa = _n - math.floor(_n)
+  return math.floor(_mantissa * 256)
+end
+
 function check_input_down_autofire(_player_object, _input, _autofire_rate, _autofire_time)
   _autofire_rate = _autofire_rate or 4
   _autofire_time = _autofire_time or 23

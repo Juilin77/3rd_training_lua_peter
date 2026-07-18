@@ -78,6 +78,82 @@ character_specific.urien.height = 121
 character_specific.yang.height = 89
 character_specific.yun.height = 89
 
+-- ## Character pushbox widths (ported from effie3rd framedata.lua, used for pattern positioning)
+character_specific.alex.pushbox_width = 56
+character_specific.chunli.pushbox_width = 44
+character_specific.dudley.pushbox_width = 50
+character_specific.elena.pushbox_width = 46
+character_specific.gill.pushbox_width = 48
+character_specific.gouki.pushbox_width = 50
+character_specific.hugo.pushbox_width = 60
+character_specific.ibuki.pushbox_width = 48
+character_specific.ken.pushbox_width = 50
+character_specific.makoto.pushbox_width = 50
+character_specific.necro.pushbox_width = 46
+character_specific.oro.pushbox_width = 48
+character_specific.q.pushbox_width = 44
+character_specific.remy.pushbox_width = 42
+character_specific.ryu.pushbox_width = 50
+character_specific.sean.pushbox_width = 50
+character_specific.twelve.pushbox_width = 50
+character_specific.urien.pushbox_width = 48
+character_specific.yang.pushbox_width = 42
+character_specific.yun.pushbox_width = 42
+
+-- ## Character corner offsets (ported from effie3rd framedata.lua, distance from stage edge to closest reachable pos_x)
+character_specific.alex.corner_offset_left = 32
+character_specific.alex.corner_offset_right = 31
+character_specific.chunli.corner_offset_left = 28
+character_specific.chunli.corner_offset_right = 27
+character_specific.dudley.corner_offset_left = 32
+character_specific.dudley.corner_offset_right = 31
+character_specific.elena.corner_offset_left = 28
+character_specific.elena.corner_offset_right = 27
+character_specific.gill.corner_offset_left = 32
+character_specific.gill.corner_offset_right = 31
+character_specific.gouki.corner_offset_left = 30
+character_specific.gouki.corner_offset_right = 29
+character_specific.hugo.corner_offset_left = 40
+character_specific.hugo.corner_offset_right = 39
+character_specific.ibuki.corner_offset_left = 24
+character_specific.ibuki.corner_offset_right = 23
+character_specific.ken.corner_offset_left = 28
+character_specific.ken.corner_offset_right = 27
+character_specific.makoto.corner_offset_left = 28
+character_specific.makoto.corner_offset_right = 27
+character_specific.necro.corner_offset_left = 36
+character_specific.necro.corner_offset_right = 35
+character_specific.oro.corner_offset_left = 28
+character_specific.oro.corner_offset_right = 27
+character_specific.q.corner_offset_left = 24
+character_specific.q.corner_offset_right = 23
+character_specific.remy.corner_offset_left = 24
+character_specific.remy.corner_offset_right = 23
+character_specific.ryu.corner_offset_left = 28
+character_specific.ryu.corner_offset_right = 27
+character_specific.sean.corner_offset_left = 28
+character_specific.sean.corner_offset_right = 27
+character_specific.twelve.corner_offset_left = 36
+character_specific.twelve.corner_offset_right = 35
+character_specific.urien.corner_offset_left = 32
+character_specific.urien.corner_offset_right = 31
+character_specific.yang.corner_offset_left = 24
+character_specific.yang.corner_offset_right = 23
+character_specific.yun.corner_offset_left = 24
+character_specific.yun.corner_offset_right = 23
+
+if is_4rd_strike then
+  -- usean has no effie3rd data, reuse sean values
+  character_specific.usean.pushbox_width = 50
+  character_specific.usean.corner_offset_left = 28
+  character_specific.usean.corner_offset_right = 27
+end
+
+-- distance between both pos_x when two characters are pushbox to pushbox
+function get_contact_distance(_char_a, _char_b)
+  return (character_specific[_char_a].pushbox_width + character_specific[_char_b].pushbox_width) / 2 - 1
+end
+
 -- ## Characters standing states
 character_specific.oro.additional_standing_states = { 3 } -- 3 is crouching
 character_specific.dudley.additional_standing_states = { 6 } -- 6 is crouching

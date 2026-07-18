@@ -59,6 +59,7 @@ require("src/draw")
 require("src/display")
 require("src/menu_widgets")
 require("src/framedata")
+require("src/data/stage_data")
 require("src/gamestate")
 require("src/input_history")
 require("src/attack_data")
@@ -608,6 +609,8 @@ function before_frame()
   -- recording
   update_recording(_input)
   update_mission_recording(_input)
+
+  update_superfreeze_sync()
 
   process_pending_input_sequence(player_objects[1], _input)
   process_pending_input_sequence(player_objects[2], _input)

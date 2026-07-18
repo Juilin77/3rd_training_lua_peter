@@ -162,6 +162,9 @@ function read_game_vars()
   if _previous_is_in_match == nil then _previous_is_in_match = true end
   is_in_match = ((p1_locked == 0xFF or p2_locked == 0xFF) and match_state == 0x02);
   has_match_just_started = not _previous_is_in_match and is_in_match
+
+  -- current stage
+  current_stage = memory.readbyte(adresses.global.stage)
 end
 
 
@@ -1154,6 +1157,22 @@ end
 
 -- # initialize player objects
 reset_player_objects()
+
+-- # position writing
+-- pos is stored as integer part (word) + mantissa (byte), both must be written or physics jitters
+function write_pos_x(_obj, _x)
+  local _x_char = math.floor(_x)
+  memory.writeword(_obj.base + 0x64, _x_char)
+  memory.writebyte(_obj.base + 0x66, float_to_byte(_x))
+  _obj.pos_x = _x_char
+end
+
+function write_pos_y(_obj, _y)
+  local _y_char = math.floor(_y)
+  memory.writeword(_obj.base + 0x68, _y_char)
+  memory.writebyte(_obj.base + 0x6A, float_to_byte(_y))
+  _obj.pos_y = _y_char
+end
 
 function write_player_vars(_player_obj)
 

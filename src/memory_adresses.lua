@@ -2,6 +2,13 @@ adresses = {
   global = {
     -- [byte][read/write] hex value is the decimal display
     character_select_timer = 0x020154FB,
+
+    -- [byte][read] current stage index (0 to 20), see src/data/stage_data.lua
+    stage = 0x020154F5,
+
+    -- [word][read/write] camera position
+    screen_pos_x = 0x02026CB0,
+    screen_pos_y = 0x02026CB4,
   },
   players = {
     {
