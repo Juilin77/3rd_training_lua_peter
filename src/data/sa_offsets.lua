@@ -178,6 +178,12 @@ sa_offset_data = {
         hits = {
           { offset = 74, action = "block", type = 3 },
         },
+        -- KNOWN LIMITATION (investigated at length 2026-07-19, closed by Peter's call):
+        -- in a narrow edge band (~hurtbox 141) a late lingering wave hits for 7 even
+        -- while the dummy held guard for 6+ seconds (exit rel=375 verified) -- it lands
+        -- with NO hit-connection events (no marker, no hit-count), outlives Gouki's
+        -- recovery, yet a human can block it for 1 chip. Out of scope: the goal here is
+        -- distance-aware standing block, which works at every practical range.
       },
       ["9c18"] = false, -- Shun Goku Satsu: unblockable command grab, nothing to schedule
     },

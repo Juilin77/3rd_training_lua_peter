@@ -903,7 +903,17 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
       end
     end
     -- "suppress" mode has no blocking action; it only waits here for the exit condition
-    if _sa_over or _schedule_done then
+    -- a schedule may outlive the attacker's recovery (e.g. KKZ's lingering quake wave
+    -- arrives after Gouki is already free): hold_through_recovery keeps Layer 0 engaged
+    -- until the windows play out instead of bailing at _sa_over
+    local _linger = _dummy.blocking.sa_mode == "schedule" and _dummy.blocking.sa_schedule
+                    and _dummy.blocking.sa_schedule.hold_through_recovery
+    if (_sa_over and not _linger) or _schedule_done then
+      if SA_OFFSET_CAPTURE and _dummy.blocking.sa_t0 then
+        -- diagnostic: when and why Layer 0 exits, to catch guards dropping too early
+        print(string.format("[SA_CAPTURE] exit rel=%d sa_over=%s schedule_done=%s linger=%s",
+          frame_number - _dummy.blocking.sa_t0, tostring(_sa_over), tostring(_schedule_done), tostring(_linger or false)))
+      end
       -- SA offset capture: dump a ready-to-paste sa_offsets.lua entry at the unified exit
       if SA_OFFSET_CAPTURE then
         local _cap_hits = _dummy.blocking.sa_capture_hits
