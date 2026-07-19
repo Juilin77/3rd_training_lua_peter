@@ -195,7 +195,10 @@ sa_offset_data = {
             -- capture were combo carryover from the eaten low, it should be a mid.
             -- First mixed-height table in the pipeline. He dashes far: timing shifts by
             -- dist 141 and it still connects from 272, so far_mode with a wide gate.
-      max_dist = 50,
+      max_dist = 138, -- Peter probed the exact reach boundary of hit 1 (connects at 138,
+                      -- whiffs at 139): precise stand/crouch windows all the way to the
+                      -- edge, crouch fallback beyond. Offsets stay within 2 frames of
+                      -- point blank across this whole range (dash covers the gap first)
       far_mode = "fallback",
       far_guard_dist = 120,
       far_type = 2, -- far fallback holds CROUCH: his punches are all crouch-blockable
@@ -205,13 +208,23 @@ sa_offset_data = {
         { offset = 56, action = "block", type = 3, hold = 21 },
         { offset = 79, action = "block", type = 3, hold = 21 },
         { offset = 102, action = "block", type = 3, hold = 21 },
-        { offset = 125, action = "block", type = 2, hold = 24 }, -- low: crouch window
-        { offset = 151, action = "block", type = 2 },            -- also low (both HIT a
-                                                                 -- standing fallback)
+        { offset = 125, action = "block", type = 2, hold = 24 }, -- hit 4: the mandatory
+                                                                 -- crouch (the only true low)
+        { offset = 151, action = "block", type = 3 },            -- hit 5: dual-blockable,
+                                                                 -- stand per Peter's choice
       },
     },
-    -- [2] opened for offset capture 2026-07-19 (was false -> hand-tuned force_recording
-    -- 8464): the measured schedule table will replace this line
+    [2] = { -- SA2 Deadly Double Combination, captured 2026-07-19 at dist 12: stationary
+            -- two-punch confirm super -- when hit 1 is blocked the follow-up never comes,
+            -- so a single window is the complete schedule. Whiffs by 122; max_dist is
+            -- generous on purpose (a ghost guard on a whiff is harmless, standing bare
+            -- inside real reach is not). Replaces the hand-tuned force_recording 8464.
+      max_dist = 110,
+      hold = 4,
+      hits = {
+        { offset = 53, action = "block", type = 3 },
+      },
+    },
     [3] = false, -- SA3 Total Destruction: command grab, unblockable
   },
   -- Grab-type SAs are unblockable: mark false so Layer 0 does not hold block pointlessly
