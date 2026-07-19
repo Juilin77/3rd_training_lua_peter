@@ -276,6 +276,62 @@ sa_offset_data = {
                  -- system crouch-blocks them (verified in-game 2026-07-05, same as pre-1.33),
                  -- see necro SA3 note
   },
+  dudley = {
+    [1] = { -- SA1 Rocket Uppercut, captured 2026-07-19 at dist 22/31 (identical within
+            -- 1 frame): three uppercut clusters, 7 hits, real neutral gaps after
+            -- clusters 1 and 2; cluster openers start early for from-neutral re-blocks.
+            -- He travels between uppercuts: timing shifts completely at range
+            -- (dist 159 -> 101/108/114), hence far_mode with a wide gate.
+      max_dist = 60,
+      far_mode = "fallback",
+      far_guard_dist = 120,
+      hold = 4,
+      hits = {
+        { offset = 51, action = "block", type = 3, hold = 6 },
+        { offset = 60, action = "block", type = 3 },            -- neutral gap follows
+        { offset = 81, action = "block", type = 3, hold = 8 },  -- cluster 2 opener, early
+        { offset = 90, action = "block", type = 3 },            -- neutral gap follows
+        { offset = 118, action = "block", type = 3, hold = 7 }, -- cluster 3 opener, early
+        { offset = 127, action = "block", type = 3 },
+        { offset = 133, action = "block", type = 3 },
+      },
+    },
+    [2] = { -- SA2 Rolling Thunder, captured 2026-07-19: 8 hits 13-15f apart -- one true
+            -- blockstring, fully chained. He rushes nearly full screen: at dist 186 all
+            -- 8 hits still connect shifted only +7, absorbed by the chained windows.
+            -- Whiffs by 292; far fallback past the measured range just in case.
+      max_dist = 200,
+      far_mode = "fallback",
+      hold = 4,
+      hits = {
+        { offset = 52, action = "block", type = 3, hold = 11 },
+        { offset = 65, action = "block", type = 3, hold = 12 },
+        { offset = 79, action = "block", type = 3, hold = 12 },
+        { offset = 93, action = "block", type = 3, hold = 12 },
+        { offset = 107, action = "block", type = 3, hold = 12 },
+        { offset = 121, action = "block", type = 3, hold = 12 },
+        { offset = 135, action = "block", type = 3, hold = 13 },
+        { offset = 150, action = "block", type = 3, hold = 10 }, -- widened for the +7
+                                                                 -- far-range shift
+      },
+    },
+    [3] = { -- SA3 Corkscrew Blow, captured 2026-07-19 at dist 19: 5 hits 4-8f apart --
+            -- one dense blockstring, fully chained. He dashes: at dist 176 only the
+            -- punch tip connects with shifted timing, hence far_mode. Whiffs by 294.
+      max_dist = 60,
+      far_mode = "fallback",
+      far_guard_dist = 160, -- his dashing punch connects while his body is still far
+                            -- out (HIT at rel 61 from t0_dist 173 with the default gate)
+      hold = 4,
+      hits = {
+        { offset = 51, action = "block", type = 3 },
+        { offset = 55, action = "block", type = 3 },
+        { offset = 59, action = "block", type = 3 },
+        { offset = 65, action = "block", type = 3, hold = 8 }, -- bridges the 8f gap
+        { offset = 73, action = "block", type = 3 },
+      },
+    },
+  },
   makoto = {
     [1] = { -- SA1 Seichuusen Godanzuki, captured 2026-07-19: hit 1 lands at t0+51
             -- (matches the startup measured for anim 1438). On block she stops after
