@@ -189,9 +189,29 @@ sa_offset_data = {
     },
   },
   q = {
-    [1] = false, -- SA1 Critical Combo Attack: low hits (type 2), prediction loop blocks it crouching;
-                 -- fallback would stand-block and get hit, so Layer 0 must stay out
-    [2] = false, -- SA2 Deadly Double Combination: hand-tuned force_recording (framedata_meta 8464)
+    [1] = { -- SA1 Critical Combo Attack, captured 2026-07-19 at dist 11/12 (identical
+            -- runs): 5 hits ~21-26f apart, chained with a stance switch -- hit 4 is the
+            -- LOW (crouch window, matches the KDTC parry guide); the hit-5 HITs in
+            -- capture were combo carryover from the eaten low, it should be a mid.
+            -- First mixed-height table in the pipeline. He dashes far: timing shifts by
+            -- dist 141 and it still connects from 272, so far_mode with a wide gate.
+      max_dist = 50,
+      far_mode = "fallback",
+      far_guard_dist = 120,
+      far_type = 2, -- far fallback holds CROUCH: his punches are all crouch-blockable
+                    -- while a standing hold eats the two lows (verified in capture)
+      hold = 4,
+      hits = {
+        { offset = 56, action = "block", type = 3, hold = 21 },
+        { offset = 79, action = "block", type = 3, hold = 21 },
+        { offset = 102, action = "block", type = 3, hold = 21 },
+        { offset = 125, action = "block", type = 2, hold = 24 }, -- low: crouch window
+        { offset = 151, action = "block", type = 2 },            -- also low (both HIT a
+                                                                 -- standing fallback)
+      },
+    },
+    -- [2] opened for offset capture 2026-07-19 (was false -> hand-tuned force_recording
+    -- 8464): the measured schedule table will replace this line
     [3] = false, -- SA3 Total Destruction: command grab, unblockable
   },
   -- Grab-type SAs are unblockable: mark false so Layer 0 does not hold block pointlessly

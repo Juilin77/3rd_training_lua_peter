@@ -477,6 +477,9 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
               -- far_guard_dist overrides for long-reach attackers (e.g. Hugo's hammer
               -- connects from well beyond his body distance)
               _dummy.blocking.sa_far_dist = _sa_entry.far_guard_dist or _sa_entry.max_dist
+              -- far_type: guard stance for the far fallback hold (2 = crouch), for SAs
+              -- whose low hits would pierce the default standing hold (e.g. Q SA1)
+              _dummy.blocking.sa_hit_type = _sa_entry.far_type
             else
               _dummy.blocking.sa_mode = "suppress"
             end
@@ -995,8 +998,9 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
       end
     end
 
-    -- Layer 0 schedule: per-hit type comes from the offset table, not framedata_meta
-    if _dummy.blocking.sa_mode == "schedule" and _dummy.blocking.sa_hit_type then
+    -- Layer 0: hit type comes from the offset table (schedule windows set it per hit,
+    -- far fallback sets it once at engage via far_type), not framedata_meta
+    if _dummy.blocking.sa_mode and _dummy.blocking.sa_hit_type then
       _hit_type = _dummy.blocking.sa_hit_type
     end
 
