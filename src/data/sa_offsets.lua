@@ -216,10 +216,10 @@ sa_offset_data = {
     },
     [2] = { -- SA2 Deadly Double Combination, captured 2026-07-19 at dist 12: stationary
             -- two-punch confirm super -- when hit 1 is blocked the follow-up never comes,
-            -- so a single window is the complete schedule. Whiffs by 122; max_dist is
-            -- generous on purpose (a ghost guard on a whiff is harmless, standing bare
-            -- inside real reach is not). Replaces the hand-tuned force_recording 8464.
-      max_dist = 110,
+            -- so a single window is the complete schedule. Reach boundary bisected by
+            -- Peter: connects at 100, whiffs at 101 -- max_dist set exactly there.
+            -- Replaces the hand-tuned force_recording 8464.
+      max_dist = 100,
       hold = 4,
       hits = {
         { offset = 53, action = "block", type = 3 },
