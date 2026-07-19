@@ -162,16 +162,20 @@ sa_offset_data = {
         { offset = 68, action = "block", type = 3 },
       },
     },
-    anims = { -- hidden supers: super flash without changing selected_sa (see header)
-      ["9c18"] = { -- Kongou Kokuretsu Zan, captured 2026-07-19: ground quake, connects
-                   -- near full screen (hit recorded at dist 231), single hit at t0+76.
-                   -- No max_dist on purpose; wide early window since one measurement only.
+    anims = { -- hidden supers: super flash without changing selected_sa (see header).
+              -- Identified 2026-07-19 via the flash diagnostic: 9c98 = Kongou Kokuretsu
+              -- Zan (KKZ, blockable quake), 9c18 = Shun Goku Satsu (raging demon -- it
+              -- glides near full screen; its grab connect once masqueraded as a KKZ hit).
+      ["9c98"] = { -- KKZ, verified point blank 2026-07-19: quake hit at t0+74, BLOCK.
+                   -- Whiffs entirely at dist 201; no max_dist on purpose -- the true
+                   -- reach boundary is unmeasured and a wrong cutoff would eat a hit,
+                   -- while a whiffed KKZ only costs ~10 frames of pointless guard.
         hold = 8,
         hits = {
           { offset = 74, action = "block", type = 3 },
         },
       },
-      ["9c98"] = false, -- Shun Goku Satsu: unblockable command grab, nothing to schedule
+      ["9c18"] = false, -- Shun Goku Satsu: unblockable command grab, nothing to schedule
     },
   },
   q = {

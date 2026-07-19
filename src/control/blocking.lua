@@ -424,6 +424,12 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
     local _sf_rising = _dummy.blocking.prev_superfreeze_decount == 0 and _sf_now > 0
     _dummy.blocking.prev_superfreeze_decount = _sf_now
     if _sf_rising then
+      if SA_OFFSET_CAPTURE then
+        -- diagnostic: printed on EVERY super flash, before any dispatch decision,
+        -- to expose flashes that never engage Layer 0 (hidden super anim hunting)
+        print(string.format("[SA_CAPTURE] flash anim=%s sa=%d dist=%d style=%d",
+          tostring(_player.animation), _player.selected_sa, _hurtbox_dist(_player, _dummy), _style))
+      end
       local _sa_char = sa_offset_data[_player.char_str]
       local _sa_entry = _sa_char and _sa_char[_player.selected_sa]
       -- anim override: hidden supers (Gouki SGS / KKZ) trigger a super flash without
