@@ -167,9 +167,13 @@ sa_offset_data = {
               -- Zan (KKZ, blockable quake), 9c18 = Shun Goku Satsu (raging demon -- it
               -- glides near full screen; its grab connect once masqueraded as a KKZ hit).
       ["9c98"] = { -- KKZ, verified point blank 2026-07-19: quake hit at t0+74, BLOCK.
-                   -- Whiffs entirely at dist 201; no max_dist on purpose -- the true
-                   -- reach boundary is unmeasured and a wrong cutoff would eat a hit,
-                   -- while a whiffed KKZ only costs ~10 frames of pointless guard.
+                   -- Layered move: the close-range pillar (this hit) is UNPARRYABLE --
+                   -- block only; the later outer wave IS parryable (future parry
+                   -- scheduling: keep hit 1 as block, wave hits may be parry/red_parry).
+                   -- The wave's timing at edge range is still unmeasured (its window
+                   -- goes here once captured). Whiffs entirely by hurtbox dist ~141;
+                   -- no max_dist on purpose -- a whiffed KKZ only costs ~10 frames of
+                   -- pointless guard while a wrong cutoff would eat a hit.
         hold = 8,
         hits = {
           { offset = 74, action = "block", type = 3 },
