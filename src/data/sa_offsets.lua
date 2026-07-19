@@ -205,6 +205,26 @@ sa_offset_data = {
   hugo = {
     [1] = false, -- SA1 Gigas Breaker: command grab
     [2] = false, -- SA2 Megaton Press: command grab (catches jumps)
+    [3] = { -- SA3 Hammer Frenzy, captured 2026-07-19 at dist 29: 5 hits, gaps 20-30f
+            -- (borderline with blockstun) so every window chains into one guard. He
+            -- walks forward swinging: at dist 191 only 2 hits connect at shifted times,
+            -- hence far_mode. Note: two capture runs recorded stray PARRY events,
+            -- likely a one-frame direction flip when Hugo crosses sides -- harmless
+            -- (still a clean defense) but keep an eye on it.
+      max_dist = 60,
+      far_mode = "fallback",
+      far_guard_dist = 160, -- his hammer connects from far outside body range: raise the
+                            -- proximity gate so the guard is up before the reach, not
+                            -- the body, arrives (HIT at dist ~130+ with the default gate)
+      hold = 4,
+      hits = {
+        { offset = 56, action = "block", type = 3, hold = 22 },
+        { offset = 80, action = "block", type = 3, hold = 25 },
+        { offset = 107, action = "block", type = 3, hold = 18 },
+        { offset = 127, action = "block", type = 3, hold = 28 },
+        { offset = 157, action = "block", type = 3 },
+      },
+    },
   },
   oro = {
     [1] = false, -- SA1 Kishin Riki: command grab (EX included)

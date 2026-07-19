@@ -473,8 +473,10 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
             if _sa_entry.far_mode == "fallback" then
               _dummy.blocking.sa_mode = "fallback"
               -- proximity gate: stay neutral until the traveling attacker closes in,
-              -- so the dummy does not walk backward during the whole approach
-              _dummy.blocking.sa_far_dist = _sa_entry.max_dist
+              -- so the dummy does not walk backward during the whole approach.
+              -- far_guard_dist overrides for long-reach attackers (e.g. Hugo's hammer
+              -- connects from well beyond his body distance)
+              _dummy.blocking.sa_far_dist = _sa_entry.far_guard_dist or _sa_entry.max_dist
             else
               _dummy.blocking.sa_mode = "suppress"
             end
