@@ -81,6 +81,12 @@ function create_main_menu()
   charge_overcharge_on_item = checkbox_menu_item("Display Overcharge", training_settings, "special_training_charge_overcharge_on")
   charge_overcharge_on_item.is_disabled = function() return training_settings.special_training_current_mode ~= 3 end
 
+  block_trigger_mode_item = list_menu_item("Blocking", training_settings, "block_trigger_mode", block_trigger_mode)
+  block_trigger_mode_item.is_disabled = function()
+    return training_settings.blocking_style ~= 2
+  end
+  block_trigger_mode_item.indent = true
+
   hits_before_red_parry_item = integer_menu_item("Hits before Red Parry", training_settings, "red_parry_hit_count", 1, 20, true)
   hits_before_red_parry_item.is_disabled = function()
     return training_settings.blocking_style ~= 4
@@ -142,6 +148,7 @@ function create_main_menu()
         entries = {
           list_menu_item("Pose", training_settings, "pose", pose),
           list_menu_item("Blocking Style", training_settings, "blocking_style", blocking_style),
+          block_trigger_mode_item,
           hits_before_red_parry_item,
           list_menu_item("Tech Throws", training_settings, "tech_throws_mode", tech_throws_mode),
           list_menu_item("Counter-Attack Move", training_settings, "counter_attack_stick", stick_gesture),
