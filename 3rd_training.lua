@@ -196,6 +196,15 @@ blocking_mode =
   "random",
 }
 
+block_trigger_mode =
+{
+  "always",
+  "combo only",
+  "random",
+}
+
+block_trigger_to_blocking_mode = { 2, 3, 4 }
+
 tech_throws_mode =
 {
   "never",
@@ -327,7 +336,7 @@ mission_dummy_id = 2
 training_settings = {
   pose = 1,
   blocking_style = 1,
-  blocking_mode = 2,
+  block_trigger_mode = 1,
   tech_throws_mode = 1,
   red_parry_hit_count = 1,
   counter_attack_stick = 1,
@@ -593,7 +602,11 @@ function before_frame()
     update_pose(_input, dummy, training_settings.pose)
 
     -- blocking
-    update_blocking(_input, player, dummy, training_settings.blocking_mode, training_settings.blocking_style, training_settings.red_parry_hit_count)
+    local _blocking_mode = 2
+    if training_settings.blocking_style == 2 then
+      _blocking_mode = block_trigger_to_blocking_mode[training_settings.block_trigger_mode]
+    end
+    update_blocking(_input, player, dummy, _blocking_mode, training_settings.blocking_style, training_settings.red_parry_hit_count)
 
     -- fast wake-up
     update_fast_wake_up(_input, player, dummy, training_settings.fast_wakeup_mode)
