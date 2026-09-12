@@ -203,6 +203,7 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
         ((_dummy.blocking.expected_attack_hit_id == _dummy.blocking.last_attack_hit_id or not _dummy.blocking.listening) and _dummy.is_idle and _dummy.idle_time > 20)
        ) then
       _dummy.blocking.wait_for_block_string = true
+      _dummy.blocking.combo_only_opener_pending = true
       log(_dummy.prefix, "block_string", string.format("wait blockstring (%d, %d, %d)",  _dummy.blocking.expected_attack_hit_id, _dummy.blocking.last_attack_hit_id, _dummy.idle_time))
     end
   end
@@ -571,7 +572,7 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
             _dummy.blocking.is_precise_timing = false
             log(_dummy.prefix, "blocking", string.format("block in %d", _dummy.blocking.expected_attack_animation_hit_frame - _player_relevant_animation_frame))
 
-            if _mode == 3 then -- combo only
+            if _mode == 3 then -- meaty/oki
               if not _dummy.blocking.block_string and not _dummy.blocking.wait_for_block_string then
                 _dummy.blocking.should_block = false
               end
@@ -584,6 +585,11 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
                     print(string.format(" %d: next hit randomized out", frame_number))
                   end
                 end
+              end
+            elseif _mode == 5 then -- combo only: force through exactly one free opener per engagement
+              if _dummy.blocking.combo_only_opener_pending ~= false then
+                _dummy.blocking.should_block = false
+                _dummy.blocking.combo_only_opener_pending = false
               end
             end
 
@@ -636,7 +642,7 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
           _dummy.blocking.is_precise_timing = false
           log(_dummy.prefix, "blocking", string.format("sim block in %d (sub-frame fallback)", _sh.delta or 1))
 
-          if _mode == 3 then -- combo only
+          if _mode == 3 then -- meaty/oki
             if not _dummy.blocking.block_string and not _dummy.blocking.wait_for_block_string then
               _dummy.blocking.should_block = false
             end
@@ -646,6 +652,11 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
               if _r > 0.5 then
                 _dummy.blocking.randomized_out = true
               end
+            end
+          elseif _mode == 5 then -- combo only: force through exactly one free opener per engagement
+            if _dummy.blocking.combo_only_opener_pending ~= false then
+              _dummy.blocking.should_block = false
+              _dummy.blocking.combo_only_opener_pending = false
             end
           end
         end
@@ -751,7 +762,7 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
             _dummy.blocking.is_precise_timing = _movement ~= nil
             log(_dummy.prefix, "blocking", string.format("block proj %s in %d", _projectile_obj.id, _i))
 
-            if _mode == 3 then -- combo only
+            if _mode == 3 then -- meaty/oki
               if not _dummy.blocking.block_string and not _dummy.blocking.wait_for_block_string then
                 _dummy.blocking.should_block_projectile = false
               end
@@ -764,6 +775,11 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
                     print(string.format(" %d: next hit randomized out", frame_number))
                   end
                 end
+              end
+            elseif _mode == 5 then -- combo only: force through exactly one free opener per engagement
+              if _dummy.blocking.combo_only_opener_pending ~= false then
+                _dummy.blocking.should_block_projectile = false
+                _dummy.blocking.combo_only_opener_pending = false
               end
             end
 

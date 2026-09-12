@@ -87,6 +87,12 @@ function create_main_menu()
   end
   hits_before_red_parry_item.indent = true
 
+  blocking_mode_item = list_menu_item("Blocking Mode", training_settings, "blocking_mode", blocking_mode)
+  blocking_mode_item.is_disabled = function()
+    return training_settings.blocking_style ~= 2
+  end
+  blocking_mode_item.indent = true
+
   display_p2_input_history_item = checkbox_menu_item("Display P2 Input History", training_settings, "display_p2_input_history")
   display_p2_input_history_item.is_disabled = function() return training_settings.display_p1_input_history_dynamic end
 
@@ -142,10 +148,11 @@ function create_main_menu()
         entries = {
           list_menu_item("Pose", training_settings, "pose", pose),
           list_menu_item("Blocking Style", training_settings, "blocking_style", blocking_style),
+          blocking_mode_item,
           hits_before_red_parry_item,
           list_menu_item("Tech Throws", training_settings, "tech_throws_mode", tech_throws_mode),
-          list_menu_item("Counter-Attack Move", training_settings, "counter_attack_stick", stick_gesture),
-          list_menu_item("Counter-Attack Action", training_settings, "counter_attack_button", button_gesture),
+          list_menu_item("Counter-Attack Move", training_settings, "counter_attack_stick", stick_gesture_display),
+          list_menu_item("Counter-Attack Action", training_settings, "counter_attack_button", button_gesture_display),
           list_menu_item("Fast Wake Up", training_settings, "fast_wakeup_mode", fast_wakeup_mode),
         }
       },
@@ -299,6 +306,26 @@ function create_main_menu()
         gui.text(_dx, _dy + 20, "1->121  2->101  3->81  4->61", _c, _b)
         gui.text(_dx, _dy + 30, "5->41   6->21   7->11  8->5", _c, _b)
         gui.text(_dx, _dy + 40, "9->2    10+->1", _c, _b)
+      end
+
+      -- Dummy tab: Blocking Mode explanation in the right-side blank space,
+      -- only while the Blocking Mode entry (index 3) is selected
+      if not _menu.is_main_menu_selected and _menu.main_menu_selected_index == 1 and _menu.sub_menu_selected_index == 3 then
+        local _dx = _menu.left + 160
+        local _dy = _menu.top + 23 + (3 - 1) * menu_y_interval - 1
+        local _c = text_disabled_color
+        local _b = text_default_border_color
+        if training_settings.blocking_mode == 3 then
+          gui.text(_dx, _dy,      "Meaty/Oki: fails to block a hit", _c, _b)
+          gui.text(_dx, _dy + 10, "landed before dummy is idle 20+", _c, _b)
+          gui.text(_dx, _dy + 20, "frames. Practice wakeup meaties", _c, _b)
+          gui.text(_dx, _dy + 30, "and tick throws.", _c, _b)
+        elseif training_settings.blocking_mode == 5 then
+          gui.text(_dx, _dy,      "Combo Only: first hit of each", _c, _b)
+          gui.text(_dx, _dy + 10, "fresh engagement always connects.", _c, _b)
+          gui.text(_dx, _dy + 20, "After that acts like Always: true", _c, _b)
+          gui.text(_dx, _dy + 30, "combos land, gaps get blocked.", _c, _b)
+        end
       end
 
       -- Display tab: color legends in the right-side blank space, only while the

@@ -81,6 +81,7 @@ require("src/ui/special_training/hyakuretsu_training")
 require("src/ui/special_training/juggle_training")
 require("src/ui/special_training/tech_throw_training")
 require("src/ui/special_training/720_trainer")
+require("src/ui/blocking_mode_display")
 require("src/data/simulation")
 require("src/prediction")
 
@@ -157,6 +158,38 @@ if is_4rd_strike then
   table.insert(stick_gesture, "Demon Armageddon") -- Gouki SA3
 end
 
+stick_gesture_display = {
+  "None",
+  "QCF (236)",
+  "QCB (214)",
+  "HCF (41236)",
+  "HCB (63214)",
+  "DPF (623)",
+  "DPB (421)",
+  "HCharge ([4]6)",
+  "VCharge ([2]8)",
+  "360",
+  "DQCF (236236)",
+  "720",
+  "Forward",
+  "Back",
+  "Down",
+  "Jump",
+  "Super Jump",
+  "Forward Jump",
+  "Forward Super Jump",
+  "Back Jump",
+  "Back Super Jump",
+  "Back Dash",
+  "Forward Dash",
+  "Guard Jump (See Readme)",
+  "Shun Goku Satsu",
+  "Kongou Kokuretsu Zan",
+}
+if is_4rd_strike then
+  table.insert(stick_gesture_display, "Demon Armageddon")
+end
+
 button_gesture =
 {
   "none",
@@ -174,11 +207,27 @@ button_gesture =
   "HP+HK",
 }
 
+button_gesture_display = {
+  "None",
+  "Recording",
+  "LP",
+  "MP",
+  "HP",
+  "EXP",
+  "LK",
+  "MK",
+  "HK",
+  "EXK",
+  "LP+LK",
+  "MP+MK",
+  "HP+HK",
+}
+
 fast_wakeup_mode =
 {
-  "never",
-  "always",
-  "random",
+  "Never",
+  "Always",
+  "Random",
 }
 
 blocking_style =
@@ -191,17 +240,18 @@ blocking_style =
 
 blocking_mode =
 {
-  "never",
-  "always",
-  "combo only",
-  "random",
+  "Never",
+  "Always",
+  "Meaty/Oki",
+  "Random",
+  "Combo Only",
 }
 
 tech_throws_mode =
 {
-  "never",
-  "always",
-  "random",
+  "Never",
+  "Always",
+  "Random",
 }
 
 hit_type =
@@ -839,6 +889,7 @@ function on_gui()
   special_training_juggle_draw()
   special_training_tech_throw_draw()
   special_training_720_draw()
+  blocking_mode_display()
 
   if is_in_match and current_recording_state ~= 1 then
     local _y = 5
