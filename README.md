@@ -73,6 +73,15 @@ A: Check video settings, you must use "Basic" blitter option with no scanlines i
 A: Install prerequires from [here](https://github.com/TASVideos/BizHawk-Prereqs/releases/latest/)
 
 ## Changelog
+### v0.24 (12/09/2026)
+- [Feature] Dummy Blocking: complete SA auto-block overhaul using a super-freeze-anchored timing layer with per-hit offset tables — Makoto, Ken, Gouki, Hugo, Q, and Dudley now block every Super Art cleanly with correct segmented guard on multi-hit supers (contribution of @Juilin77)
+- [Feature] Dummy Blocking: added Blocking Mode (Never / Always / Meaty/Oki / Random / Combo Only) — Meaty/Oki lets meaties, tick throws, and wakeup pressure land if thrown before the dummy has been idle 20 frames; Combo Only guarantees the first hit of an engagement always connects, then blocks normally (contribution of @Juilin77)
+- [Feature] Dummy: Counter-Attack Move now shows numpad motion notation next to each abbreviation, e.g. QCF (236), DPF (623) (contribution of @Juilin77)
+- [Feature] Pattern Replay: added positioning support with contact distance, stage limits, and corner handling (contribution of @Juilin77)
+- [Fix] Dummy Blocking: Ken SA1 and SA2 now block correctly as segmented chains via a force_recording carry-chain fix (contribution of @Juilin77)
+- [Improvement] Dummy tab: capitalized option labels to Title Case for consistency with the rest of the menu (contribution of @Juilin77)
+- [Improvement] Codebase: dummy control and prediction modules refactored for consistency, internal comments translated to English (contribution of @Juilin77)
+
 ### v0.23 (29/06/2026)
 - [Feature] Dummy Pose: added directional jump and dash options — Forward Jump, Neutral Jump, Back Jump, Super Fwd Jump, Super Jump, Super Back Jump, Forward Dash, Back Dash (contribution of @Juilin77)
 - [Feature] Dummy Blocking: SA pre-block state machine — dummy pre-blocks during super freeze and maintains block hold through SA chip hits; proxy_max_dist uses hurtbox edge distance for accuracy (contribution of @Juilin77)
