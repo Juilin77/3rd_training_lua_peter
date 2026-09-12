@@ -9,7 +9,7 @@ require("src/data/sa_offsets") -- Layer 0 per-SA hit timing tables (TODO 1.33)
 -- Pure observation: never alters blocking behavior. Works in every sa_mode, so running
 -- it against an existing "schedule" entry doubles as a verification pass.
 -- Keep true while farming offset tables; set back to false before release.
-local SA_OFFSET_CAPTURE = true
+local SA_OFFSET_CAPTURE = false
 
 -- BLOCKING
 
