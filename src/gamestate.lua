@@ -842,7 +842,8 @@ function read_player_vars(_player_obj)
     _parry_object.validity_time = memory.readbyte(_validity_addr)
     _parry_object.cooldown_time = memory.readbyte(_cooldown_addr)
     if _parry_object.cooldown_time == 0xFF then _parry_object.cooldown_time = 0 end
-    if _previous_validity_time == 0 and _parry_object.validity_time ~= 0 then
+    if (_previous_validity_time == 0 and _parry_object.validity_time ~= 0)
+      or (_previous_validity_time ~= 0 and _parry_object.validity_time > _previous_validity_time) then
       _parry_object.last_validity_start_frame = frame_number
       _parry_object.delta = nil
       _parry_object.success = nil

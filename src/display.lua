@@ -85,6 +85,17 @@ function display_draw_life(_player_object)
 end
 
 
+function display_draw_ping_delay()
+  if training_settings.ping_delay == 1 then return end
+
+  local _t = "Ping " .. ping_delay_names[training_settings.ping_delay]
+  local _x = screen_width - 2 - get_text_width(_t)
+  local _y = 2
+
+  gui.text(_x, _y, _t, 0xFFFB63FF)
+end
+
+
 function display_draw_life_loss(_player_object)
   if _player_object.life >= 160 then return end
 

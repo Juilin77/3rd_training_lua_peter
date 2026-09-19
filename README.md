@@ -18,7 +18,7 @@ The right version of Fightcade can be downloaded [here](https://www.fightcade.co
 - Save / load slots to files; curated pattern replay
 
 **Frame Data**
-- Frame Table: startup / active / recovery / cancel frames with projectile and throw support
+- Frame Table: startup / active / recovery / cancel frames with projectile and throw support, plus a Parry SA Only mode
 - Damage info and frame advantage popup
 - Input history display for both players
 
@@ -28,6 +28,7 @@ The right version of Fightcade can be downloaded [here](https://www.fightcade.co
 
 **Special Training**
 - Parry and Red Parry training
+- Parry Rhythm - SA (17-frame forward-tap rhythm trainer)
 - Tech Throw training (5-frame window indicator)
 - Juggle Air Timer (remaining air hitstun gauge)
 - 720 Input Trainer (Hugo)
@@ -73,6 +74,18 @@ A: Check video settings, you must use "Basic" blitter option with no scanlines i
 A: Install prerequires from [here](https://github.com/TASVideos/BizHawk-Prereqs/releases/latest/)
 
 ## Changelog
+### v0.25 (19/09/2026)
+- [Feature] Special Training: added Parry Rhythm - SA, a pure input-timing trainer for the 17-frame forward-tap rhythm needed between two Super Art parries, with a live orange timing bar and the last 10 tap gaps listed as +N / -N / 0 (contribution of @Juilin77)
+- [Feature] Special Training: Parry Rhythm - SA is mutually exclusive with the four Parry Helpers, turns on Follow Character automatically, and replaces the menu legend with its own explanation (contribution of @Juilin77)
+- [Feature] Rules: added Ping Delay (Off, 1f to 6f), which buffers your own inputs to simulate network delay, with a "Ping xx" indicator in the top-right corner (contribution of @Juilin77)
+- [Feature] Frame Table: added "Parry SA Only" switch for Super Art parry practice, where the capture only arms on a real Super Art, stays continuous across the 90-frame boundary, and the legend is reduced to 8 states (contribution of @Juilin77)
+- [Feature] Frame Table: SA Only view shows a hollow box for the input hold range, an orange 17-frame rhythm target box, and an FP / DP / AP history line (contribution of @Juilin77)
+- [Feature] Frame Table: new Movement (dash / jump) and Blocked (blockstun) states (contribution of @Juilin77)
+- [Improvement] Frame Table: the gap number between parry results now means "success frame to the start of the next window" (contribution of @Juilin77)
+- [Fix] Frame Table: fixed leftover ghost frames, and perfect parries with delta 0 being dropped from the history (contribution of @Juilin77)
+- [Fix] Parry timing: a parry re-triggered while a previous validity window is still counting is now detected as a new window (contribution of @Juilin77)
+- [Fix] Random-based options now vary across script reloads by seeding math.random with os.time (contribution of @Juilin77)
+
 ### v0.24 (12/09/2026)
 - [Feature] Dummy Blocking: new super-freeze-anchored SA auto-block layer with per-hit offset tables, replacing the old best-effort chip-hit fallback (contribution of @Juilin77)
 - [Feature] Dummy Blocking: Makoto SA1 (Seichuusen Godanzuki) and SA2 now block cleanly with correct per-hit timing (contribution of @Juilin77)

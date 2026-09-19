@@ -13,7 +13,8 @@ Toggle various on-screen overlays to visualize game data in real time.
 | Display P2 Input History | Show a scrolling log of P2's recent inputs. Grayed out when Dynamic P1 Input History is on. |
 | Display Damage Info | Show numeric damage values for each hit. |
 | Display Frame Advantage | Show frame advantage or disadvantage after each hit or block. |
-| Display Frame Table | Show the real-time per-frame state timeline for both players (startup / active / recovery / hitstun / parry / invincible). |
+| Display Frame Table | Show the real-time per-frame state timeline for both players (neutral / startup / movement / active / recovery / hitstun / blocked / projectile / parry / invincible). |
+| Parry SA Only | Switch the Frame Table to Super Art parry practice, see below. Only available while Display Frame Table is on. |
 | Display Hitboxes | Show attack and hurt boxes with a color legend. |
 | Display Distances | Show the distance between P1 and P2. Enables the three distance options below. |
 | Mid Distance Height | Y-coordinate reference height used for mid-range distance calculation (0–200, default 10). |
@@ -62,14 +63,31 @@ The Frame Table shows a real-time per-frame state bar for both P1 (top) and P2 (
 
 | Color | State | Meaning |
 |-------|-------|---------|
-| 🟩 Green | Startup | Frames before the first hitbox appears |
+| ⬛ Dark grey | Neutral | Idle, no action |
+| 🟩 Green | Startup | Frames before the first hitbox appears, including any airborne windup for jumping normals or specials |
+| 🟢 Olive | Movement | Dash or jump with no hitbox yet, not idle but not a real attack windup either |
 | 🟥 Red | Active | Frames where the attack hitbox is active |
-| 🟫 Brown | Projectile | Frames where a projectile hitbox is active |
 | 🟦 Blue | Recovery | Frames after the active window until the character can act |
-| 🟨 Yellow | Hitstun / Blockstun | Frames the defender cannot act after being hit or blocking |
-| 🟪 Purple | Parry | Frames where a parry succeeded |
+| 🟨 Yellow | Hitstun | Frames the defender cannot act after being hit, thrown, or knocked down |
+| 🔵 Cyan | Blocked | Frames the defender is in blockstun after chip-blocking an attack, not parried |
+| 🟫 Brown | Projectile | Frames where a projectile hitbox is active |
+| 🟪 Purple | Parry | Frames where the parry input is being accepted, the validity window itself rather than only a successful parry, shown only while the opponent has an active hitbox or projectile |
 | ⬜ White | Invincible | Frames where the character has no vulnerability box |
-| ⬛ Dark grey | Neutral | Idle / no action |
+
+A white-bordered marker on the timeline is a successful parry, a yellow-bordered marker is a miss (early or late).
+
+Below the timeline, a `P1: FP -2  17  -3 ...` style line lists each player's recent parry-gauge results. Each entry shows the parry type (`FP` forward, `DP` down, `AP` air) followed by its delta in frames, using the same convention as the Special Training parry gauges, where `+N` is N frames late and `-N` is N frames early. The plain number between two entries is the frame gap from the success frame of one result to the start of the next validity window, not necessarily when the input was pressed. When both entries are successful parries of the same type back to back (two white markers), this gap equals the attacker's real hit-to-hit interval, since a successful parry resolves on the exact frame it connects.
+
+### Parry SA Only
+
+Turn on **Parry SA Only** (right below Display Frame Table) to practice parrying Super Arts with the Frame Table.
+
+- All parry validity windows use the same purple color, and the legend is reduced to 8 states
+- The capture only arms on a real Super Art, so normal moves no longer start or reset it
+- A Super Art capture stays continuous across the 90-frame boundary instead of being cut off
+- A hollow box marks the range where the parry input was held
+- An orange box marks the 17-frame rhythm target for the next forward tap
+- The history line shows FP / DP / AP results, and the number between two entries is the gap from the success frame to the start of the next validity window
 
 ---
 

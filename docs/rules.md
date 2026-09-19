@@ -21,3 +21,4 @@ Adjust match conditions to suit your training goals — time, health recovery, s
 | Infinite Super Art Time | Super Art gauge does not drain after activation — the effect lasts indefinitely. |
 | Music Volume | Background music volume (0–10, default 10). |
 | Speed Up Game Intro | Skip or accelerate the game intro animation to reduce wait time. |
+| Ping Delay | Simulate network input delay by buffering your inputs: Off, or 1f to 6f (about 16.7ms to 100ms). Only affects P1 inputs. While active, a `Ping xx` indicator is shown in the top-right corner. |

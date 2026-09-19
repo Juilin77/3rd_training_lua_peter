@@ -1,6 +1,6 @@
 require("src/startup")
 
--- v0.24
+-- v0.25
 
 print("-----------------------------")
 print("  3rd_training.lua - "..script_version.."")
@@ -82,6 +82,7 @@ require("src/ui/special_training/juggle_training")
 require("src/ui/special_training/tech_throw_training")
 require("src/ui/special_training/720_trainer")
 require("src/ui/blocking_mode_display")
+require("src/ui/parry_rhythm_sa_display")
 require("src/data/simulation")
 require("src/prediction")
 
@@ -282,6 +283,9 @@ stun_mode =
   "delayed reset"
 }
 
+ping_delay_frames = {0, 1, 2, 3, 4, 5, 6}
+ping_delay_names = {"Off", "16.7ms (1f)", "33.3ms (2f)", "50.0ms (3f)", "66.7ms (4f)", "83.3ms (5f)", "100.0ms (6f)"}
+
 standing_state =
 {
   "knockeddown",
@@ -402,8 +406,10 @@ training_settings = {
   display_attack_data = false,
   display_frame_advantage = false,
   display_frame_table = false,
+  frame_table_sa_only = false,
   display_hitboxes = false,
   display_distances = false,
+  display_parry_rhythm_sa = false,
   mid_distance_height = 70,
   p1_distances_reference_point = 1,
   p2_distances_reference_point = 2,
@@ -418,6 +424,7 @@ training_settings = {
   life_refill_delay = 20,
   meter_refill_delay = 20,
   fast_forward_intro = true,
+  ping_delay = 1, -- index into ping_delay_names/ping_delay_frames; 1 = "Off"
   recording_mission_mode = false,
   mission_play_side = 1,
   mission_replay_on = false,
@@ -627,6 +634,30 @@ function before_frame()
     dummy = player_objects[1]
   end
 
+  -- ping delay: buffer the human player's own input by N frames
+  local _ping_frames = ping_delay_frames[training_settings.ping_delay]
+  if is_in_match and not is_menu_open and _ping_frames and _ping_frames > 0 then
+    ping_delay_buffer = ping_delay_buffer or {}
+    local _snapshot = {}
+    for _key, _val in pairs(_input) do
+      if _key:sub(1, 2) == player.prefix then
+        _snapshot[_key] = _val
+      end
+    end
+    table.insert(ping_delay_buffer, _snapshot)
+    while #ping_delay_buffer > _ping_frames + 1 do
+      table.remove(ping_delay_buffer, 1)
+    end
+    local _delayed = ping_delay_buffer[1]
+    if _delayed then
+      for _key, _val in pairs(_delayed) do
+        _input[_key] = _val
+      end
+    end
+  else
+    ping_delay_buffer = nil
+  end
+
   -- attack data
   attack_data_update(player, dummy)
 
@@ -635,6 +666,7 @@ function before_frame()
 
   -- frame table
   frame_table_update(player_objects[1], player_objects[2])
+  frame_table_update_parry_history()
 
   if replay_mission_item.is_disabled() then training_settings.mission_replay_on = false end
   if direct_play_item.is_disabled() then training_settings.pattern_replay_on = false end
@@ -802,6 +834,8 @@ function on_gui()
       display_draw_bonuses(player_objects[2])
     end
 
+    display_draw_ping_delay()
+
     -- hitboxes
     if training_settings.display_hitboxes then
       display_draw_hitboxes()
@@ -890,6 +924,8 @@ function on_gui()
   special_training_tech_throw_draw()
   special_training_720_draw()
   blocking_mode_display()
+  update_parry_rhythm_sa_capture()
+  parry_rhythm_sa_display()
 
   if is_in_match and current_recording_state ~= 1 then
     local _y = 5

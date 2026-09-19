@@ -7,7 +7,7 @@ Focused training tools for specific SF3 mechanics. Select a mode from **Special 
 | Option | Description |
 |--------|-------------|
 | Mode | Training mode: None / Parry / Charge / Hyakuretsu Kyaku / Juggle / Tech Throw / 720 |
-| Follow Character | Gauge follows P1's on-screen position. Grayed out in None, Juggle, Tech Throw, and 720 modes. |
+| Follow Character | Gauge follows P1's on-screen position. Grayed out in None, Juggle, Tech Throw, and 720 modes, and forced on while Parry Rhythm - SA is enabled. |
 
 ---
 
@@ -18,7 +18,7 @@ Focused training tools for specific SF3 mechanics. Select a mode from **Special 
 Shows real-time timing gauges for all four parry types. Each gauge has two bars:
 - **Blue bar** — validity window (the frame window where a parry input is accepted)
 - **Orange bar** — cooldown window (frames before the next parry can be attempted)
-- **Green number** — delta: how many frames early (positive) or late (negative) the parry input was
+- **Number** — delta: `+N` means the parry input was N frames late (be faster), `-N` means it was N frames early (be slower). A successful parry shows a green `-#` for how many frames into the window it landed, and closer to 0 is better
 
 | Option | Description |
 |--------|-------------|
@@ -26,7 +26,18 @@ Shows real-time timing gauges for all four parry types. Each gauge has two bars:
 | Down Parry Helper | Show timing gauge for down parry. |
 | Air Parry Helper | Show timing gauge for air parry. |
 | Anti-Air Parry Helper | Show timing gauge for anti-air parry. |
-| Follow Character | Gauge follows P1's on-screen position. |
+| Parry Rhythm - SA | Pure input-timing trainer for the rhythm needed between two Super Art parries, see below. Mutually exclusive with the four Parry Helpers, turning one on turns the other off. Turns on Follow Character automatically, and replaces the menu legend on the right with its own explanation. |
+| Follow Character | Gauge follows P1's on-screen position. Forced on while Parry Rhythm - SA is enabled. |
+
+### Parry Rhythm - SA
+
+Trains the forward-tap rhythm for chaining Super Art parries, where two forward taps need to be 17 frames apart. It only measures your input timing, so no real Super Art is needed.
+
+- **Orange bar** — live timing bar that fills up to the 17-frame target after each forward tap
+- **History** — the last 10 tap gaps, listed from newest to oldest
+- **`+N`** — the gap was N frames longer than 17F, you tapped too slowly and need to be faster
+- **`-N`** — the gap was N frames shorter than 17F, you tapped too quickly and need to be slower
+- **`0`** — the gap was exactly 17F, a perfect rhythm
 
 ---
 

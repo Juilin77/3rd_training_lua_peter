@@ -78,6 +78,37 @@ function create_main_menu()
   parry_antiair_on_item = checkbox_menu_item("Anti-Air Parry Helper", training_settings, "special_training_parry_antiair_on")
   parry_antiair_on_item.is_disabled = parry_forward_on_item.is_disabled
 
+  parry_rhythm_sa_on_item = checkbox_menu_item("Parry Rhythm - SA", training_settings, "display_parry_rhythm_sa")
+  parry_rhythm_sa_on_item.is_disabled = parry_forward_on_item.is_disabled
+
+  -- Parry Rhythm - SA is mutually exclusive with the 4 Parry Helpers as a
+  -- group (the helpers aren't exclusive with each other): whichever one was
+  -- JUST toggled on turns the other side off. Each wrapper checks its OWN
+  -- item's new value (self.object[self.property_name]) rather than the other
+  -- side's current state, since that state is stale at the moment this runs
+  -- (e.g. if Parry Rhythm - SA was already on and a helper just got turned
+  -- on, display_parry_rhythm_sa is still true here — checking it first would
+  -- wrongly re-disable the helper that was just turned on instead of
+  -- disabling Parry Rhythm - SA).
+  local function parry_rhythm_sa_disable_helpers()
+    training_settings.special_training_parry_forward_on = false
+    training_settings.special_training_parry_down_on = false
+    training_settings.special_training_parry_air_on = false
+    training_settings.special_training_parry_antiair_on = false
+    training_settings.special_training_follow_character = true
+  end
+  local parry_rhythm_sa_orig_left = parry_rhythm_sa_on_item.left
+  local parry_rhythm_sa_orig_right = parry_rhythm_sa_on_item.right
+  parry_rhythm_sa_on_item.left = function(self) parry_rhythm_sa_orig_left(self) if training_settings.display_parry_rhythm_sa then parry_rhythm_sa_disable_helpers() end end
+  parry_rhythm_sa_on_item.right = function(self) parry_rhythm_sa_orig_right(self) if training_settings.display_parry_rhythm_sa then parry_rhythm_sa_disable_helpers() end end
+
+  for _, _item in ipairs({ parry_forward_on_item, parry_down_on_item, parry_air_on_item, parry_antiair_on_item }) do
+    local _orig_left = _item.left
+    local _orig_right = _item.right
+    _item.left = function(self) _orig_left(self) if self.object[self.property_name] then training_settings.display_parry_rhythm_sa = false end end
+    _item.right = function(self) _orig_right(self) if self.object[self.property_name] then training_settings.display_parry_rhythm_sa = false end end
+  end
+
   charge_overcharge_on_item = checkbox_menu_item("Display Overcharge", training_settings, "special_training_charge_overcharge_on")
   charge_overcharge_on_item.is_disabled = function() return training_settings.special_training_current_mode ~= 3 end
 
@@ -228,6 +259,12 @@ function create_main_menu()
           checkbox_menu_item("Display Damage Info", training_settings, "display_attack_data"),
           checkbox_menu_item("Display Frame Advantage", training_settings, "display_frame_advantage"),
           checkbox_menu_item("Display Frame Table", training_settings, "display_frame_table"),
+          (function()
+            local _item = checkbox_menu_item("Parry SA Only", training_settings, "frame_table_sa_only")
+            _item.is_disabled = function() return not training_settings.display_frame_table end
+            _item.indent = true
+            return _item
+          end)(),
           checkbox_menu_item("Display Hitboxes", training_settings, "display_hitboxes"),
           checkbox_menu_item("Display Distances", training_settings, "display_distances"),
           mid_distance_height_item,
@@ -253,6 +290,7 @@ function create_main_menu()
           checkbox_menu_item("Infinite Super Art Time", training_settings, "infinite_sa_time"),
           integer_menu_item("Music Volume", training_settings, "music_volume", 0, 10, false, 10),
           checkbox_menu_item("Speed Up Game Intro", training_settings, "fast_forward_intro"),
+          list_menu_item("Ping Delay", training_settings, "ping_delay", ping_delay_names),
         }
       },
       {
@@ -271,6 +309,7 @@ function create_main_menu()
           parry_down_on_item,
           parry_air_on_item,
           parry_antiair_on_item,
+          parry_rhythm_sa_on_item,
           charge_overcharge_on_item
         }
       },
@@ -294,6 +333,40 @@ function create_main_menu()
         gui.text(_dx, _dy,      "Green bar: 5F tech window (press LP+LK)", _c, _b)
         gui.text(_dx, _dy + 10, "Orange bar: fwd/down parry validity", _c, _b)
         gui.text(_dx, _dy + 20, "Parry active = can't tech throw", _c, _b)
+      end
+
+      if _menu.main_menu_selected_index == 6 and special_training_mode[training_settings.special_training_current_mode] == "Parry" then
+        local _dx = _menu.left + 160
+        local _dy = _menu.top + 23
+        local _c = text_disabled_color
+        local _b = text_default_border_color
+        local _miss_c = 0xE70000FF
+        local _success_c = 0x10FB00FF
+
+        if training_settings.display_parry_rhythm_sa then
+          -- Parry Rhythm - SA is on: replace the Parry Helper legend with the rhythm one
+          gui.text(_dx, _dy, "Goal: 17F between two forward taps", _c, _b)
+
+          gui.text(_dx, _dy + 10, "+N", _miss_c, _b)
+          gui.text(_dx + get_text_width("+N"), _dy + 10, ": Gap N frames too long, be faster", _c, _b)
+
+          gui.text(_dx, _dy + 20, "-N", _miss_c, _b)
+          gui.text(_dx + get_text_width("-N"), _dy + 20, ": Gap N frames too short, be slower", _c, _b)
+
+          gui.text(_dx, _dy + 30, "0", _success_c, _b)
+          gui.text(_dx + get_text_width("0"), _dy + 30, ": Perfect", _c, _b)
+        else
+          gui.text(_dx, _dy, "+N", _miss_c, _b)
+          gui.text(_dx + get_text_width("+N"), _dy, ": Pressed N frames late, need to be faster", _c, _b)
+
+          gui.text(_dx, _dy + 10, "-N", _miss_c, _b)
+          gui.text(_dx + get_text_width("-N"), _dy + 10, ": Pressed N frames early, need to be slower", _c, _b)
+
+          gui.text(_dx, _dy + 20, "Success ", _c, _b)
+          gui.text(_dx + get_text_width("Success "), _dy + 20, "-#", _success_c, _b)
+          gui.text(_dx + get_text_width("Success -#"), _dy + 20, ": frames into window", _c, _b)
+          gui.text(_dx, _dy + 30, "(closer to 0 is better)", _c, _b)
+        end
       end
 
       if _menu.main_menu_selected_index == 6 and special_training_mode[training_settings.special_training_current_mode] == "Juggle" then
@@ -332,11 +405,13 @@ function create_main_menu()
       -- corresponding entry is selected and its display is turned on
       if not _menu.is_main_menu_selected and _menu.main_menu_selected_index == 4 then
         local _legend_x = _menu.left + 160
-        if _menu.sub_menu_selected_index == 8 and training_settings.display_frame_table then
+        if (_menu.sub_menu_selected_index == 8 or _menu.sub_menu_selected_index == 9) and training_settings.display_frame_table then
+          -- anchored to the "Display Frame Table" row (8) even while "Parry SA Only" (9)
+          -- is selected, so the legend doesn't jump position between the two
           local _legend_y = _menu.top + 23 + (8 - 1) * menu_y_interval - 1
           frame_table_legend_display(_legend_x, _legend_y)
-        elseif _menu.sub_menu_selected_index == 9 and training_settings.display_hitboxes then
-          local _legend_y = _menu.top + 23 + (9 - 1) * menu_y_interval - 1
+        elseif _menu.sub_menu_selected_index == 10 and training_settings.display_hitboxes then
+          local _legend_y = _menu.top + 23 + (10 - 1) * menu_y_interval - 1
           hitbox_legend_display(_legend_x, _legend_y)
         end
       end
