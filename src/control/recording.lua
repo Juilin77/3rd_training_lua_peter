@@ -692,3 +692,32 @@ function update_recording(_input)
 
   previous_recording_state = current_recording_state
 end
+
+function recording_state_hud_draw(_dummy)
+  if is_in_match and current_recording_state ~= 1 then
+    local _y = 5
+    local _current_recording_size = 0
+    if (recording_slots[training_settings.current_recording_slot].inputs) then
+      _current_recording_size = #recording_slots[training_settings.current_recording_slot].inputs
+    end
+
+    if current_recording_state == 2 then
+      local _text = string.format("%s: Wait for recording (%d)", recording_slots_names[training_settings.current_recording_slot], _current_recording_size)
+      gui.text(250, _y, _text, text_default_color, text_default_border_color)
+    elseif current_recording_state == 3 then
+      local _text = string.format("%s: Recording... (%d)", recording_slots_names[training_settings.current_recording_slot], _current_recording_size)
+      gui.text(274, _y, _text, text_default_color, text_default_border_color)
+    elseif current_recording_state == 4 and _dummy.pending_input_sequence and _dummy.pending_input_sequence.sequence then
+      local _text = ""
+      local _x = 0
+      if training_settings.replay_mode == 1 or training_settings.replay_mode == 4 then
+        _x = 308
+        _text = string.format("Playing (%d/%d)", _dummy.pending_input_sequence.current_frame, #_dummy.pending_input_sequence.sequence)
+      else
+        _x = 338
+        _text = "Playing..."
+      end
+      gui.text(_x, _y, _text, text_default_color, text_default_border_color)
+    end
+  end
+end
