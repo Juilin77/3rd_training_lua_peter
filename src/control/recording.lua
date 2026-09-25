@@ -389,7 +389,7 @@ function open_load_popup()
 
   load_file_index = 1
 
-  local _cmd = "dir /b "..string.gsub(saved_recordings_path, "/", "\\")
+  local _cmd = "dir /b "..string.gsub(saved_presets_path, "/", "\\")
   local _f = io.popen(_cmd)
   if _f == nil then
     print(string.format("Error: Failed to execute command \"%s\"", _cmd))
@@ -412,7 +412,7 @@ function save_recording_slot_to_file()
     return
   end
 
-  local _path = string.format("%s%s.json",saved_recordings_path, save_file_name)
+  local _path = string.format("%s%s.json",saved_presets_path, save_file_name)
   if not write_object_to_json_file(recording_slots[training_settings.current_recording_slot].inputs, _path) then
     print(string.format("Error: Failed to save recording to \"%s\"", _path))
   else
@@ -428,7 +428,7 @@ function load_recording_slot_from_file()
     return
   end
 
-  local _path = string.format("%s%s",saved_recordings_path, load_file_list[load_file_index])
+  local _path = string.format("%s%s",saved_presets_path, load_file_list[load_file_index])
   local _recording = read_object_from_json_file(_path)
   if not _recording then
     print(string.format("Error: Failed to load recording from \"%s\"", _path))

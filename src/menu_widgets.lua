@@ -747,14 +747,46 @@ function multitab_menu_draw(_menu)
 
   local _menu_x = _menu.left + 10
   local _menu_y = _menu.top + 23
-  local _draw_index = 0
   local _is_focused = _menu == menu_stack_top()
-  for i = 1, #_menu.content[_menu.main_menu_selected_index].entries do
-    if _menu.content[_menu.main_menu_selected_index].entries[i].is_disabled == nil or not _menu.content[_menu.main_menu_selected_index].entries[i].is_disabled() then
-      local _indent = _menu.content[_menu.main_menu_selected_index].entries[i].indent and 8 or 0
-      _menu.content[_menu.main_menu_selected_index].entries[i]:draw(_menu_x + _indent, _menu_y + menu_y_interval * _draw_index, not _menu.is_main_menu_selected and _is_focused and _menu.sub_menu_selected_index == i)
-      _draw_index = _draw_index + 1
+  local _entries = _menu.content[_menu.main_menu_selected_index].entries
+
+  -- filter out disabled entries, keep each one's raw index (used by multitab_menu_update for selection/highlight)
+  local _visible = {}
+  local _selected_draw_index = 0
+  for i = 1, #_entries do
+    if _entries[i].is_disabled == nil or not _entries[i].is_disabled() then
+      table.insert(_visible, { entry = _entries[i], raw_index = i })
+      if i == _menu.sub_menu_selected_index then
+        _selected_draw_index = #_visible - 1
+      end
     end
+  end
+
+  -- 14px reserved at the bottom for the legend line so entries never draw under it
+  local _visible_count = math.max(1, math.floor((_menu.bottom - 14 - _menu_y) / menu_y_interval))
+  local _scroll_offset = 0
+  if #_visible > _visible_count then
+    _scroll_offset = _selected_draw_index - (_visible_count - 1)
+    if _scroll_offset < 0 then _scroll_offset = 0 end
+    local _max_scroll = #_visible - _visible_count
+    if _scroll_offset > _max_scroll then _scroll_offset = _max_scroll end
+  end
+
+  for _draw_index = _scroll_offset, math.min(_scroll_offset + _visible_count, #_visible) - 1 do
+    local _v = _visible[_draw_index + 1]
+    local _indent = _v.entry.indent and 8 or 0
+    local _row = _draw_index - _scroll_offset
+    _v.entry:draw(_menu_x + _indent, _menu_y + menu_y_interval * _row, not _menu.is_main_menu_selected and _is_focused and _menu.sub_menu_selected_index == _v.raw_index)
+  end
+
+  if #_visible > _visible_count then
+    local _bar_x = _menu.right - 4
+    local _bar_top = _menu_y
+    local _bar_bottom = _menu_y + _visible_count * menu_y_interval
+    gui.box(_bar_x, _bar_top, _bar_x + 2, _bar_bottom, 0x00000000, gui_box_outline_color)
+    local _thumb_height = math.max(4, (_visible_count / #_visible) * (_bar_bottom - _bar_top))
+    local _thumb_y = _bar_top + (_scroll_offset / #_visible) * (_bar_bottom - _bar_top)
+    gui.box(_bar_x, _thumb_y, _bar_x + 2, _thumb_y + _thumb_height, gui_box_outline_color, 0x00000000)
   end
 
   if not _menu.is_main_menu_selected then

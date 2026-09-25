@@ -21,6 +21,23 @@ function create_main_menu()
     button_menu_item("Cancel", function() menu_stack_pop(load_recording_slot_popup) end),
   })
 
+  save_profile_name = ""
+  save_profile_popup = make_menu(71, 61, 312, 122, -- screen size 383,223
+  {
+    textfield_menu_item("Profile Name", _G, "save_profile_name", ""),
+    button_menu_item("Save", save_profile_to_file),
+    button_menu_item("Cancel", function() menu_stack_pop(save_profile_popup) end),
+  })
+
+  load_profile_file_list = {}
+  load_profile_file_index = 1
+  load_profile_popup = make_menu(71, 61, 312, 122, -- screen size 383,223
+  {
+    list_menu_item("File", _G, "load_profile_file_index", load_profile_file_list),
+    button_menu_item("Load", load_profile_from_file),
+    button_menu_item("Cancel", function() menu_stack_pop(load_profile_popup) end),
+  })
+
   -- ── _replay_file_item ─────────────────────────────────────
   _replay_file_item = list_menu_item("Pattern (P2: ?)", replay_import_state, "file_index", replay_import_files)
 
@@ -291,6 +308,16 @@ function create_main_menu()
           integer_menu_item("Music Volume", training_settings, "music_volume", 0, 10, false, 10),
           checkbox_menu_item("Speed Up Game Intro", training_settings, "fast_forward_intro"),
           list_menu_item("Ping Delay", training_settings, "ping_delay", ping_delay_names),
+          (function()
+            local _item = button_menu_item("Save Profile", open_save_profile_popup)
+            _item.legend = function() return "LP: Validate | Saves Dummy+Rules settings and this character's recording slots" end
+            return _item
+          end)(),
+          (function()
+            local _item = button_menu_item("Load Profile", open_load_profile_popup)
+            _item.legend = function() return "LP: Validate | Loads a saved Dummy+Rules+Recording profile" end
+            return _item
+          end)(),
         }
       },
       {

@@ -73,6 +73,7 @@ require("src/settings")
 require("src/data/prediction_helpers")
 require("src/control/dummy_control")
 require("src/control/recording")
+require("src/control/profiles")
 require("src/control/missions")
 require("src/control/pattern_replay")
 require("src/ui/special_training/parry_training")
@@ -108,7 +109,9 @@ log_categories_display =
 } or log_categories_display
 
 saved_recordings_path = "saved/recordings/"
+saved_presets_path = "saved/presets/"
 saved_missions_path = "saved/recording_missions/"
+saved_profiles_path = "saved/profiles/"
 training_settings_file = "training_settings.json"
 
 -- training settings
@@ -312,6 +315,10 @@ special_training_mode = {
 juggle_disp = { jc = 0, air_time = 0, expired = false, was_airborne = false }
 throw_tech_disp = {
   name = "TECH THROW",
+  always_show_ratio_text = true,  -- keep "n/5" instead of switching to a delta number after a result; the cooldown_marker pointer shows timing instead
+  pre_press_tracking_window = 4,  -- measured by Peter frame-by-frame with Hugo Moonsault Press (2026-09-18): held from 4F before connect still techs, 5F+ does not
+  early_press_tracking_window = 8,  -- wider lookback used only to correctly label a failed too-early press as "Too Early" rather than "Too Late"; not the real valid window (see pre_press_tracking_window)
+  validity_left_offset = 4,
   max_validity = 5,
   max_cooldown = 10,
   validity_time = 0,
