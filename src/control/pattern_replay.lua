@@ -338,3 +338,14 @@ function pattern_defense_result_draw()
     gui.text(math.floor((383 - _w) / 2), 30, pattern_defense_result, _color, text_default_border_color)
   end
 end
+
+function pattern_replay_invalidate_scan(_char_str)
+  -- invalidate stale Pattern scan (cheap string reset, no io.popen)
+  if replay_import_char ~= "(not scanned)" and replay_import_char ~= _char_str then
+    replay_import_char = "(not scanned)"
+    for i = #replay_import_files, 1, -1 do table.remove(replay_import_files, i) end
+    table.insert(replay_import_files, "empty")
+    replay_import_state.file_index = 1
+    _replay_file_item.name = "Pattern (P2: ?)"
+  end
+end

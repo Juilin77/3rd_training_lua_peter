@@ -577,14 +577,7 @@ function before_frame()
   -- load recordings according to P2 character
   if _previous_dummy_char_str ~= player_objects[2].char_str then
     restore_recordings()
-    -- invalidate stale Pattern scan (cheap string reset, no io.popen)
-    if replay_import_char ~= "(not scanned)" and replay_import_char ~= player_objects[2].char_str then
-      replay_import_char = "(not scanned)"
-      for i = #replay_import_files, 1, -1 do table.remove(replay_import_files, i) end
-      table.insert(replay_import_files, "empty")
-      replay_import_state.file_index = 1
-      _replay_file_item.name = "Pattern (P2: ?)"
-    end
+    pattern_replay_invalidate_scan(player_objects[2].char_str)
   end
 
   -- cap training settings
