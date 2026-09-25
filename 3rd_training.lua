@@ -810,21 +810,7 @@ function on_gui()
 
   recording_state_hud_draw(dummy)
 
-  if mission_recording_active then
-    local _frame_count = #mission_recording_inputs.p1
-    local _slot_index = training_settings.current_mission_slot
-    local _text = string.format("Mission REC [slot %d] (%d)", _slot_index, _frame_count)
-    gui.text(306, 8, _text, 0xFF4444FF, text_default_border_color)
-  end
-
-  if mission_replay_active then
-    local _dummy = player_objects[mission_dummy_id]
-    if _dummy and _dummy.pending_input_sequence then
-      local _seq = _dummy.pending_input_sequence
-      local _text = string.format("Replay (%d/%d)", _seq.current_frame, #_seq.sequence)
-      gui.text(306, 8, _text, 0xFF44FF44, text_default_border_color)
-    end
-  end
+  mission_hud_draw()
 
   if pattern_defense_result and pattern_defense_result_timer > 0 then
     pattern_defense_result_timer = pattern_defense_result_timer - 1
