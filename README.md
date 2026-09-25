@@ -75,6 +75,10 @@ A: Check video settings, you must use "Basic" blitter option with no scanlines i
 A: Install prerequires from [here](https://github.com/TASVideos/BizHawk-Prereqs/releases/latest/)
 
 ## Changelog
+### v0.26.1 (26/09/2026)
+- [Fix] Training profile recording slots no longer get saved under the wrong (stale) character when loading the character-select screen mid-recording (contribution of @Juilin77)
+- [Improvement] Documentation: updated Rules, Display, and Frame Table screenshots, added missing Display Controllers and Frame Table Parry SA Only sections with a dedicated color legend, gave Ping Delay its own section (contribution of @Juilin77)
+
 ### v0.26 (25/09/2026)
 - [Feature] Rules: added Save Profile / Load Profile, bundling Dummy tab settings, Rules tab settings, and the current character's recording slots into a named file for later reuse (contribution of @Juilin77)
 - [Improvement] Load Profile skips the recording slots when the profile's character does not match the currently selected dummy, printing a warning instead of overwriting unrelated recordings (contribution of @Juilin77)
