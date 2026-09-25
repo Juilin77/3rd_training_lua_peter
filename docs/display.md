@@ -92,7 +92,19 @@ Below the timeline, a `P1: FP -2  17  -3 ...` style line lists each player's rec
 
 Turn on **Parry SA Only** (right below Display Frame Table) to practice parrying Super Arts with the Frame Table.
 
-- All parry validity windows use the same purple color, and the legend is reduced to 8 states
+The legend is reduced to 8 states, with all three parry validity windows (forward / down / air) sharing one purple color:
+
+| Color | State | Meaning |
+|-------|-------|---------|
+| ⬛ Dark grey | Neutral | Idle, no action |
+| 🟪 Purple | Parry | Frames where any parry input is accepted, forward/down/air validity windows all share this color |
+| 🟩 Green | Startup | Frames before the first hitbox appears |
+| 🟥 Red | Active | Frames where the attack hitbox is active |
+| 🟦 Blue | Recovery | Frames after the active window until the character can act |
+| 🟫 Brown | Projectile | Frames where a projectile hitbox is active |
+| 🔵 Cyan | Blocked | Frames the defender is in blockstun after chip-blocking, not parried |
+| 🟨 Yellow | Hitstun | Frames the defender cannot act after being hit, thrown, or knocked down |
+
 - The capture only arms on a real Super Art, so normal moves no longer start or reset it
 - A Super Art capture stays continuous across the 90-frame boundary instead of being cut off
 - A hollow box marks the range where the parry input was held
