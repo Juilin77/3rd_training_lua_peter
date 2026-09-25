@@ -75,6 +75,10 @@ A: Check video settings, you must use "Basic" blitter option with no scanlines i
 A: Install prerequires from [here](https://github.com/TASVideos/BizHawk-Prereqs/releases/latest/)
 
 ## Changelog
+### v0.26.2 (26/09/2026)
+- [Fix] Missions tab: Play Side and Replay Mission are now indented under Replay Mission for Slot, matching the Parry SA Only indent style (contribution of @Juilin77)
+- [Improvement] Internal code cleanup: removed dead debug code and moved remaining per-frame logic out of the main script into their respective modules, no behavior change (contribution of @Juilin77)
+
 ### v0.26.1 (26/09/2026)
 - [Fix] Training profile recording slots no longer get saved under the wrong (stale) character when loading the character-select screen mid-recording (contribution of @Juilin77)
 - [Improvement] Documentation: updated Rules, Display, and Frame Table screenshots, added missing Display Controllers and Frame Table Parry SA Only sections with a dedicated color legend, gave Ping Delay its own section (contribution of @Juilin77)
