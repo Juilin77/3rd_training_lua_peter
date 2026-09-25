@@ -13,9 +13,10 @@ The right version of Fightcade can be downloaded [here](https://www.fightcade.co
 - Auto-block SA supers with pre-block state machine (super freeze detection)
 
 **Recording & Replay**
-- Record and replay input sequences across 8 slots
+- Record and replay input sequences across 8 slots, saved per character
 - Random replay and counter-attack replay modes
 - Save / load slots to files; curated pattern replay
+- Save / load named training profiles bundling Dummy settings, Rules settings, and recording slots
 
 **Frame Data**
 - Frame Table: startup / active / recovery / cancel frames with projectile and throw support, plus a Parry SA Only mode

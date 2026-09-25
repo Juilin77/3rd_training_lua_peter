@@ -22,3 +22,5 @@ Adjust match conditions to suit your training goals — time, health recovery, s
 | Music Volume | Background music volume (0–10, default 10). |
 | Speed Up Game Intro | Skip or accelerate the game intro animation to reduce wait time. |
 | Ping Delay | Simulate network input delay by buffering your inputs: Off, or 1f to 6f (about 16.7ms to 100ms). Only affects P1 inputs. While active, a `Ping xx` indicator is shown in the top-right corner. |
+| Save Profile | Save the current Dummy tab settings, Rules tab settings, and the current character's recording slots to a named file. |
+| Load Profile | Load a saved profile. Dummy and Rules settings always apply; recording slots only apply if the profile was saved for the character you're currently training against, otherwise they're left untouched and a warning is printed. |
