@@ -25,4 +25,10 @@ Adjust match conditions to suit your training goals — time, health recovery, s
 | Save Profile | Save the current Dummy tab settings, Rules tab settings, and the current character's recording slots to a named file. |
 | Load Profile | Load a saved profile. Dummy and Rules settings always apply; recording slots only apply if the profile was saved for the character you're currently training against, otherwise they're left untouched and a warning is printed. |
 
+---
+
+## Ping Delay
+
 ![Ping Delay](../screenshots/ping_delay.png)
+
+Simulates network input delay by buffering your inputs: Off, or 1f to 6f (about 16.7ms to 100ms). Only affects P1 inputs. While active, a `Ping xx` indicator is shown in the top-right corner.
