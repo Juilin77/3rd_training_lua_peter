@@ -164,6 +164,7 @@ function create_main_menu()
     if training_settings.recording_mission_mode then return true end
     return no_replay_slot_selected()
   end
+  replay_mission_item.indent = true
 
   recording_mission_mode_item = checkbox_menu_item("Recording Mission Mode", training_settings, "recording_mission_mode", nil, {"On", "Off"})
 
@@ -231,6 +232,7 @@ function create_main_menu()
             _item.is_disabled = function()
               return training_settings.recording_mission_mode or no_replay_slot_selected()
             end
+            _item.indent = true
             return _item
           end)(),
           replay_mission_item,
