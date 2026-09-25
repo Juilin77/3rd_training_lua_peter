@@ -699,31 +699,7 @@ function before_frame()
   end
 
   -- Log input
-  if previous_input then
-    local function log_input(_player_object, _name, _short_name)
-      _short_name = _short_name or _name
-      local _full_name = _player_object.prefix.." ".._name
-      if not previous_input[_full_name] and _input[_full_name] then
-        log(_player_object.prefix, "input", _short_name.." 1")
-      elseif previous_input[_full_name] and not _input[_full_name] then
-        log(_player_object.prefix, "input", _short_name.." 0")
-      end
-    end
-
-    for _i, _o in ipairs(player_objects) do
-      log_input(_o, "Left")
-      log_input(_o, "Right")
-      log_input(_o, "Up")
-      log_input(_o, "Down")
-      log_input(_o, "Weak Punch", "LP")
-      log_input(_o, "Medium Punch", "MP")
-      log_input(_o, "Strong Punch", "HP")
-      log_input(_o, "Weak Kick", "LK")
-      log_input(_o, "Medium Kick", "MK")
-      log_input(_o, "Strong Kick", "HK")
-    end
-  end
-  previous_input = _input
+  log_input_changes(_input, player_objects)
 
   if not is_fightcade_replay then
     joypad.set(_input)
