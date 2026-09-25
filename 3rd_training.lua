@@ -757,39 +757,6 @@ function before_frame()
   update_projectiles_recording(projectiles)
   update_wakeupdata_recording(player, dummy)
 
-  local _debug_position_prediction = false
-  if _debug_position_prediction and player.pos_y > 0 then
-    local _px, _py = game_to_screen_space(player.pos_x, player.pos_y)
-    print_point(_px, _py, 0x00FFFFFF)
-    local _prediction = predict_object_position(player, 2)
-    _px, _py = game_to_screen_space(_prediction[1], _prediction[2])
-    print_point(_px, _py, 0xFF0000FF)
-  end
-
-  if _debug_position_prediction then
-    for _id, _obj in pairs(projectiles) do
-      if #_obj.pos_samples > 1 then
-        local _x = _obj.pos_samples[#_obj.pos_samples].x - _obj.pos_samples[#_obj.pos_samples - 1].x
-        local _y = _obj.pos_samples[#_obj.pos_samples].y - _obj.pos_samples[#_obj.pos_samples - 1].y
-        print(string.format("x: %d, y: %d", _x, _y))
-      end
-
-      local _px, _py = game_to_screen_space(_obj.pos_x, _obj.pos_y)
-      print_point(_px, _py, 0x00FFFFFF)
-
-      local _movement = nil
-      local _lifetime = _obj.lifetime
-      local _emitter = player_objects[_obj.emitter_id]
-      local _projectile_meta_data = _emitter and frame_data_meta[_emitter.char_str] and frame_data_meta[_emitter.char_str].projectiles and frame_data_meta[_emitter.char_str].projectiles[_obj.projectile_type] or nil
-      if _projectile_meta_data ~= nil then
-        _movement = _projectile_meta_data.movement
-      end
-      local _prediction = predict_object_position(_obj, 4, _movement, _lifetime)
-      _px, _py = game_to_screen_space(_prediction[1], _prediction[2])
-      print_point(_px, _py, 0xFF0000FF)
-    end
-  end
-
   log_update()
 end
 
@@ -804,13 +771,6 @@ function on_gui()
   draw_character_select()
 
   if is_in_match then
-
-    --[[
-    -- Code to test frame advantage correctness by measuring the frame count between both players jump
-    if (player_objects[1].last_jump_startup_frame ~= nil and player_objects[2].last_jump_startup_frame ~= nil) then
-      gui.text(5, 5, string.format("jump difference: %d (startups: %d/%d)", player_objects[2].last_jump_startup_frame - player_objects[1].last_jump_startup_frame, player_objects[1].last_jump_startup_duration, player_objects[2].last_jump_startup_duration), text_default_color, text_default_border_color)
-    end
-    ]]
 
     display_draw_printed_geometry()
 
