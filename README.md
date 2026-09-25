@@ -74,6 +74,14 @@ A: Check video settings, you must use "Basic" blitter option with no scanlines i
 A: Install prerequires from [here](https://github.com/TASVideos/BizHawk-Prereqs/releases/latest/)
 
 ## Changelog
+### v0.26 (25/09/2026)
+- [Feature] Rules: added Save Profile / Load Profile, bundling Dummy tab settings, Rules tab settings, and the current character's recording slots into a named file for later reuse (contribution of @Juilin77)
+- [Improvement] Load Profile skips the recording slots when the profile's character does not match the currently selected dummy, printing a warning instead of overwriting unrelated recordings (contribution of @Juilin77)
+- [Improvement] Recording slots are now saved as one file per character under saved/recordings/, instead of a single shared table inside the main settings file (contribution of @Juilin77)
+- [Improvement] Manually exported recording presets (Save/Load Slot To File) now live in their own saved/presets/ folder, separate from per-character recording data (contribution of @Juilin77)
+- [Improvement] Menu tabs with more entries than fit on screen now scroll with a scrollbar, and reserve space so the bottom legend text no longer overlaps the last entry (contribution of @Juilin77)
+- [Fix] Fixed recording slots occasionally being saved under the wrong character due to a stale character reference (contribution of @Juilin77)
+
 ### v0.25 (19/09/2026)
 - [Feature] Special Training: added Parry Rhythm - SA, a pure input-timing trainer for the 17-frame forward-tap rhythm needed between two Super Art parries, with a live orange timing bar and the last 10 tap gaps listed as +N / -N / 0 (contribution of @Juilin77)
 - [Feature] Special Training: Parry Rhythm - SA is mutually exclusive with the four Parry Helpers, turns on Follow Character automatically, and replaces the menu legend with its own explanation (contribution of @Juilin77)
