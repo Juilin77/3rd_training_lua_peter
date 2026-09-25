@@ -23,6 +23,14 @@ Toggle various on-screen overlays to visualize game data in real time.
 
 ---
 
+## Display Controllers
+
+![Display Controllers](../screenshots/display_controllers.png)
+
+Shows a controller icon with live button states above each player's health bar.
+
+---
+
 ## Display Gauges Numbers
 
 ![Display Gauges Numbers](../screenshots/display_gauges.png)
@@ -79,6 +87,8 @@ A white-bordered marker on the timeline is a successful parry, a yellow-bordered
 Below the timeline, a `P1: FP -2  17  -3 ...` style line lists each player's recent parry-gauge results. Each entry shows the parry type (`FP` forward, `DP` down, `AP` air) followed by its delta in frames, using the same convention as the Special Training parry gauges, where `+N` is N frames late and `-N` is N frames early. The plain number between two entries is the frame gap from the success frame of one result to the start of the next validity window, not necessarily when the input was pressed. When both entries are successful parries of the same type back to back (two white markers), this gap equals the attacker's real hit-to-hit interval, since a successful parry resolves on the exact frame it connects.
 
 ### Parry SA Only
+
+![Frame Table Parry SA Only](../screenshots/frame_table_sa.png)
 
 Turn on **Parry SA Only** (right below Display Frame Table) to practice parrying Super Arts with the Frame Table.
 

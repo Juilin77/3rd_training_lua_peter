@@ -16,7 +16,7 @@ Focused training tools for specific SF3 mechanics. Select a mode from **Special 
 ![Parry Mode](../screenshots/special_training_parry.png)
 
 Shows real-time timing gauges for all four parry types. Each gauge has two bars:
-- **Blue bar** — validity window (the frame window where a parry input is accepted)
+- **Green bar** — validity window (the frame window where a parry input is accepted)
 - **Orange bar** — cooldown window (frames before the next parry can be attempted)
 - **Number** — delta: `+N` means the parry input was N frames late (be faster), `-N` means it was N frames early (be slower). A successful parry shows a green `-#` for how many frames into the window it landed, and closer to 0 is better
 
@@ -89,6 +89,6 @@ Shows a timing gauge when you are grabbed. Input **LP+LK** within the green wind
 
 Detects Hugo's 720° rotation input using SF3's 11-frame window. Shows an input display and result feedback.
 
-- **Result text** — 720! (green, success) / Too Late / Wrong Button
+- **Result text** — 720! (green, success) / Too Late / Wrong Button / Incomplete
 - **Orange bar** — 11-frame input window
 - **Input squares** — direction inputs captured during the rotation
