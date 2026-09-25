@@ -106,6 +106,13 @@ function mission_replay_queue_inputs()
   queue_input_sequence(player_objects[mission_dummy_id], _inputs)
 end
 
+function mission_on_load_state()
+  if mission_replay_pending then
+    mission_replay_pending = false
+    mission_replay_queue_inputs()
+  end
+end
+
 function replay_current_mission()
   local _slot_index = training_settings.current_replay_mission_slot - 1
   if _slot_index < 1 then return end

@@ -36,6 +36,17 @@ function pattern_defense_start()
   pattern_defense_thrown    = false
 end
 
+function pattern_replay_on_load_state()
+  if direct_play_pending then
+    direct_play_pending = false
+    if direct_play_inputs then
+      queue_input_sequence(player_objects[2], direct_play_inputs)
+      pattern_defense_start()
+      direct_play_inputs = nil
+    end
+  end
+end
+
 function scan_replay_files()
   local _char = player_objects[2].char_str or "unknown"
   replay_import_char = _char

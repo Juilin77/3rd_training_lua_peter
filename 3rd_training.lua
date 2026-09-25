@@ -503,19 +503,8 @@ function on_load_state()
 
   restore_recordings()
 
-  if mission_replay_pending then
-    mission_replay_pending = false
-    mission_replay_queue_inputs()
-  end
-
-  if direct_play_pending then
-    direct_play_pending = false
-    if direct_play_inputs then
-      queue_input_sequence(player_objects[2], direct_play_inputs)
-      pattern_defense_start()
-      direct_play_inputs = nil
-    end
-  end
+  mission_on_load_state()
+  pattern_replay_on_load_state()
 
   -- reset recording states in a useful way
   if current_recording_state == 3 then
