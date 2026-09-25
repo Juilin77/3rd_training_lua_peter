@@ -22,7 +22,7 @@ function load_training_data()
 end
 
 function backup_recordings()
-  if player_objects[2].char_str ~= "" then
+  if is_in_match and player_objects[2].char_str ~= "" then
     write_object_to_json_file(recording_slots, saved_recordings_path..player_objects[2].char_str..".json")
   end
 end
