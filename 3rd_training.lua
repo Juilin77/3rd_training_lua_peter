@@ -651,16 +651,7 @@ function before_frame()
   process_pending_input_sequence(player_objects[1], _input)
   process_pending_input_sequence(player_objects[2], _input)
 
-  if mission_replay_trigger then
-    mission_replay_trigger = false
-    replay_current_mission()
-  end
-
-  if mission_replay_active and not mission_replay_pending and training_settings.mission_replay_on and not training_settings.recording_mission_mode and not is_menu_open and is_in_match then
-    if player_objects[mission_dummy_id].pending_input_sequence == nil then
-      replay_current_mission()
-    end
-  end
+  mission_replay_trigger_update()
 
   update_pattern_replay_before_frame()
 
