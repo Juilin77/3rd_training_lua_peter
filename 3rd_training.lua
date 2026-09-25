@@ -812,15 +812,7 @@ function on_gui()
 
   mission_hud_draw()
 
-  if pattern_defense_result and pattern_defense_result_timer > 0 then
-    pattern_defense_result_timer = pattern_defense_result_timer - 1
-    local _color = 0xFF44FF44
-    if string.find(pattern_defense_result, "HIT") or string.find(pattern_defense_result, "THROWN") then
-      _color = 0xFFFF4444
-    end
-    local _w = get_text_width(pattern_defense_result)
-    gui.text(math.floor((383 - _w) / 2), 30, pattern_defense_result, _color, text_default_border_color)
-  end
+  pattern_defense_result_draw()
 
   if log_enabled then
     log_draw()
