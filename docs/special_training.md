@@ -31,6 +31,8 @@ Shows real-time timing gauges for all four parry types. Each gauge has two bars:
 
 ### Parry Rhythm - SA
 
+![Parry Rhythm - SA](../screenshots/special_training_parry_rhythm_sa.png)
+
 Trains the forward-tap rhythm for chaining Super Art parries, where two forward taps need to be 17 frames apart. It only measures your input timing, so no real Super Art is needed.
 
 - **Orange bar** — live timing bar that fills up to the 17-frame target after each forward tap
