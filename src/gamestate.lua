@@ -848,6 +848,14 @@ function read_player_vars(_player_obj)
       _parry_object.delta = nil
       _parry_object.success = nil
       _parry_object.armed = true
+      -- SF3 3rd Strike's real red-parry window is 3f for normal moves, 2f for
+      -- specials/supers; we can't classify normal-vs-special per move, but we
+      -- can detect Super Art activation via the attacker's superfreeze_decount
+      -- (the same pattern used in src/control/blocking.lua and
+      -- src/frame_advantage.lua), so: 2f if this window started from an SA
+      -- hit/block, 3f otherwise
+      local _opponent = player_objects[3 - _player_obj.id]
+      _parry_object.reference_line_offset = (_opponent and _opponent.superfreeze_decount > 0) and 2 or 3
       log(_player_obj.prefix, "parry_training_".._parry_object.name, "armed")
     end
 

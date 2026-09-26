@@ -1,7 +1,7 @@
 math.randomseed(os.time())
 
 game_name = "Street Fighter III 3rd Strike (Japan 990512)"
-script_version = "v0.26.2"
+script_version = "v0.27"
 fc_version = "v2.1.45"
 saved_path = "saved/"
 rom_name = emu.romname()

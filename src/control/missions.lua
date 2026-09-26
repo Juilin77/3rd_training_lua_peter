@@ -202,6 +202,14 @@ function mission_hud_draw()
       local _text = string.format("Replay (%d/%d)", _seq.current_frame, #_seq.sequence)
       gui.text(306, 8, _text, 0xFF44FF44, text_default_border_color)
     end
+  elseif training_settings.mission_replay_on and not training_settings.recording_mission_mode then
+    -- mission_replay_active is a transient flag (not saved to disk, not part
+    -- of emulator RAM) that gets cleared every time the training menu opens
+    -- (see the Start-button toggle in on_gui) and is only re-armed by
+    -- closing it again; an external/native savestate load never touches it
+    -- either way. Without this line the setting looks "on" in the menu but
+    -- silently shows nothing here, which reads as broken rather than paused.
+    gui.text(306, 8, "Replay OFF (reopen menu to re-arm)", 0xFFAA00FF, text_default_border_color)
   end
 end
 

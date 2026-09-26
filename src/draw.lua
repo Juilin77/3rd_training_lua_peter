@@ -292,12 +292,32 @@ function draw_parry_gauge_group(_x, _y, _parry_object, _scale)
 
   local _validity_gauge_width = _parry_object.max_validity * _scale
   local _cooldown_gauge_width = _parry_object.max_cooldown * _scale
-  local _validity_gauge_left = math.floor(_x + (_cooldown_gauge_width - _validity_gauge_width) * 0.5)
+  -- validity and cooldown both start counting the instant the parry input
+  -- lands, so a naive left-align would technically be more literal — but a
+  -- delta marker (early/late attempt) needs room on BOTH sides to be
+  -- visible, and left-aligning gives all of that room to the late side and
+  -- none to the early side. Centering the validity bar within the cooldown
+  -- bar's width (matching the effie3rd reference) splits that margin evenly.
+  -- validity_left_offset is the one opt-in exception — Tech Throw uses it to
+  -- push its validity bar right by its own pre-press tracking window (in
+  -- frames) instead of centering, reserving that much bar width to the left
+  -- for early presses to land on, while the cooldown bar (an unrelated
+  -- clock) stays put
+  local _validity_gauge_left = _parry_object.validity_left_offset
+    and (_x + _parry_object.validity_left_offset * _scale)
+    or math.floor(_x + (_cooldown_gauge_width - _validity_gauge_width) * 0.5)
   local _validity_gauge_right = _validity_gauge_left + _validity_gauge_width + 1
   local _cooldown_gauge_left = _x
   local _cooldown_gauge_right = _cooldown_gauge_left + _cooldown_gauge_width + 1
-  local _validity_time_text = string.format("%d", _parry_object.validity_time)
-  local _cooldown_time_text = string.format("%d", _parry_object.cooldown_time)
+  -- opt-in inset so a marker that would otherwise pin exactly at the
+  -- widget's outer edges stops 1 frame-width short of each edge instead;
+  -- defaults to 0 (no change) for every caller that doesn't set this field
+  local _marker_edge_buffer = (_parry_object.marker_edge_buffer or 0) * _scale
+  -- ratio_text_override lets a caller replace the n/max readout entirely
+  -- (e.g. Tech Throw's Pre-Press case, which isn't measured against
+  -- max_validity at all — a different window applies before frame 0)
+  local _validity_time_text = _parry_object.ratio_text_override or string.format("%d/%d", _parry_object.validity_time, _parry_object.max_validity)
+  local _cooldown_time_text = string.format("%d/%d", _parry_object.cooldown_time, _parry_object.max_cooldown)
   local _validity_text_color = text_default_color
   local _validity_outline_color = text_default_border_color
   if _parry_object.delta then
@@ -308,29 +328,64 @@ function draw_parry_gauge_group(_x, _y, _parry_object, _scale)
       _validity_text_color = _miss_color
       _validity_outline_color = 0x840000FF
     end
-    if _parry_object.delta >= 0 then
-      _validity_time_text = string.format("%d", -_parry_object.delta)
-    else
-      _validity_time_text = string.format("+%d", -_parry_object.delta)
+    if not _parry_object.always_show_ratio_text then
+      if _parry_object.delta >= 0 then
+        _validity_time_text = string.format("%d", -_parry_object.delta)
+      else
+        _validity_time_text = string.format("+%d", -_parry_object.delta)
+      end
     end
   end
 
   gui.text(_x + 1, _y, _parry_object.name, _parry_object.name_color or text_default_color, text_default_border_color)
-  gui.box(_cooldown_gauge_left + 1, _y + 11, _validity_gauge_left, _y + 11, 0x00000000, 0xFFFFFF77)
   gui.box(_cooldown_gauge_left, _y + 10, _cooldown_gauge_left, _y + 12, 0x00000000, 0xFFFFFF77)
   gui.box(_validity_gauge_right, _y + 11, _cooldown_gauge_right - 1, _y + 11, 0x00000000, 0xFFFFFF77)
   gui.box(_cooldown_gauge_right, _y + 10, _cooldown_gauge_right, _y + 12, 0x00000000, 0xFFFFFF77)
+  if _validity_gauge_left > _x then
+    -- reserved pre-press margin: plain background, same track height as the
+    -- validity bar, so the widened bar reads as one continuous piece
+    gui.box(_x, _y + 8, _validity_gauge_left, _y + 8 + _gauge_height + 1, _gauge_background_color, 0x00000000)
+  end
   draw_gauge(_validity_gauge_left, _y + 8, _validity_gauge_width, _gauge_height + 1, _parry_object.validity_time / _parry_object.max_validity, _gauge_valid_fill_color, _gauge_background_color, nil, true)
   draw_gauge(_cooldown_gauge_left, _y + 8 + _gauge_height + 2, _cooldown_gauge_width, _gauge_height, _parry_object.cooldown_time / _parry_object.max_cooldown, _gauge_cooldown_fill_color, _gauge_background_color, nil, true)
 
+  if _parry_object.reference_line_offset then
+    -- solid reference line (not a hollow outlined box) at a fixed frame
+    -- offset from frame 0 — e.g. Tech Throw's startup line, or Parry's
+    -- red-parry-window line; meaning is caller-specific
+    local _reference_line_x = _validity_gauge_left + _parry_object.reference_line_offset * _scale
+    draw_vertical_line(_reference_line_x, _y + 8, _y + 8 + _gauge_height + 1, 0xFF0000FF)
+  end
+
   if _parry_object.delta then
-    local _marker_x = _validity_gauge_left + _parry_object.delta * _scale
-    _marker_x = math.min(math.max(_marker_x, _x), _cooldown_gauge_right)
+    -- only clamped on the right (against the cooldown bar's own end) — a
+    -- negative delta (pre-press, before the gauge's own frame 0) is left
+    -- free to land to the left of the bar instead of being pinned to it, so
+    -- early presses of different magnitudes stay visually distinguishable —
+    -- but only up to the widened bar's own left edge (_x); a press earlier
+    -- than that (e.g. Tech Throw's wider Too-Early detection window vs. its
+    -- narrower visible pre-press margin) pins there instead of drawing off
+    -- the widget entirely
+    local _marker_x = math.min(math.max(_validity_gauge_left + _parry_object.delta * _scale, _x + _marker_edge_buffer), _cooldown_gauge_right - _marker_edge_buffer)
     gui.box(_marker_x, _y + 7, _marker_x + _scale, _y + 8 + _gauge_height + 2, _validity_text_color, _validity_outline_color)
   end
 
+  -- optional pointer on the cooldown bar itself, independent of the delta
+  -- marker above — e.g. Tech Throw uses this to show how many frames of
+  -- parry validity were left at the exact moment the tech input landed.
+  -- cooldown_marker is a remaining-time value (like cooldown_time itself),
+  -- but the bar's reverse_fill drains left-to-right as time elapses (its
+  -- filled region stays anchored to the right edge), so the x position has
+  -- to be keyed off elapsed time (max - remaining), not the remaining value
+  -- directly, to land on the same point the drain boundary passed through
+  if _parry_object.cooldown_marker then
+    local _cd_marker_x = _cooldown_gauge_left + (_parry_object.max_cooldown - _parry_object.cooldown_marker) * _scale
+    _cd_marker_x = math.min(math.max(_cd_marker_x, _x + _marker_edge_buffer), _cooldown_gauge_right - _marker_edge_buffer)
+    gui.box(_cd_marker_x, _y + 8 + _gauge_height + 1, _cd_marker_x + _scale, _y + 8 + _gauge_height * 2 + 3, _validity_text_color, _validity_outline_color)
+  end
+
   gui.text(_cooldown_gauge_right + 4, _y + 7, " " .. _validity_time_text, _validity_text_color, text_default_border_color)
-  gui.text(_cooldown_gauge_right + 4, _y + 13, " " .. _cooldown_time_text, text_default_color, text_default_border_color)
+  gui.text(_cooldown_gauge_right + 4, _y + 13, " " .. _cooldown_time_text, _parry_object.cooldown_text_color or text_default_color, text_default_border_color)
 
   return 8 + 5 + (_gauge_height * 2)
 end

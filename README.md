@@ -75,6 +75,14 @@ A: Check video settings, you must use "Basic" blitter option with no scanlines i
 A: Install prerequires from [here](https://github.com/TASVideos/BizHawk-Prereqs/releases/latest/)
 
 ## Changelog
+### v0.27 (26/09/2026)
+- [Feature] Special Training: Tech Throw gauge now shows a startup reference line (2 frames before the grab connects) for normal throws (contribution of @Juilin77)
+- [Fix] Special Training: Tech Throw gauge's early-press margin no longer overhangs past the cooldown bar (contribution of @Juilin77)
+- [Feature] Parry Helpers: added a red-parry-window reference line (3 frames for normal moves, 2 for Super Arts) (contribution of @Juilin77)
+- [Improvement] Parry Helpers: validity bar is now centered within the cooldown bar instead of left-aligned, giving early and late attempts equal room to display (contribution of @Juilin77)
+- [Fix] Mission Replay no longer silently disappears from the HUD after reopening the training menu; shows "Replay OFF" until re-armed (contribution of @Juilin77)
+- [Fix] Recording slots could permanently lose data after a savestate load or character switch, due to an intermittent per-character file read failure; added an in-session cache and a read-failure guard (contribution of @Juilin77)
+
 ### v0.26.2 (26/09/2026)
 - [Fix] Missions tab: Play Side and Replay Mission are now indented under Replay Mission for Slot, matching the Parry SA Only indent style (contribution of @Juilin77)
 - [Improvement] Internal code cleanup: removed dead debug code and moved remaining per-frame logic out of the main script into their respective modules, no behavior change (contribution of @Juilin77)

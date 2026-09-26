@@ -1,6 +1,6 @@
 require("src/startup")
 
--- v0.26.2
+-- v0.27
 
 print("-----------------------------")
 print("  3rd_training.lua - "..script_version.."")
@@ -315,9 +315,11 @@ juggle_disp = { jc = 0, air_time = 0, expired = false, was_airborne = false }
 throw_tech_disp = {
   name = "TECH THROW",
   always_show_ratio_text = true,  -- keep "n/5" instead of switching to a delta number after a result; the cooldown_marker pointer shows timing instead
-  pre_press_tracking_window = 4,  -- measured by Peter frame-by-frame with Hugo Moonsault Press (2026-09-18): held from 4F before connect still techs, 5F+ does not
+  pre_press_tracking_window = 6,  -- measured by Peter frame-by-frame with Hugo Moonsault Press (2026-09-26, using the logged delta as ground truth): held from 6F before connect still techs, 7F+ does not
   early_press_tracking_window = 8,  -- wider lookback used only to correctly label a failed too-early press as "Too Early" rather than "Too Late"; not the real valid window (see pre_press_tracking_window)
-  validity_left_offset = 4,
+  validity_left_offset = 4,  -- 1f buffer + 3f early-press margin (deliberately narrower than the true measured pre_press_tracking_window of 6f — this is just how much of the gauge's left side is reserved to visually show early-press markers, not a change to the real tech window)
+  marker_edge_buffer = 1,
+  reference_line_offset = -2,  -- normal-throw startup is 2f, so this marks 2f before frame 0; only valid for normal throws, not command grabs
   max_validity = 5,
   max_cooldown = 10,
   validity_time = 0,
@@ -500,18 +502,25 @@ function on_load_state()
 
   gamestate_read()
 
-  restore_recordings()
-
-  mission_on_load_state()
-  pattern_replay_on_load_state()
-
-  -- reset recording states in a useful way
+  -- reset recording states in a useful way — this must run BEFORE
+  -- restore_recordings() below: if a savestate loads while still recording
+  -- (or within the Coin-double-tap debounce window right after stopping),
+  -- current_recording_state is still 3 and the in-memory recording_slots
+  -- holds the real just-recorded data. Finalizing/saving it here first means
+  -- the disk read in restore_recordings() picks up that fresh save instead
+  -- of clobbering it with the stale pre-recording file and then re-saving
+  -- that emptiness over the real recording.
   if current_recording_state == 3 then
     set_recording_state({}, 2)
   elseif current_recording_state == 4 and (training_settings.replay_mode == 4 or training_settings.replay_mode == 5 or training_settings.replay_mode == 6) then
     set_recording_state({}, 1)
     set_recording_state({}, 4)
   end
+
+  restore_recordings()
+
+  mission_on_load_state()
+  pattern_replay_on_load_state()
 
   clear_input_history()
   clear_printed_geometry()
