@@ -28,9 +28,9 @@ The right version of Fightcade can be downloaded [here](https://www.fightcade.co
 - Life Loss Indicator above health bars
 
 **Special Training**
-- Parry and Red Parry training
+- Parry and Red Parry training, with a red-parry-window reference line (3 frames for normal moves, 2 for Super Arts)
 - Parry Rhythm - SA (17-frame forward-tap rhythm trainer)
-- Tech Throw training (5-frame window indicator)
+- Tech Throw training, with a startup reference line for normal throws
 - Juggle Air Timer (remaining air hitstun gauge)
 - 720 Input Trainer (Hugo)
 - Charge training
