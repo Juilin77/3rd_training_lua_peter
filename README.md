@@ -75,6 +75,9 @@ A: Check video settings, you must use "Basic" blitter option with no scanlines i
 A: Install prerequires from [here](https://github.com/TASVideos/BizHawk-Prereqs/releases/latest/)
 
 ## Changelog
+### v0.28 (10/10/2026)
+- [Feature] Combo Only blocking mode now supports a configurable free-hit count (1-5) and after-N behavior (Block or Random), replacing the previous fixed first-hit-only logic (contribution of @Juilin77)
+
 ### v0.27 (26/09/2026)
 - [Feature] Special Training: Tech Throw gauge now shows a startup reference line (2 frames before the grab connects) for normal throws (contribution of @Juilin77)
 - [Fix] Special Training: Tech Throw gauge's early-press margin no longer overhangs past the cooldown bar (contribution of @Juilin77)

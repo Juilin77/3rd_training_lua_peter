@@ -169,6 +169,27 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
     memory.writebyte(_player_obj.parry_antiair_cooldown_time_addr, 0)
   end
 
+  -- combo only (mode 5): first N hits of each engagement always connect; once the
+  -- counter reaches training_settings.combo_only_hit_count, either hold block forever
+  -- (after_mode 1) or fall back to the same 50/50 per-hit coinflip as mode 4 (after_mode 2).
+  -- _block_field/_randomized_field let the three call sites (predicted hit, sub-frame
+  -- fallback, projectile) share one counter instead of duplicating the logic three times.
+  local function apply_combo_only_mode(_block_field, _randomized_field)
+    local _n = training_settings.combo_only_hit_count or 1
+    _dummy.blocking.combo_only_hits_blocked_through = _dummy.blocking.combo_only_hits_blocked_through or 0
+    if _dummy.blocking.combo_only_hits_blocked_through < _n then
+      _dummy.blocking[_block_field] = false
+      _dummy.blocking.combo_only_hits_blocked_through = _dummy.blocking.combo_only_hits_blocked_through + 1
+    elseif training_settings.combo_only_after_mode == 2 then -- Random after N
+      if not _dummy.blocking.block_string then
+        local _r = math.random()
+        if _r > 0.5 then
+          _dummy.blocking[_randomized_field] = true
+        end
+      end
+    end
+  end
+
   if not is_in_match then
     return
   end
@@ -203,7 +224,7 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
         ((_dummy.blocking.expected_attack_hit_id == _dummy.blocking.last_attack_hit_id or not _dummy.blocking.listening) and _dummy.is_idle and _dummy.idle_time > 20)
        ) then
       _dummy.blocking.wait_for_block_string = true
-      _dummy.blocking.combo_only_opener_pending = true
+      _dummy.blocking.combo_only_hits_blocked_through = 0
       log(_dummy.prefix, "block_string", string.format("wait blockstring (%d, %d, %d)",  _dummy.blocking.expected_attack_hit_id, _dummy.blocking.last_attack_hit_id, _dummy.idle_time))
     end
   end
@@ -586,11 +607,8 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
                   end
                 end
               end
-            elseif _mode == 5 then -- combo only: force through exactly one free opener per engagement
-              if _dummy.blocking.combo_only_opener_pending ~= false then
-                _dummy.blocking.should_block = false
-                _dummy.blocking.combo_only_opener_pending = false
-              end
+            elseif _mode == 5 then -- combo only: first N hits always connect, then Block or Random
+              apply_combo_only_mode("should_block", "randomized_out")
             end
 
             if _debug then
@@ -653,11 +671,8 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
                 _dummy.blocking.randomized_out = true
               end
             end
-          elseif _mode == 5 then -- combo only: force through exactly one free opener per engagement
-            if _dummy.blocking.combo_only_opener_pending ~= false then
-              _dummy.blocking.should_block = false
-              _dummy.blocking.combo_only_opener_pending = false
-            end
+          elseif _mode == 5 then -- combo only: first N hits always connect, then Block or Random
+            apply_combo_only_mode("should_block", "randomized_out")
           end
         end
       end
@@ -776,11 +791,8 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
                   end
                 end
               end
-            elseif _mode == 5 then -- combo only: force through exactly one free opener per engagement
-              if _dummy.blocking.combo_only_opener_pending ~= false then
-                _dummy.blocking.should_block_projectile = false
-                _dummy.blocking.combo_only_opener_pending = false
-              end
+            elseif _mode == 5 then -- combo only: first N hits always connect, then Block or Random
+              apply_combo_only_mode("should_block_projectile", "projectile_randomized_out")
             end
 
             break

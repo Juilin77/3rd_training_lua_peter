@@ -1,6 +1,6 @@
 require("src/startup")
 
--- v0.27
+-- v0.28
 
 print("-----------------------------")
 print("  3rd_training.lua - "..script_version.."")
@@ -253,6 +253,12 @@ blocking_mode =
   "Combo Only",
 }
 
+combo_only_after_mode =
+{
+  "Block",
+  "Random",
+}
+
 tech_throws_mode =
 {
   "Never",
@@ -391,6 +397,8 @@ training_settings = {
   pose = 1,
   blocking_style = 1,
   blocking_mode = 2,
+  combo_only_hit_count = 1,
+  combo_only_after_mode = 1,
   tech_throws_mode = 1,
   red_parry_hit_count = 1,
   counter_attack_stick = 1,

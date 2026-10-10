@@ -5,6 +5,8 @@ local dummy_settings_keys = {
   "pose",
   "blocking_style",
   "blocking_mode",
+  "combo_only_hit_count",
+  "combo_only_after_mode",
   "red_parry_hit_count",
   "tech_throws_mode",
   "counter_attack_stick",

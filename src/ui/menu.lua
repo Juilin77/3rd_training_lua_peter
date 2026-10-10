@@ -141,6 +141,18 @@ function create_main_menu()
   end
   blocking_mode_item.indent = true
 
+  combo_only_hit_count_item = integer_menu_item("Combo Only Hits", training_settings, "combo_only_hit_count", 1, 5, true)
+  combo_only_hit_count_item.is_disabled = function()
+    return training_settings.blocking_mode ~= 5
+  end
+  combo_only_hit_count_item.indent = true
+
+  combo_only_after_mode_item = list_menu_item("After N Hits", training_settings, "combo_only_after_mode", combo_only_after_mode)
+  combo_only_after_mode_item.is_disabled = function()
+    return training_settings.blocking_mode ~= 5
+  end
+  combo_only_after_mode_item.indent = true
+
   display_p2_input_history_item = checkbox_menu_item("Display P2 Input History", training_settings, "display_p2_input_history")
   display_p2_input_history_item.is_disabled = function() return training_settings.display_p1_input_history_dynamic end
 
@@ -198,6 +210,8 @@ function create_main_menu()
           list_menu_item("Pose", training_settings, "pose", pose),
           list_menu_item("Blocking Style", training_settings, "blocking_style", blocking_style),
           blocking_mode_item,
+          combo_only_hit_count_item,
+          combo_only_after_mode_item,
           hits_before_red_parry_item,
           list_menu_item("Tech Throws", training_settings, "tech_throws_mode", tech_throws_mode),
           list_menu_item("Counter-Attack Move", training_settings, "counter_attack_stick", stick_gesture_display),
@@ -423,10 +437,10 @@ function create_main_menu()
           gui.text(_dx, _dy + 20, "frames. Practice wakeup meaties", _c, _b)
           gui.text(_dx, _dy + 30, "and tick throws.", _c, _b)
         elseif training_settings.blocking_mode == 5 then
-          gui.text(_dx, _dy,      "Combo Only: first hit of each", _c, _b)
-          gui.text(_dx, _dy + 10, "fresh engagement always connects.", _c, _b)
-          gui.text(_dx, _dy + 20, "After that acts like Always: true", _c, _b)
-          gui.text(_dx, _dy + 30, "combos land, gaps get blocked.", _c, _b)
+          gui.text(_dx, _dy,      "Combo Only: first N hits of each", _c, _b)
+          gui.text(_dx, _dy + 10, "fresh engagement always connect.", _c, _b)
+          gui.text(_dx, _dy + 20, "After that: Block mode always", _c, _b)
+          gui.text(_dx, _dy + 30, "blocks, Random mode 50/50 per hit.", _c, _b)
         end
       end
 
