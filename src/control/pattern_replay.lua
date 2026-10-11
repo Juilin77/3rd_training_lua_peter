@@ -6,11 +6,30 @@ replay_output_path = "../replay-pattern-trainer/patterns/"
 replay_import_state = {
   file_index = 1,
 }
+bookmark_clear_state = {
+  file_index = 1,
+}
+bookmark_clear_names = {"none"}
+bookmark_clear_char_state = {
+  char_index = 1,
+}
+bookmark_clear_char_names = {"none"}
+bookmark_clear_file_cache = {} -- char name -> list of .json filenames, built once by refresh_bookmark_clear_chars()
+-- Pattern Character (2026-10-11 Peter): which character's folder "Pattern (P2: ...)" browses.
+-- Reuses bookmark_clear_char_names/bookmark_clear_file_cache (same underlying disk scan, no
+-- need for a second io.popen pass) with its own independent index into that same list.
+pattern_browse_char_state = {
+  char_index = 1,
+}
 replay_import_char = "(not scanned)"
 replay_import_files = { "empty" }
 direct_play_pending = false
 direct_play_inputs  = nil
 direct_play_superfreeze = nil
+-- true for the entire duration (loading + combat playback) of a savestate-based (.fs) direct
+-- play pattern; false for positioning-based / play-in-place patterns. Used only to decide Rules
+-- suppression (see pattern_replay_needs_rules_suppression below), not pattern_replay_active().
+direct_play_savestate_based = false
 
 -- positioning state machine (non-savestate patterns): teleport both players to the
 -- recorded relative distance every frame until they settle, then queue the inputs
@@ -36,6 +55,30 @@ function pattern_defense_start()
   pattern_defense_thrown    = false
 end
 
+-- one-shot full heal for positioning-based (non-savestate) Direct Play: both
+-- players' life and meter get maxed out ONCE per loop, before pattern_defense_start()
+-- captures its life baseline. Deliberately not continuous (unlike Rules-tab Infinite
+-- Life/Instant Max Meter) -- a continuous rewrite would zero out pattern_defense's
+-- life-delta damage calc and instantly refill meter spent mid-pattern (e.g. a second
+-- SA or a timed-SA move), see community_feature_inspiration.md 2026-10-11 9527 review
+local function direct_play_reset_resources()
+  for _, _p in ipairs({player_objects[1], player_objects[2]}) do
+    memory.writebyte(_p.base + 0x9F, 160)
+    _p.life = 160
+    memory.writebyte(_p.gauge_addr, _p.max_meter_gauge)
+    memory.writebyte(_p.meter_addr[2], _p.max_meter_count)
+    memory.writebyte(_p.meter_update_flag, 0x01)
+    -- 2026-10-11 Peter: stun carried over rep to rep instead of resetting (same
+    -- write_player_vars()/Rules Stun Mode gap the infinite_time fix addressed:
+    -- write_player_vars() is skipped during pattern replay, same as life/meter, so nothing
+    -- was ever resetting stun). One-shot reset to 0 here, same spot/same reasoning as the
+    -- life/meter reset above, not a continuous lock (that would hide real stun buildup
+    -- mid-pattern, same risk as continuous Infinite Life would for life).
+    memory.writebyte(_p.stun_timer_addr, 0)
+    memory.writedword(_p.stun_bar_addr, 0)
+  end
+end
+
 function pattern_replay_on_load_state()
   if direct_play_pending then
     direct_play_pending = false
@@ -47,25 +90,26 @@ function pattern_replay_on_load_state()
   end
 end
 
-function scan_replay_files()
-  local _char = player_objects[2].char_str or "unknown"
-  replay_import_char = _char
+-- Pattern Character's "Pattern (P2: ...)" list: reads bookmark_clear_file_cache (built by
+-- refresh_bookmark_clear_chars()) for whichever character pattern_browse_char_state picked --
+-- no disk scan here, so switching Character is instant (2026-10-11 Peter: the old version
+-- always auto-picked whichever character the scan happened to find first, so the other
+-- character's already-written patterns had no way to be browsed to).
+function load_pattern_browse_files()
+  local _char = bookmark_clear_char_names[pattern_browse_char_state.char_index]
   for i = #replay_import_files, 1, -1 do table.remove(replay_import_files, i) end
-  local _win = string.gsub(replay_output_path .. _char .. "/", "/", "\\")
-  local _f = io.popen('dir /b "' .. _win .. '*.json"')
-  if _f then
-    local _str = _f:read("*all")
-    _f:close()
-    for _line in string.gmatch(_str, "([^\r\n]+)") do
-      if _line ~= "" and not string.find(_line, "%.inputs%.json$") then
-        table.insert(replay_import_files, _line)
+  if _char and _char ~= "none" and bookmark_clear_file_cache[_char] then
+    for _, _file in ipairs(bookmark_clear_file_cache[_char]) do
+      local _file_sa = tonumber(string.match(_file, "_sa(%d)_"))
+      if not _file_sa or _file_sa == player_objects[2].selected_sa then
+        table.insert(replay_import_files, _file)
       end
     end
   end
   if #replay_import_files == 0 then table.insert(replay_import_files, "empty") end
   replay_import_state.file_index = 1
-  _replay_file_item.name = string.format("Pattern (P2: %s)", string.upper(_char))
-  print(string.format("[import] P2=%s  found %d patterns", _char, #replay_import_files))
+  replay_import_char = _char or "(not scanned)"
+  _replay_file_item.name = string.format("Pattern (P2: %s)", _char and string.upper(_char) or "?")
 end
 
 function direct_play_pattern()
@@ -90,6 +134,7 @@ function direct_play_pattern()
   if _fs_check then
     -- savestate path: positions come from the savestate, no positioning
     _fs_check:close()
+    direct_play_savestate_based = true
     if _meta.start_pos then
       memory.writeword(player_objects[1].base + 0x64, bit.band(_meta.start_pos.p1.x, 0xFFFF))
       memory.writeword(player_objects[1].base + 0x68, bit.band(_meta.start_pos.p1.y, 0xFFFF))
@@ -100,9 +145,9 @@ function direct_play_pattern()
     direct_play_pending = true
     mission_replay_active = true
     savestate.load(savestate.create(_fs_path))
-    print(string.format("[direct play] %s  char=%s  frames=%d  loading savestate...",
-      _file, replay_import_char, #_inputs))
   else
+    direct_play_savestate_based = false
+    direct_play_reset_resources()
     local _def_target_x, _atk_target_x = compute_positioning_targets(_meta)
     if _def_target_x then
       positioning_state = {
@@ -114,15 +159,11 @@ function direct_play_pattern()
         inputs = _inputs,
       }
       mission_replay_active = true
-      print(string.format("[direct play] %s  char=%s  frames=%d  positioning P1=%d P2=%d",
-        _file, replay_import_char, #_inputs, _def_target_x, _atk_target_x))
     else
       -- no start_pos in metadata: play in place
       queue_input_sequence(player_objects[2], _inputs)
       pattern_defense_start()
       mission_replay_active = true
-      print(string.format("[direct play] %s  char=%s  frames=%d  (no savestate, close menu to start)",
-        _file, replay_import_char, #_inputs))
     end
   end
 end
@@ -255,6 +296,154 @@ function no_pattern_available()
   return replay_import_files[1] == "empty"
 end
 
+-- disable everything that depends on a found pattern, once Scan Pattern for Character has run.
+-- Also collapses with the "Analyze Raw Mission for Bookmarks" gate (2026-10-11 Peter: turning
+-- that gate off should fold up its whole sub-tree, same as every other gated section in this tab)
+function pattern_import_disabled()
+  return not training_settings.analyze_raw_mission_on or no_pattern_available()
+end
+
+-- Clear Bookmark Slot's "Character" list + file cache: a SINGLE recursive dir scan of
+-- replay_output_path (one io.popen call total, not one per character folder) -- each
+-- io.popen call has several seconds of fixed overhead on this machine (see the SF3 Direct
+-- Play auto-select note in community_feature_inspiration.md), so the original one-call-
+-- per-character version meant turning this on, then picking each Character, both paid
+-- that cost separately, each step waiting several seconds (Peter 2026-10-11). Grouping every file by its
+-- parent folder here means only characters with >=1 pattern end up in the list (same
+-- filtering as before), and refresh_bookmark_clear_files() below becomes a pure cache
+-- lookup with zero further disk scans.
+function refresh_bookmark_clear_chars()
+  for i = #bookmark_clear_char_names, 1, -1 do table.remove(bookmark_clear_char_names, i) end
+  table.insert(bookmark_clear_char_names, "none")
+  bookmark_clear_file_cache = {}
+
+  local _root = string.gsub(replay_output_path, "/", "\\")
+  local _f = io.popen('dir /b /s "' .. _root .. '*.json"')
+  if _f then
+    local _str = _f:read("*all")
+    _f:close()
+    for _path in string.gmatch(_str, "([^\r\n]+)") do
+      if _path ~= "" and not string.find(_path, "%.inputs%.json$") then
+        local _dir, _file = string.match(_path, "([^\\]+)\\([^\\]+)$")
+        if _dir and _file then
+          if not bookmark_clear_file_cache[_dir] then
+            bookmark_clear_file_cache[_dir] = {}
+            table.insert(bookmark_clear_char_names, _dir)
+          end
+          table.insert(bookmark_clear_file_cache[_dir], _file)
+        end
+      end
+    end
+  end
+  bookmark_clear_char_state.char_index = 1
+  refresh_bookmark_clear_files()
+end
+
+-- Clear Bookmark Slot's "Bookmark Slot" list: reads bookmark_clear_file_cache (built by
+-- refresh_bookmark_clear_chars() above) for whichever character is currently selected --
+-- no disk scan here, so switching Character is instant.
+function refresh_bookmark_clear_files()
+  for i = #bookmark_clear_names, 1, -1 do table.remove(bookmark_clear_names, i) end
+  table.insert(bookmark_clear_names, "none")
+  local _char = bookmark_clear_char_names[bookmark_clear_char_state.char_index]
+  if _char and _char ~= "none" and bookmark_clear_file_cache[_char] then
+    for _, _file in ipairs(bookmark_clear_file_cache[_char]) do
+      table.insert(bookmark_clear_names, _file)
+    end
+  end
+  bookmark_clear_state.file_index = 1
+end
+
+-- resets Pattern Character browsing back to "none" and clears the "Pattern (P2: ...)"
+-- list -- called after any bookmark deletion below, since bookmark_clear_char_names
+-- (which Pattern Character's list also reads) gets rebuilt and may shrink/reorder, and
+-- the file(s) just deleted could be the ones currently being browsed (2026-10-11 Peter:
+-- deleted files stayed visible in "Pattern (P2: ...)" after Clear All Bookmark Slot)
+local function invalidate_pattern_browse()
+  pattern_browse_char_state.char_index = 1
+  load_pattern_browse_files()
+end
+
+function clear_bookmark_pattern()
+  if bookmark_clear_state.file_index == 1 then return end
+  local _char = bookmark_clear_char_names[bookmark_clear_char_state.char_index]
+  if not _char or _char == "none" then return end
+  local _file = bookmark_clear_names[bookmark_clear_state.file_index]
+  local _id = string.gsub(_file, "%.json$", "")
+  local _base = replay_output_path .. _char .. "/" .. _id
+  os.remove(_base .. ".json")
+  os.remove(_base .. ".inputs.json")
+  os.remove(_base .. ".fs")
+  refresh_bookmark_clear_chars() -- may drop _char if that was its last file
+  for i, _c in ipairs(bookmark_clear_char_names) do
+    if _c == _char then
+      bookmark_clear_char_state.char_index = i
+      refresh_bookmark_clear_files()
+      break
+    end
+  end
+  invalidate_pattern_browse()
+end
+
+-- deletes every bookmark pattern belonging to whichever character is currently selected
+-- in the Character sub-list (2026-10-11 Peter: "Clear Chara All Bookmark Slot")
+function clear_chara_all_bookmark_patterns()
+  local _char = bookmark_clear_char_names[bookmark_clear_char_state.char_index]
+  if not _char or _char == "none" then return end
+  local _win = string.gsub(replay_output_path .. _char .. "/", "/", "\\")
+  local _f = io.popen('dir /b "' .. _win .. '*.*"')
+  if _f then
+    local _str = _f:read("*all")
+    _f:close()
+    for _line in string.gmatch(_str, "([^\r\n]+)") do
+      if _line ~= "" then
+        os.remove(replay_output_path .. _char .. "/" .. _line)
+      end
+    end
+  end
+  refresh_bookmark_clear_chars()
+  invalidate_pattern_browse()
+end
+
+-- deletes every bookmark pattern for EVERY character, regardless of which one is
+-- currently selected -- mirrors Clear All Raw Slots (always visible/usable, never
+-- gated behind the Clear Bookmark Slot On/Off toggle, 2026-10-11 Peter). Always
+-- (re)scans first rather than trusting bookmark_clear_file_cache, since this item
+-- can fire even when Clear Bookmark Slot was never switched on this session (cache
+-- would still be empty otherwise).
+function clear_all_bookmark_patterns_global()
+  refresh_bookmark_clear_chars()
+  for _char, _files in pairs(bookmark_clear_file_cache) do
+    for _, _file in ipairs(_files) do
+      local _id = string.gsub(_file, "%.json$", "")
+      local _base = replay_output_path .. _char .. "/" .. _id
+      os.remove(_base .. ".json")
+      os.remove(_base .. ".inputs.json")
+      os.remove(_base .. ".fs")
+    end
+  end
+  refresh_bookmark_clear_chars()
+  invalidate_pattern_browse()
+end
+
+-- true while a pattern is actually mid-playback (savestate loading, positioning, or inputs
+-- being fed) as opposed to just "Pattern Replay" being toggled on in the menu but idle;
+-- same compound condition direct_play_pattern()/update_pattern_replay_before_frame() already
+-- use to detect "nothing in progress" (negated)
+function pattern_replay_active()
+  return direct_play_pending or positioning_state ~= nil or player_objects[2].pending_input_sequence ~= nil
+end
+
+-- narrower than pattern_replay_active(): true only while the CURRENT replay is the savestate-based
+-- (.fs) sub-case, through both loading and its input-sequence combat playback. False for
+-- positioning-based / play-in-place patterns, so Rules (Infinite Life / Instant Max Meter /
+-- Infinite Time) can run unsuppressed on those. The `and pattern_replay_active()` is defensive:
+-- direct_play_savestate_based is cleared at the same "done" point as direct_play_superfreeze
+-- (see update_pattern_replay_before_frame), so the two should already agree.
+function pattern_replay_needs_rules_suppression()
+  return direct_play_savestate_based and pattern_replay_active()
+end
+
 last_ordered_pattern_index = 0
 
 function pick_random_pattern_index()
@@ -275,6 +464,10 @@ function update_pattern_replay_before_frame()
 
   if direct_play_superfreeze and player_objects[2].pending_input_sequence == nil and not direct_play_pending and not positioning_state then
     direct_play_superfreeze = nil
+  end
+
+  if direct_play_savestate_based and player_objects[2].pending_input_sequence == nil and not direct_play_pending and not positioning_state then
+    direct_play_savestate_based = false
   end
 
   if pattern_defense_tracking then
@@ -335,7 +528,11 @@ function pattern_defense_result_draw()
       _color = 0xFFFF4444
     end
     local _w = get_text_width(pattern_defense_result)
-    gui.text(math.floor((383 - _w) / 2), 30, pattern_defense_result, _color, text_default_border_color)
+    -- moved down from y=30 (was overlapping the round timer) and given a fully opaque
+    -- black border instead of text_default_border_color (only ~6% alpha, nearly invisible
+    -- against a busy stage background) -- moved down and given a solid border per Peter's
+    -- feedback (2026-10-11)
+    gui.text(math.floor((383 - _w) / 2), 46, pattern_defense_result, _color, 0xFF000000)
   end
 end
 

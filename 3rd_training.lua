@@ -1,6 +1,6 @@
 require("src/startup")
 
--- v0.28
+-- v0.29
 
 print("-----------------------------")
 print("  3rd_training.lua - "..script_version.."")
@@ -78,6 +78,9 @@ require("src/control/recording")
 require("src/control/profiles")
 require("src/control/missions")
 require("src/control/pattern_replay")
+-- private repo, not shipped with the public one -- load it if present (Peter's own
+-- machine), skip silently otherwise so the script still loads for everyone else
+pcall(dofile, "../replay-pattern-trainer/lua/bookmark_scan.lua")
 require("src/ui/special_training/parry_training")
 require("src/ui/special_training/charge_training")
 require("src/ui/special_training/hyakuretsu_training")
@@ -229,13 +232,6 @@ button_gesture_display = {
   "HP+HK",
 }
 
-fast_wakeup_mode =
-{
-  "Never",
-  "Always",
-  "Random",
-}
-
 blocking_style =
 {
   "Off",
@@ -246,23 +242,15 @@ blocking_style =
 
 blocking_mode =
 {
-  "Never",
   "Always",
-  "Meaty/Oki",
-  "Random",
   "Combo Only",
+  "Random",
+  "Frame Trap",
 }
 
-combo_only_after_mode =
+frame_trap_after_mode =
 {
   "Block",
-  "Random",
-}
-
-tech_throws_mode =
-{
-  "Never",
-  "Always",
   "Random",
 }
 
@@ -396,14 +384,14 @@ mission_dummy_id = 2
 training_settings = {
   pose = 1,
   blocking_style = 1,
-  blocking_mode = 2,
-  combo_only_hit_count = 1,
-  combo_only_after_mode = 1,
-  tech_throws_mode = 1,
+  blocking_mode = 1, -- "Always" (index shifted down after removing "Never", 2026-10-11)
+  frame_trap_hit_count = 1,
+  frame_trap_after_mode = 1,
+  tech_throws_on = false,
   red_parry_hit_count = 1,
   counter_attack_stick = 1,
   counter_attack_button = 1,
-  fast_wakeup_mode = 1,
+  fast_wakeup_on = false,
   infinite_time = true,
   life_mode = 1,
   meter_mode = 1,
@@ -432,8 +420,15 @@ training_settings = {
   auto_crop_recording_start = true,
   auto_crop_recording_end = true,
   current_recording_slot = 1,
+  current_clear_recording_slot = 1,
+  clear_all_recording_slots_on = false,
+  save_slot_to_file_on = false,
+  load_slot_from_file_on = false,
   current_mission_slot = 1,
   current_clear_mission_slot = 1,
+  current_analyze_raw_slot = 1,
+  scan_pattern_analyzer_mode = 1, -- "SA/Throw"
+  replay_raw_mission_menu_on = false,
   current_replay_mission_slot = 1,
   replay_mode = 1,
   music_volume = 10,
@@ -444,6 +439,12 @@ training_settings = {
   recording_mission_mode = false,
   mission_play_side = 1,
   mission_replay_on = false,
+  analyze_raw_mission_on = false,
+  generate_bookmark_savestates_on = false,
+  clear_all_raw_slots_on = false,
+  clear_bookmark_mode_on = false,
+  clear_chara_all_bookmark_slot_on = false,
+  clear_all_bookmark_slot_on = false,
   pattern_replay_on = false,
   pattern_replay_mode = 1, -- normal
 
@@ -529,6 +530,7 @@ function on_load_state()
 
   mission_on_load_state()
   pattern_replay_on_load_state()
+  if bookmark_savestate_on_load_state then bookmark_savestate_on_load_state() end
 
   clear_input_history()
   clear_printed_geometry()
@@ -602,12 +604,27 @@ function before_frame()
   local _write_game_vars_settings =
   {
     freeze = is_menu_open,
-    infinite_time = not training_settings.recording_mission_mode and training_settings.infinite_time,
+    -- bookmark savestate resimulation forces the clock frozen regardless of the user's
+    -- own Infinite Time setting -- it can run several minutes (as long as the original
+    -- raw recording), far past a round's real timer, and a round timeout mid-resimulation
+    -- would derail the frame-by-frame savestate capture (found via in-game testing,
+    -- 2026-10-11 Peter). mission_replay_active is deliberately NOT part of this check
+    -- (unlike the life/meter suppression below, which protects pattern_defense's
+    -- damage-delta math): the round clock has nothing to do with that math, and
+    -- suppressing it just let Pattern/Mission Replay get interrupted by a round timeout
+    -- even with Infinite Time set to Yes (also found via in-game testing, 2026-10-11).
+    infinite_time = bookmark_savestate_state ~= nil
+      or (not training_settings.recording_mission_mode and not pattern_replay_needs_rules_suppression() and training_settings.infinite_time),
     music_volume = training_settings.music_volume,
   }
   write_game_vars(_write_game_vars_settings)
 
-  if not training_settings.recording_mission_mode then
+  -- life/meter always fully suppressed during pattern replay (both savestate and
+  -- positioning modes) -- continuous Infinite Life/Instant Max Meter would clobber
+  -- pattern_defense_tracking's life-delta damage calc and any mid-pattern SA/meter
+  -- spend; positioning-mode patterns get a one-shot full heal instead, in
+  -- direct_play_pattern() (pattern_replay.lua), not here
+  if not training_settings.recording_mission_mode and not pattern_replay_active() and not mission_replay_active then
     write_player_vars(player_objects[1])
     write_player_vars(player_objects[2])
   end
@@ -650,10 +667,10 @@ function before_frame()
     update_blocking(_input, player, dummy, training_settings.blocking_mode, training_settings.blocking_style, training_settings.red_parry_hit_count)
 
     -- fast wake-up
-    update_fast_wake_up(_input, player, dummy, training_settings.fast_wakeup_mode)
+    update_fast_wake_up(_input, player, dummy, training_settings.fast_wakeup_on)
 
     -- tech throws
-    update_tech_throws(_input, player, dummy, training_settings.tech_throws_mode)
+    update_tech_throws(_input, player, dummy, training_settings.tech_throws_on)
 
     -- counter attack
     update_counter_attack(_input, player, dummy, training_settings.counter_attack_stick, training_settings.counter_attack_button)
@@ -671,6 +688,9 @@ function before_frame()
   mission_replay_trigger_update()
 
   update_pattern_replay_before_frame()
+
+  if bookmark_savestate_trigger_update then bookmark_savestate_trigger_update() end
+  if update_bookmark_savestate_generation then update_bookmark_savestate_generation() end
 
   if is_in_match then
     input_history_update(input_history[1], "P1", _input)
@@ -801,7 +821,13 @@ function on_gui()
 
   mission_hud_draw()
 
-  pattern_defense_result_draw()
+  -- pattern_defense_result_draw() removed from display (2026-10-11 Peter: the next rep
+  -- starts right after the previous one ends, leaving no time to actually read the
+  -- banner) -- the tracking state machine itself (pattern_defense_tracking/hits/blocks/
+  -- parries/thrown) still runs and still drives when the next pattern starts, only the
+  -- on-screen result banner is gone
+
+  if bookmark_savestate_generation_draw then bookmark_savestate_generation_draw() end
 
   if log_enabled then
     log_draw()

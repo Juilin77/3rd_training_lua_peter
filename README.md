@@ -75,6 +75,14 @@ A: Check video settings, you must use "Basic" blitter option with no scanlines i
 A: Install prerequires from [here](https://github.com/TASVideos/BizHawk-Prereqs/releases/latest/)
 
 ## Changelog
+### v0.29 (10/11/2026)
+- [Feature] Add Bookmark Scan tools to the Missions tab: scan a recorded Raw Mission for attack patterns, browse results by character, and clear them individually or in bulk (contribution of @Juilin77)
+- [Feature] Include 3 curated Ken SA3/throw bookmark patterns in patterns/ken/ as starting examples for Pattern Replay (contribution of @Juilin77)
+- [Improvement] Rename Blocking Mode's Meaty/Oki to Combo Only and the old configurable Combo Only to Frame Trap, and remove the redundant Never mode (contribution of @Juilin77)
+- [Fix] Combo Only was blocking the first hit of a fresh engagement instead of letting it through (contribution of @Juilin77)
+- [Improvement] Simplify Tech Throws and Fast Wake Up from a three-way Never/Always/Random choice to a plain On/Off toggle (contribution of @Juilin77)
+- [Fix] Infinite Time no longer gets silently disabled, and Stun no longer accumulates across reps, during Pattern/Mission Replay (contribution of @Juilin77)
+
 ### v0.28 (10/10/2026)
 - [Feature] Combo Only blocking mode now supports a configurable free-hit count (1-5) and after-N behavior (Block or Random), replacing the previous fixed first-hit-only logic (contribution of @Juilin77)
 

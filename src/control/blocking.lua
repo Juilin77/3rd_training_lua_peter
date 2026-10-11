@@ -169,23 +169,52 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
     memory.writebyte(_player_obj.parry_antiair_cooldown_time_addr, 0)
   end
 
-  -- combo only (mode 5): first N hits of each engagement always connect; once the
-  -- counter reaches training_settings.combo_only_hit_count, either hold block forever
-  -- (after_mode 1) or fall back to the same 50/50 per-hit coinflip as mode 4 (after_mode 2).
+  -- frame trap (mode 4, renamed from "Combo Only" 2026-10-11 -- see below): first N hits
+  -- of each engagement always connect, gap or not; once the counter reaches
+  -- training_settings.frame_trap_hit_count, either hold block forever (after_mode 1) or
+  -- do an independent 50/50 coinflip on every hit after N (after_mode 2).
   -- _block_field/_randomized_field let the three call sites (predicted hit, sub-frame
   -- fallback, projectile) share one counter instead of duplicating the logic three times.
-  local function apply_combo_only_mode(_block_field, _randomized_field)
-    local _n = training_settings.combo_only_hit_count or 1
-    _dummy.blocking.combo_only_hits_blocked_through = _dummy.blocking.combo_only_hits_blocked_through or 0
-    if _dummy.blocking.combo_only_hits_blocked_through < _n then
+  -- 2026-10-11 Peter: the "Random after N" branch used to also require `not block_string`
+  -- (copied from Random mode's own guard, which only decides once at the START of a block
+  -- string) -- but by the time the counter has reached N, block_string is already true for
+  -- basically every subsequent hit, so that guard made this branch dead code: After N Hits
+  -- "Random" behaved identically to "Block". Removed so every hit past N gets its own
+  -- independent 50/50, which is what the setting is supposed to do.
+  --
+  -- Naming history (2026-10-11 Peter): what used to be called "Combo Only" (this function)
+  -- blindly forces through N hits regardless of whether they're really combo-connected --
+  -- that's a frame trap / pressure-string testing tool, not a combo tester (a real frame-
+  -- tight combo already connects on its own via hitstun, with no help from this setting).
+  -- Renamed to "Frame Trap". The old "Meaty/Oki" mode (still mode 2 below) -- which only
+  -- ever waves through exactly the first hit, then behaves like Always -- turned out to be
+  -- EXACTLY what "Combo Only" should mean (first hit free, then real combos connect via
+  -- hitstun while gaps get blocked), so mode 2 was renamed "Combo Only" and mode 4 (this
+  -- one) took the name "Frame Trap" instead.
+  local function apply_frame_trap_mode(_block_field, _randomized_field)
+    local _n = training_settings.frame_trap_hit_count or 1
+    _dummy.blocking.frame_trap_hits_blocked_through = _dummy.blocking.frame_trap_hits_blocked_through or 0
+    _dummy.blocking.frame_trap_gap_frozen = _dummy.blocking.frame_trap_gap_frozen or {}
+    local _through = _dummy.blocking.frame_trap_hits_blocked_through
+    -- this hit ends the gap since the previous one (none before the very first hit) --
+    -- freeze the real frame gap since the previous hit, for the per-gap gauge display
+    -- (2026-10-11 Peter: wants to see each gap's stop time). Deliberately NOT based on
+    -- _dummy.idle_time: idle_time only resets off has_just_been_hit, which can land on a
+    -- different frame than this prediction fires on, so it doesn't reliably reflect the
+    -- real elapsed frames between two consecutive predicted hits (found via in-game
+    -- testing -- a 3-frame-apart hit froze at 0 instead of ~17)
+    if _through > 0 and _dummy.blocking.frame_trap_last_hit_frame then
+      local _gap_frames = frame_number - _dummy.blocking.frame_trap_last_hit_frame
+      _dummy.blocking.frame_trap_gap_frozen[_through] = math.max(20 - _gap_frames, 0)
+    end
+    _dummy.blocking.frame_trap_last_hit_frame = frame_number
+    if _dummy.blocking.frame_trap_hits_blocked_through < _n then
       _dummy.blocking[_block_field] = false
-      _dummy.blocking.combo_only_hits_blocked_through = _dummy.blocking.combo_only_hits_blocked_through + 1
-    elseif training_settings.combo_only_after_mode == 2 then -- Random after N
-      if not _dummy.blocking.block_string then
-        local _r = math.random()
-        if _r > 0.5 then
-          _dummy.blocking[_randomized_field] = true
-        end
+      _dummy.blocking.frame_trap_hits_blocked_through = _dummy.blocking.frame_trap_hits_blocked_through + 1
+    elseif training_settings.frame_trap_after_mode == 2 then -- Random after N
+      local _r = math.random()
+      if _r > 0.5 then
+        _dummy.blocking[_randomized_field] = true
       end
     end
   end
@@ -224,7 +253,9 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
         ((_dummy.blocking.expected_attack_hit_id == _dummy.blocking.last_attack_hit_id or not _dummy.blocking.listening) and _dummy.is_idle and _dummy.idle_time > 20)
        ) then
       _dummy.blocking.wait_for_block_string = true
-      _dummy.blocking.combo_only_hits_blocked_through = 0
+      _dummy.blocking.frame_trap_hits_blocked_through = 0
+      _dummy.blocking.frame_trap_gap_frozen = {}
+      _dummy.blocking.frame_trap_last_hit_frame = nil
       log(_dummy.prefix, "block_string", string.format("wait blockstring (%d, %d, %d)",  _dummy.blocking.expected_attack_hit_id, _dummy.blocking.last_attack_hit_id, _dummy.idle_time))
     end
   end
@@ -287,7 +318,10 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
     end
   end
 
-  if _mode == 1 or _dummy.throw.listening == true then
+  -- "Never" blocking mode was removed (2026-10-11 Peter: redundant with Blocking Style
+  -- "Off", which already never presses a block/parry input regardless of this mode) --
+  -- this early-return now only exists for the throw-listening mutual exclusion.
+  if _dummy.throw.listening == true then
     stop_listening_hits(_dummy)
     stop_listening_projectiles(_dummy)
     return
@@ -593,22 +627,32 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
             _dummy.blocking.is_precise_timing = false
             log(_dummy.prefix, "blocking", string.format("block in %d", _dummy.blocking.expected_attack_animation_hit_frame - _player_relevant_animation_frame))
 
-            if _mode == 3 then -- meaty/oki
-              if not _dummy.blocking.block_string and not _dummy.blocking.wait_for_block_string then
-                _dummy.blocking.should_block = false
-              end
-            elseif _mode == 4 then -- random
-              if not _dummy.blocking.block_string then
-                local _r = math.random()
-                if _r > 0.5 then
-                  _dummy.blocking.randomized_out = true
-                  if _debug then
-                    print(string.format(" %d: next hit randomized out", frame_number))
+            -- Combo Only, Random, Frame Trap are Block-style-only refinements (see docs/dummy.md) --
+            -- Parry/Red Parry always attempt every predicted hit, same as Blocking Mode "Always"
+            -- (2026-10-11 Peter: found these leaking into Parry/Red Parry when blocking_mode was
+            -- left at 2/3/4 from a previous Block-style session)
+            if _style == 2 then
+              if _mode == 2 then -- combo only: let the very first hit of a fresh engagement through
+                -- wait_for_block_string==true IS the "freshly armed, about to see the first hit"
+                -- moment -- checking "not wait_for_block_string" here was backwards and blocked
+                -- that exact first hit instead of letting it through (2026-10-11 Peter: found via
+                -- in-game testing, Combo Only was blocking the first hit instead of passing it)
+                if _dummy.blocking.wait_for_block_string then
+                  _dummy.blocking.should_block = false
+                end
+              elseif _mode == 3 then -- random
+                if not _dummy.blocking.block_string then
+                  local _r = math.random()
+                  if _r > 0.5 then
+                    _dummy.blocking.randomized_out = true
+                    if _debug then
+                      print(string.format(" %d: next hit randomized out", frame_number))
+                    end
                   end
                 end
+              elseif _mode == 4 then -- frame trap: first N hits always connect, then Block or Random
+                apply_frame_trap_mode("should_block", "randomized_out")
               end
-            elseif _mode == 5 then -- combo only: first N hits always connect, then Block or Random
-              apply_combo_only_mode("should_block", "randomized_out")
             end
 
             if _debug then
@@ -660,19 +704,23 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
           _dummy.blocking.is_precise_timing = false
           log(_dummy.prefix, "blocking", string.format("sim block in %d (sub-frame fallback)", _sh.delta or 1))
 
-          if _mode == 3 then -- meaty/oki
-            if not _dummy.blocking.block_string and not _dummy.blocking.wait_for_block_string then
-              _dummy.blocking.should_block = false
-            end
-          elseif _mode == 4 then -- random
-            if not _dummy.blocking.block_string then
-              local _r = math.random()
-              if _r > 0.5 then
-                _dummy.blocking.randomized_out = true
+          -- Block-style-only refinements, see the identical comment above (2026-10-11 Peter)
+          if _style == 2 then
+            if _mode == 2 then -- combo only: let the very first hit of a fresh engagement through
+              -- see the identical fix/comment above: wait_for_block_string==true, not negated
+              if _dummy.blocking.wait_for_block_string then
+                _dummy.blocking.should_block = false
               end
+            elseif _mode == 3 then -- random
+              if not _dummy.blocking.block_string then
+                local _r = math.random()
+                if _r > 0.5 then
+                  _dummy.blocking.randomized_out = true
+                end
+              end
+            elseif _mode == 4 then -- frame trap: first N hits always connect, then Block or Random
+              apply_frame_trap_mode("should_block", "randomized_out")
             end
-          elseif _mode == 5 then -- combo only: first N hits always connect, then Block or Random
-            apply_combo_only_mode("should_block", "randomized_out")
           end
         end
       end
@@ -777,22 +825,26 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
             _dummy.blocking.is_precise_timing = _movement ~= nil
             log(_dummy.prefix, "blocking", string.format("block proj %s in %d", _projectile_obj.id, _i))
 
-            if _mode == 3 then -- meaty/oki
-              if not _dummy.blocking.block_string and not _dummy.blocking.wait_for_block_string then
-                _dummy.blocking.should_block_projectile = false
-              end
-            elseif _mode == 4 then -- random
-              if not _dummy.blocking.block_string then
-                local _r = math.random()
-                if _r > 0.5 then
-                  _dummy.blocking.projectile_randomized_out = true
-                  if _debug then
-                    print(string.format(" %d: next hit randomized out", frame_number))
+            -- Block-style-only refinements, see the identical comment above (2026-10-11 Peter)
+            if _style == 2 then
+              if _mode == 2 then -- combo only: let the very first hit of a fresh engagement through
+                -- see the identical fix/comment above: wait_for_block_string==true, not negated
+                if _dummy.blocking.wait_for_block_string then
+                  _dummy.blocking.should_block_projectile = false
+                end
+              elseif _mode == 3 then -- random
+                if not _dummy.blocking.block_string then
+                  local _r = math.random()
+                  if _r > 0.5 then
+                    _dummy.blocking.projectile_randomized_out = true
+                    if _debug then
+                      print(string.format(" %d: next hit randomized out", frame_number))
+                    end
                   end
                 end
+              elseif _mode == 4 then -- frame trap: first N hits always connect, then Block or Random
+                apply_frame_trap_mode("should_block_projectile", "projectile_randomized_out")
               end
-            elseif _mode == 5 then -- combo only: first N hits always connect, then Block or Random
-              apply_combo_only_mode("should_block_projectile", "projectile_randomized_out")
             end
 
             break
@@ -1135,15 +1187,14 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
   end
 end
 
-function update_fast_wake_up(_input, _player, _dummy, _mode)
-  if is_in_match and _mode ~= 1 and current_recording_state ~= 4 then
+-- 2026-10-11 Peter: simplified from a 3-way Never/Always/Random mode to a plain on/off
+-- toggle -- dropped the Random variant, the dummy now either always fast wakes up or never does.
+function update_fast_wake_up(_input, _player, _dummy, _on)
+  if is_in_match and _on and current_recording_state ~= 4 then
     local _should_tap_down = _dummy.previous_can_fast_wakeup == 0 and _dummy.can_fast_wakeup == 1
 
     if _should_tap_down then
-      local _r = math.random()
-      if _mode ~= 3 or _r > 0.5 then
-        _input[dummy.prefix..' Down'] = true
-      end
+      _input[dummy.prefix..' Down'] = true
     end
   end
 end

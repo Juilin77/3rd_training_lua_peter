@@ -40,6 +40,8 @@ function create_main_menu()
 
   -- ── _replay_file_item ─────────────────────────────────────
   _replay_file_item = list_menu_item("Pattern (P2: ?)", replay_import_state, "file_index", replay_import_files)
+  _replay_file_item.is_disabled = pattern_import_disabled
+  _replay_file_item.indent = true
 
   -- disable Pattern Replay Mode / Pattern Replay until Replay Import: Scan has found at least one pattern
   -- no_pattern_available() is defined in 3rd_training.lua (after replay_import_files init)
@@ -141,22 +143,29 @@ function create_main_menu()
   end
   blocking_mode_item.indent = true
 
-  combo_only_hit_count_item = integer_menu_item("Combo Only Hits", training_settings, "combo_only_hit_count", 1, 5, true)
-  combo_only_hit_count_item.is_disabled = function()
-    return training_settings.blocking_mode ~= 5
+  frame_trap_hit_count_item = integer_menu_item("Frame Trap Hits", training_settings, "frame_trap_hit_count", 1, 5, true)
+  frame_trap_hit_count_item.is_disabled = function()
+    -- must match blocking_mode_item's own is_disabled (blocking_style ~= 2) too, or this
+    -- stays visible as an "orphan" once blocking_mode was left at 4 ("Frame Trap") from a
+    -- previous Block-style session and the style gets switched away (2026-10-11 Peter)
+    return training_settings.blocking_style ~= 2 or training_settings.blocking_mode ~= 4
   end
-  combo_only_hit_count_item.indent = true
+  frame_trap_hit_count_item.indent = true
 
-  combo_only_after_mode_item = list_menu_item("After N Hits", training_settings, "combo_only_after_mode", combo_only_after_mode)
-  combo_only_after_mode_item.is_disabled = function()
-    return training_settings.blocking_mode ~= 5
+  frame_trap_after_mode_item = list_menu_item("After N Hits", training_settings, "frame_trap_after_mode", frame_trap_after_mode)
+  frame_trap_after_mode_item.is_disabled = function()
+    return training_settings.blocking_style ~= 2 or training_settings.blocking_mode ~= 4
   end
-  combo_only_after_mode_item.indent = true
+  frame_trap_after_mode_item.indent = true
 
   display_p2_input_history_item = checkbox_menu_item("Display P2 Input History", training_settings, "display_p2_input_history")
   display_p2_input_history_item.is_disabled = function() return training_settings.display_p1_input_history_dynamic end
 
-  replay_slot_item = list_menu_item("Replay Mission for Slot", training_settings, "current_replay_mission_slot", mission_recording_slots_names)
+  replay_slot_item = list_menu_item("Raw Mission Slot", training_settings, "current_replay_mission_slot", mission_recording_slots_names)
+  replay_slot_item.is_disabled = function()
+    return not training_settings.replay_raw_mission_menu_on
+  end
+  replay_slot_item.indent = true
 
   -- disable Replay Mission / Play Side when no non-empty replay slot is selected
   local function no_replay_slot_selected()
@@ -165,16 +174,31 @@ function create_main_menu()
     return _slot == nil or _slot.name == "none"
   end
 
+  -- Generate Bookmark Savestates reads the slot picked by "Analyze Raw Mission Slot"
+  -- (2026-10-11 Peter: was wrongly gated on "Raw Mission Slot" above, a separate and
+  -- unrelated selector tied to Replay Raw Mission for Slot)
+  local function no_analyze_slot_selected()
+    if training_settings.current_analyze_raw_slot == 1 then return true end
+    local _slot = mission_slots[training_settings.current_analyze_raw_slot - 1]
+    return _slot == nil or _slot.name == "none"
+  end
+
   pattern_replay_mode_item = list_menu_item("Pattern Replay Mode", training_settings, "pattern_replay_mode", pattern_replay_mode_options)
-  pattern_replay_mode_item.is_disabled = no_pattern_available
+  pattern_replay_mode_item.is_disabled = pattern_import_disabled
+  pattern_replay_mode_item.indent = true
 
   direct_play_item = checkbox_menu_item("Pattern Replay", training_settings, "pattern_replay_on", nil, {"Start", "Stop"})
-  direct_play_item.is_disabled = no_pattern_available
+  direct_play_item.is_disabled = pattern_import_disabled
+  direct_play_item.indent = true
 
-  replay_mission_item = checkbox_menu_item("Replay Mission", training_settings, "mission_replay_on", nil, {"Start", "Stop"})
+  replay_raw_mission_gate_item = checkbox_menu_item("Replay Raw Mission for Slot", training_settings, "replay_raw_mission_menu_on", nil, {"On", "Off"})
+  replay_raw_mission_gate_item.is_disabled = function()
+    return training_settings.recording_mission_mode
+  end
+
+  replay_mission_item = checkbox_menu_item("Replay Raw Mission", training_settings, "mission_replay_on", nil, {"Start", "Stop"})
   replay_mission_item.is_disabled = function()
-    if training_settings.recording_mission_mode then return true end
-    return no_replay_slot_selected()
+    return training_settings.recording_mission_mode or not training_settings.replay_raw_mission_menu_on
   end
   replay_mission_item.indent = true
 
@@ -210,13 +234,13 @@ function create_main_menu()
           list_menu_item("Pose", training_settings, "pose", pose),
           list_menu_item("Blocking Style", training_settings, "blocking_style", blocking_style),
           blocking_mode_item,
-          combo_only_hit_count_item,
-          combo_only_after_mode_item,
+          frame_trap_hit_count_item,
+          frame_trap_after_mode_item,
           hits_before_red_parry_item,
-          list_menu_item("Tech Throws", training_settings, "tech_throws_mode", tech_throws_mode),
+          checkbox_menu_item("Tech Throws", training_settings, "tech_throws_on", nil, {"On", "Off"}),
           list_menu_item("Counter-Attack Move", training_settings, "counter_attack_stick", stick_gesture_display),
           list_menu_item("Counter-Attack Action", training_settings, "counter_attack_button", button_gesture_display),
-          list_menu_item("Fast Wake Up", training_settings, "fast_wakeup_mode", fast_wakeup_mode),
+          checkbox_menu_item("Fast Wake Up", training_settings, "fast_wakeup_on", nil, {"On", "Off"}),
         }
       },
       {
@@ -229,29 +253,168 @@ function create_main_menu()
           slot_weight_item,
           counter_attack_delay_item,
           counter_attack_random_deviation_item,
-          button_menu_item("Clear Slot", clear_slot),
-          button_menu_item("Clear All Slots", clear_all_slots),
-          button_menu_item("Save Slot To File", open_save_popup),
-          button_menu_item("Load Slot From File", open_load_popup),
+          (function()
+            local _item = list_menu_item("Clear Slot", training_settings, "current_clear_recording_slot", recording_slots_names_with_none)
+            _item.last_frame_validated = 0
+            _item.validate = function(self)
+              if training_settings.current_clear_recording_slot ~= 1 then
+                clear_slot()
+                self.last_frame_validated = frame_number
+              end
+            end
+            _item.legend = function() return "LP: Validate" end
+            local _orig_draw = _item.draw
+            _item.draw = function(self, _x, _y, _selected)
+              if _selected and self.last_frame_validated > 0 then
+                if frame_number < self.last_frame_validated then self.last_frame_validated = 0 end
+                if frame_number - self.last_frame_validated < 5 then
+                  gui.text(_x, _y, "< Clear Slot : deleted >", 0xFFFF00FF, text_default_border_color)
+                  return
+                end
+              end
+              _orig_draw(self, _x, _y, _selected)
+            end
+            return _item
+          end)(),
+          (function()
+            local _item = checkbox_menu_item("Clear All Slots", training_settings, "clear_all_recording_slots_on", nil, {"On", "Off"})
+            _item.validate = function(self)
+              if training_settings.clear_all_recording_slots_on then
+                clear_all_slots()
+              end
+            end
+            _item.legend = function() return "LP: Clear All" end
+            return _item
+          end)(),
+          (function()
+            local _item = checkbox_menu_item("Save Slot To File", training_settings, "save_slot_to_file_on", nil, {"On", "Off"})
+            _item.validate = function(self)
+              if training_settings.save_slot_to_file_on then
+                open_save_popup()
+              end
+            end
+            _item.legend = function() return "LP: Open" end
+            return _item
+          end)(),
+          (function()
+            local _item = checkbox_menu_item("Load Slot From File", training_settings, "load_slot_from_file_on", nil, {"On", "Off"})
+            _item.validate = function(self)
+              if training_settings.load_slot_from_file_on then
+                open_load_popup()
+              end
+            end
+            _item.legend = function() return "LP: Open" end
+            return _item
+          end)(),
         }
       },
       {
         name = "Missions",
         entries = {
           recording_mission_mode_item,
-          list_menu_item("Record Mission in Slot", training_settings, "current_mission_slot", mission_slot_names),
+          (function()
+            local _item = list_menu_item("Record Raw Mission in Slot", training_settings, "current_mission_slot", mission_slot_names)
+            _item.is_disabled = function()
+              return not training_settings.recording_mission_mode
+            end
+            _item.indent = true
+            return _item
+          end)(),
+          replay_raw_mission_gate_item,
           replay_slot_item,
           (function()
             local _item = list_menu_item("Play Side", training_settings, "mission_play_side", mission_play_side_names)
             _item.is_disabled = function()
-              return training_settings.recording_mission_mode or no_replay_slot_selected()
+              return training_settings.recording_mission_mode or not training_settings.replay_raw_mission_menu_on or no_replay_slot_selected()
             end
             _item.indent = true
             return _item
           end)(),
           replay_mission_item,
           (function()
-            local _item = list_menu_item("Clear Slot", training_settings, "current_clear_mission_slot", mission_recording_slots_names)
+            local _item = checkbox_menu_item("Analyze Raw Mission for Bookmarks", training_settings, "analyze_raw_mission_on", nil, {"On", "Off"})
+            -- refresh the shared character/file cache on turning this on, same as the
+            -- Clear Bookmark Slot gate below -- otherwise Pattern Character stays stuck
+            -- on "none" until something else happens to trigger a scan first (2026-10-11
+            -- Peter: public users with only the hand-placed patterns/ken/ examples, no
+            -- private scan tool, would otherwise have no way to ever populate this list)
+            local _orig_left, _orig_right = _item.left, _item.right
+            _item.left = function(self)
+              _orig_left(self)
+              if training_settings.analyze_raw_mission_on then refresh_bookmark_clear_chars() end
+            end
+            _item.right = function(self)
+              _orig_right(self)
+              if training_settings.analyze_raw_mission_on then refresh_bookmark_clear_chars() end
+            end
+            return _item
+          end)(),
+          (function()
+            local _item = list_menu_item("Analyze Raw Mission Slot", training_settings, "current_analyze_raw_slot", mission_recording_slots_names)
+            _item.is_disabled = function()
+              return not training_settings.analyze_raw_mission_on
+            end
+            _item.indent = true
+            return _item
+          end)(),
+          (function()
+            local _item = list_menu_item("Scan Pattern for Character", training_settings, "scan_pattern_analyzer_mode", scan_pattern_analyzer_mode_names)
+            _item.is_disabled = function()
+              return not training_settings.analyze_raw_mission_on
+            end
+            _item.validate = function(self)
+              if run_scan_pattern_analyzer then run_scan_pattern_analyzer() end
+            end
+            _item.legend = function() return "LP: Run" end
+            _item.indent = true
+            return _item
+          end)(),
+          (function()
+            local _item = checkbox_menu_item("Generate Bookmark Savestates", training_settings, "generate_bookmark_savestates_on", nil, {"On", "Off"})
+            -- 2026-10-11 Peter: hidden until the resimulation path is sorted out -- round
+            -- timer freeze during resimulation is fixed, but it also spuriously triggers
+            -- pattern_defense_result's "HIT"/"THROWN" banner (root cause not yet found).
+            -- Revert to `return no_analyze_slot_selected()` once that's resolved.
+            _item.is_disabled = function()
+              return true
+            end
+            _item.validate = function(self)
+              if training_settings.generate_bookmark_savestates_on and generate_bookmark_savestates then
+                generate_bookmark_savestates()
+              end
+            end
+            _item.legend = function() return "LP: Generate" end
+            return _item
+          end)(),
+          (function()
+            -- Pattern Character (2026-10-11 Peter): picks which character's folder the
+            -- "Pattern (P2: ...)" list below browses. Switching is a cache lookup only
+            -- (bookmark_clear_file_cache, built by Scan Pattern / refresh_bookmark_clear_chars),
+            -- no disk re-scan per switch.
+            local _item = list_menu_item("Pattern Character", pattern_browse_char_state, "char_index", bookmark_clear_char_names)
+            _item.is_disabled = function()
+              return not training_settings.analyze_raw_mission_on or #bookmark_clear_char_names <= 1
+            end
+            local _orig_left, _orig_right = _item.left, _item.right
+            _item.left = function(self)
+              _orig_left(self)
+              load_pattern_browse_files()
+            end
+            _item.right = function(self)
+              _orig_right(self)
+              load_pattern_browse_files()
+            end
+            _item.indent = true
+            return _item
+          end)(),
+          _replay_file_item,
+          pattern_replay_mode_item,
+          direct_play_item,
+          -- Clear Raw/Bookmark Slot items moved to the bottom, parent level (no indent,
+          -- per Peter 2026-10-11): they're standalone cleanup actions, not sub-options
+          -- tied to any one step above, so they read better grouped and un-nested.
+          (function()
+            local _item = list_menu_item("Clear Raw Slot", training_settings, "current_clear_mission_slot", mission_recording_slots_names)
             _item.last_frame_validated = 0
             _item.validate = function(self)
               if training_settings.current_clear_mission_slot ~= 1 then
@@ -266,7 +429,7 @@ function create_main_menu()
               if _selected and self.last_frame_validated > 0 then
                 if frame_number < self.last_frame_validated then self.last_frame_validated = 0 end
                 if frame_number - self.last_frame_validated < 5 then
-                  gui.text(_x, _y, "< Clear Slot : "..mission_recording_slots_names[training_settings.current_clear_mission_slot].." >", 0xFFFF00FF, text_default_border_color)
+                  gui.text(_x, _y, "< Clear Raw Slot : "..mission_recording_slots_names[training_settings.current_clear_mission_slot].." >", 0xFFFF00FF, text_default_border_color)
                   return
                 end
               end
@@ -274,11 +437,107 @@ function create_main_menu()
             end
             return _item
           end)(),
-          button_menu_item("Clear All Mission Slots", clear_all_mission_slots),
-          button_menu_item("-- Replay Import: Scan --", scan_replay_files),
-          _replay_file_item,
-          pattern_replay_mode_item,
-          direct_play_item,
+          (function()
+            local _item = checkbox_menu_item("Clear All Raw Slots", training_settings, "clear_all_raw_slots_on", nil, {"On", "Off"})
+            _item.validate = function(self)
+              if training_settings.clear_all_raw_slots_on then
+                clear_all_mission_slots()
+              end
+            end
+            _item.legend = function() return "LP: Clear All" end
+            return _item
+          end)(),
+          -- Clear Bookmark Slot (2026-10-11 Peter): a gate checkbox + two sub-lists,
+          -- instead of one list tied to the Pattern Replay import scan -- that old design
+          -- always showed "none" unless "Scan Pattern for Character" had already run,
+          -- which is impossible once the raw mission that produced it has been cleared.
+          -- This scans replay_output_path directly so it works independently of any raw
+          -- mission slot or scan, for any character, at any time.
+          (function()
+            local _item = checkbox_menu_item("Clear Bookmark Slot", training_settings, "clear_bookmark_mode_on", nil, {"On", "Off"})
+            local _orig_left, _orig_right = _item.left, _item.right
+            _item.left = function(self)
+              _orig_left(self)
+              if training_settings.clear_bookmark_mode_on then refresh_bookmark_clear_chars() end
+            end
+            _item.right = function(self)
+              _orig_right(self)
+              if training_settings.clear_bookmark_mode_on then refresh_bookmark_clear_chars() end
+            end
+            return _item
+          end)(),
+          (function()
+            local _item = list_menu_item("Character", bookmark_clear_char_state, "char_index", bookmark_clear_char_names)
+            _item.is_disabled = function() return not training_settings.clear_bookmark_mode_on end
+            _item.indent = true
+            local _orig_left, _orig_right = _item.left, _item.right
+            _item.left = function(self)
+              _orig_left(self)
+              refresh_bookmark_clear_files()
+            end
+            _item.right = function(self)
+              _orig_right(self)
+              refresh_bookmark_clear_files()
+            end
+            return _item
+          end)(),
+          (function()
+            local _item = list_menu_item("Bookmark Slot", bookmark_clear_state, "file_index", bookmark_clear_names)
+            _item.is_disabled = function()
+              return not training_settings.clear_bookmark_mode_on
+                or bookmark_clear_char_names[bookmark_clear_char_state.char_index] == "none"
+            end
+            _item.indent = true
+            _item.last_frame_validated = 0
+            _item.validate = function(self)
+              if bookmark_clear_state.file_index ~= 1 then
+                clear_bookmark_pattern()
+                self.last_frame_validated = frame_number
+              end
+            end
+            _item.legend = function() return "LP: Validate" end
+            local _orig_draw = _item.draw
+            _item.draw = function(self, _x, _y, _selected)
+              if _selected and self.last_frame_validated > 0 then
+                if frame_number < self.last_frame_validated then self.last_frame_validated = 0 end
+                if frame_number - self.last_frame_validated < 5 then
+                  gui.text(_x, _y, "< Bookmark Slot : deleted >", 0xFFFF00FF, text_default_border_color)
+                  return
+                end
+              end
+              _orig_draw(self, _x, _y, _selected)
+            end
+            return _item
+          end)(),
+          (function()
+            local _item = checkbox_menu_item("Clear Chara All Bookmark Slot", training_settings, "clear_chara_all_bookmark_slot_on", nil, {"On", "Off"})
+            _item.is_disabled = function()
+              return not training_settings.clear_bookmark_mode_on
+                or bookmark_clear_char_names[bookmark_clear_char_state.char_index] == "none"
+            end
+            _item.indent = true
+            _item.validate = function(self)
+              if training_settings.clear_chara_all_bookmark_slot_on then
+                clear_chara_all_bookmark_patterns()
+              end
+            end
+            _item.legend = function() return "LP: Clear Chara All" end
+            return _item
+          end)(),
+          -- global, not scoped to the selected Character AND not gated behind the Clear
+          -- Bookmark Slot On/Off toggle -- mirrors Clear All Raw Slots exactly (always
+          -- visible, 2026-10-11 Peter: this deletes every character's bookmarks in one
+          -- shot, so it must stay visible even while Clear Bookmark Slot itself is Off)
+          (function()
+            local _item = checkbox_menu_item("Clear All Bookmark Slot", training_settings, "clear_all_bookmark_slot_on", nil, {"On", "Off"})
+            _item.validate = function(self)
+              if training_settings.clear_all_bookmark_slot_on then
+                clear_all_bookmark_patterns_global()
+              end
+            end
+            _item.legend = function() return "LP: Clear All" end
+            return _item
+          end)(),
         }
       },
       {
@@ -431,17 +690,30 @@ function create_main_menu()
         local _dy = _menu.top + 23 + (3 - 1) * menu_y_interval - 1
         local _c = text_disabled_color
         local _b = text_default_border_color
-        if training_settings.blocking_mode == 3 then
-          gui.text(_dx, _dy,      "Meaty/Oki: fails to block a hit", _c, _b)
-          gui.text(_dx, _dy + 10, "landed before dummy is idle 20+", _c, _b)
-          gui.text(_dx, _dy + 20, "frames. Practice wakeup meaties", _c, _b)
-          gui.text(_dx, _dy + 30, "and tick throws.", _c, _b)
-        elseif training_settings.blocking_mode == 5 then
-          gui.text(_dx, _dy,      "Combo Only: first N hits of each", _c, _b)
-          gui.text(_dx, _dy + 10, "fresh engagement always connect.", _c, _b)
-          gui.text(_dx, _dy + 20, "After that: Block mode always", _c, _b)
-          gui.text(_dx, _dy + 30, "blocks, Random mode 50/50 per hit.", _c, _b)
+        if training_settings.blocking_mode == 2 then
+          gui.text(_dx, _dy,      "Combo Only: lets the first hit", _c, _b)
+          gui.text(_dx, _dy + 10, "of each fresh engagement through", _c, _b)
+          gui.text(_dx, _dy + 20, "unblocked. True combos still land", _c, _b)
+          gui.text(_dx, _dy + 30, "(hitstun); gaps get blocked.", _c, _b)
+        elseif training_settings.blocking_mode == 4 then
+          gui.text(_dx, _dy,      "Frame Trap: first N hits of each", _c, _b)
+          gui.text(_dx, _dy + 10, "fresh engagement always connect,", _c, _b)
+          gui.text(_dx, _dy + 20, "gap or not. After that: Block", _c, _b)
+          gui.text(_dx, _dy + 30, "always blocks, Random is 50/50.", _c, _b)
         end
+      end
+
+      -- Missions tab: Pattern Character explanation in the right-side blank space,
+      -- only while the Pattern Character entry (index 11) is selected (2026-10-11 Peter)
+      if not _menu.is_main_menu_selected and _menu.main_menu_selected_index == 3 and _menu.sub_menu_selected_index == 11 then
+        local _dx = _menu.left + 160
+        local _dy = _menu.top + 23 + (11 - 1) * menu_y_interval - 1
+        local _c = text_disabled_color
+        local _b = text_default_border_color
+        gui.text(_dx, _dy,      "Pattern Character: picks which", _c, _b)
+        gui.text(_dx, _dy + 10, "folder the list below reads.", _c, _b)
+        gui.text(_dx, _dy + 20, "Only shows entries if your live", _c, _b)
+        gui.text(_dx, _dy + 30, "P2 char + SA match this pick.", _c, _b)
       end
 
       -- Display tab: color legends in the right-side blank space, only while the
@@ -485,8 +757,17 @@ function create_main_menu()
     end
   end
 
-  -- Gray out Replay Mission for Slot (3), Play Side (4), Replay Mission (5), Clear Mission Slot (6), Clear All Mission Slots (7) in Missions tab (3)
-  for _entry_index = 3, 7 do
+  -- Gray out everything below Record Raw Mission in Slot EXCEPT Clear Raw Slot (14) and
+  -- Clear All Raw Slots (15), which should stay usable even while armed to record: (3) Replay
+  -- Raw Mission for Slot, (4) Raw Mission Slot, (5) Play Side, (6) Replay Raw Mission,
+  -- (7) Analyze Raw Mission for Bookmarks, (8) Analyze Raw Mission Slot, (9) Scan Pattern
+  -- for Character, (10) Generate Bookmark Savestates, (11) Pattern, (12) Pattern Replay Mode,
+  -- (13) Pattern Replay, (16) Clear Bookmark Slot, (17) Character, (18) Bookmark Slot,
+  -- (19) Clear Chara All Bookmark Slot, (20) Clear All Bookmark Slot, in Missions tab (3)
+  -- (2026-10-11: Clear Raw/Bookmark Slot items moved to the bottom of the entries list, and
+  -- Clear Bookmark Slot gained "Character"/"Clear Chara All Bookmark Slot" sub-items --
+  -- indices shifted accordingly. Clear Raw Slot/All Raw Slots stay exempt by their NEW position.)
+  for _, _entry_index in ipairs({3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 16, 17, 18, 19, 20}) do
     local _entry = main_menu.content[3].entries[_entry_index]
     if _entry then
       local _orig = _entry.is_disabled

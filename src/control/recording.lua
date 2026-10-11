@@ -344,6 +344,11 @@ for _i = 1, #recording_slots do
   table.insert(recording_slots_names, "slot ".._i)
 end
 
+recording_slots_names_with_none = {"none"}
+for _i = 1, #recording_slots do
+  table.insert(recording_slots_names_with_none, "slot ".._i)
+end
+
 -- swap inputs
 function swap_inputs(_out_input_table)
   local function swap(_input)
@@ -365,8 +370,11 @@ function swap_inputs(_out_input_table)
 end
 
 function clear_slot()
-  recording_slots[training_settings.current_recording_slot] = make_recording_slot()
+  local _slot_index = training_settings.current_clear_recording_slot - 1
+  if _slot_index < 1 then return end
+  recording_slots[_slot_index] = make_recording_slot()
   save_training_data()
+  training_settings.current_clear_recording_slot = 1
 end
 
 function clear_all_slots()

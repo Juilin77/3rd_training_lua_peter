@@ -11,7 +11,7 @@ end
 mission_play_side_names = { "1P", "2P" }
 
 function make_mission_slot()
-  return { name = "none", inputs = {p1 = {}, p2 = {}}, savestate_path = nil }
+  return { name = "none", inputs = {p1 = {}, p2 = {}}, state = {p1 = {}, p2 = {}}, savestate_path = nil }
 end
 
 mission_slots = {}
@@ -39,6 +39,7 @@ function get_mission_slot_paths(_slot_index)
   return {
     meta   = string.format("%smission_slot_%d.json",        saved_missions_path, _slot_index),
     inputs = string.format("%smission_slot_%d.inputs.json", saved_missions_path, _slot_index),
+    state  = string.format("%smission_slot_%d.state.json",  saved_missions_path, _slot_index),
     fs     = string.format("%smission_slot_%d.fs",          saved_missions_path, _slot_index),
   }
 end
@@ -55,6 +56,9 @@ function save_mission_to_file(_slot_index)
     print(string.format("Error: Failed to save mission inputs to \"%s\"", _paths.inputs))
   else
     print(string.format("Saved mission slot %d", _slot_index))
+  end
+  if not write_object_to_json_file(_slot.state, _paths.state) then
+    print(string.format("Error: Failed to save mission state to \"%s\"", _paths.state))
   end
 end
 
@@ -76,6 +80,7 @@ function delete_mission_slot_files(_slot_index)
   local _paths = get_mission_slot_paths(_slot_index)
   os.remove(_paths.meta)
   os.remove(_paths.inputs)
+  os.remove(_paths.state)
   os.remove(_paths.fs)
 end
 
@@ -156,6 +161,27 @@ function update_mission_recording(_input)
     end
     local _side = _player_obj.id == 1 and "p1" or "p2"
     table.insert(mission_recording_inputs[_side], _frame)
+    table.insert(mission_recording_state[_side], {
+      thr = _player_obj.is_being_thrown,
+      sfd = _player_obj.superfreeze_decount,
+      atk = _player_obj.is_attacking,
+      frz = _player_obj.remaining_freeze_frames,
+      hit = _player_obj.has_just_been_hit,
+      act = _player_obj.action,
+      x = _player_obj.pos_x,
+      y = _player_obj.pos_y,
+      char = _player_obj.char_str,
+      life = _player_obj.life,
+      mg = _player_obj.meter_gauge,
+      mc = _player_obj.meter_count,
+      face = _player_obj.flip_x,
+      sa = _player_obj.selected_sa,
+      blk = _player_obj.has_just_blocked,
+      par = _player_obj.has_just_parried,
+      pst = _player_obj.posture,
+      wkup = _player_obj.is_wakingup,
+      cfw = _player_obj.can_fast_wakeup,
+    })
   end
 end
 
@@ -163,6 +189,7 @@ function hotkey5()
   if not mission_recording_active then
     mission_recording_active = true
     mission_recording_inputs = {p1 = {}, p2 = {}}
+    mission_recording_state = {p1 = {}, p2 = {}}
     mission_recording_start_frame = frame_number
     local _slot_index = training_settings.current_mission_slot
     mission_recording_savestate_path = string.format("%smission_slot_%d.fs", saved_missions_path, _slot_index)
@@ -170,10 +197,11 @@ function hotkey5()
   else
     mission_recording_active = false
     local _end_frame = frame_number
-    local _name = string.format("mission_%d-%d", mission_recording_start_frame, _end_frame)
+    local _name = string.format("mission_raw_%s_%s_%d-%d", player_objects[1].char_str, player_objects[2].char_str, mission_recording_start_frame, _end_frame)
     local _slot_index = training_settings.current_mission_slot
     mission_slots[_slot_index].name = _name
     mission_slots[_slot_index].inputs = mission_recording_inputs
+    mission_slots[_slot_index].state = mission_recording_state
     mission_slots[_slot_index].savestate_path = mission_recording_savestate_path
     save_mission_to_file(_slot_index)
     refresh_mission_recording_slots_names()
@@ -209,7 +237,8 @@ function mission_hud_draw()
     -- closing it again; an external/native savestate load never touches it
     -- either way. Without this line the setting looks "on" in the menu but
     -- silently shows nothing here, which reads as broken rather than paused.
-    gui.text(306, 8, "Replay OFF (reopen menu to re-arm)", 0xFFAA00FF, text_default_border_color)
+    local _text = "Replay OFF (reopen menu to re-arm)"
+    gui.text(screen_width - get_text_width(_text) - 2, 8, _text, 0xFFAA00FF, text_default_border_color)
   end
 end
 

@@ -1,10 +1,12 @@
 -- src/control/tech_throw.lua
 -- Dummy tech throw control.
 
-function update_tech_throws(_input, _attacker, _defender, _mode)
+-- 2026-10-11 Peter: simplified from a 3-way Never/Always/Random mode to a plain on/off
+-- toggle -- dropped the Random variant, the dummy now either always techs or never does.
+function update_tech_throws(_input, _attacker, _defender, _on)
   local _debug = false
 
-  if not is_in_match or _mode == 1 then
+  if not is_in_match or not _on then
     _defender.throw.listening = false
     if _debug and _attacker.previous_throw_countdown > 0 then
       print(string.format("%d - %s stopped listening for throws", frame_number, _defender.prefix))
@@ -39,11 +41,8 @@ function update_tech_throws(_input, _attacker, _defender, _mode)
       if _debug then
         print(string.format("%d - %s teching throw", frame_number, _defender.prefix))
       end
-      local _r = math.random()
-      if _mode ~= 3 or _r > 0.5 then
-        _input[_defender.prefix..' Weak Punch'] = true
-        _input[_defender.prefix..' Weak Kick'] = true
-      end
+      _input[_defender.prefix..' Weak Punch'] = true
+      _input[_defender.prefix..' Weak Kick'] = true
     end
   end
 end

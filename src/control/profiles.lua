@@ -5,13 +5,13 @@ local dummy_settings_keys = {
   "pose",
   "blocking_style",
   "blocking_mode",
-  "combo_only_hit_count",
-  "combo_only_after_mode",
+  "frame_trap_hit_count",
+  "frame_trap_after_mode",
   "red_parry_hit_count",
-  "tech_throws_mode",
+  "tech_throws_on",
   "counter_attack_stick",
   "counter_attack_button",
-  "fast_wakeup_mode",
+  "fast_wakeup_on",
 }
 
 local rules_settings_keys = {
