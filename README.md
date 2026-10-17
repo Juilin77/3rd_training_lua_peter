@@ -75,6 +75,13 @@ A: Check video settings, you must use "Basic" blitter option with no scanlines i
 A: Install prerequires from [here](https://github.com/TASVideos/BizHawk-Prereqs/releases/latest/)
 
 ## Changelog
+### v0.30 (10/17/2026)
+- [Improvement] Frame Table's Start/Total/Advantage are now computed from the attack or parry's own startup instead of the display timeline, so a jump's prep and airtime no longer inflate Start, matching Display Frame Advantage (contribution of @Juilin77)
+- [Fix] Frame Table's dimmed residual only shows when the same action spills past the 90-frame width, instead of every new action, so repeated reps start on a clean row (contribution of @Juilin77)
+- [Fix] Frame Table now correctly shows startup/active for a counterattack or reversal that happens immediately without passing through neutral (contribution of @Juilin77)
+- [Fix] Frame Table now correctly shows hitstun instead of staying on startup/recovery when both players trade hits at the same time (contribution of @Juilin77)
+- [Fix] Ping Delay's first real input no longer stretches to extra output frames when the buffer is first created (contribution of @Juilin77)
+
 ### v0.29 (10/11/2026)
 - [Feature] Add Bookmark Scan tools to the Missions tab: scan a recorded Raw Mission for attack patterns, browse results by character, and clear them individually or in bulk (contribution of @Juilin77)
 - [Feature] Include 3 curated Ken SA3/throw bookmark patterns in patterns/ken/ as starting examples for Pattern Replay (contribution of @Juilin77)
