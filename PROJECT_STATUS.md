@@ -8,8 +8,14 @@ history.
 ## Last verified
 2026-10-17
 
-## Version / branch / HEAD
-v0.30, branch `master`, HEAD `dbd54d7`
+## Version / branch
+v0.30, branch `master`
+
+## verified_code_commit
+`dbd54d7` — the code state the "Completed since last update" and "Verification" sections
+below actually describe. Updating this file is itself a commit after this one, so don't treat
+this file's own latest commit as equal to `verified_code_commit`; run `git log -1 --
+PROJECT_STATUS.md` for that (`status_source_commit`).
 
 ## Completed since last update
 - Frame Table's Start/Total/Advantage are now computed from the attack or parry's own startup
