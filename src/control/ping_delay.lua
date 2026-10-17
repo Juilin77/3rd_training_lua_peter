@@ -7,7 +7,18 @@ ping_delay_names = {"Off", "16.7ms (1f)", "33.3ms (2f)", "50.0ms (3f)", "66.7ms 
 function update_ping_delay(_input, _player)
   local _ping_frames = ping_delay_frames[training_settings.ping_delay]
   if is_in_match and not is_menu_open and _ping_frames and _ping_frames > 0 then
-    ping_delay_buffer = ping_delay_buffer or {}
+    if not ping_delay_buffer then
+      ping_delay_buffer = {}
+      local _neutral = {}
+      for _key, _val in pairs(_input) do
+        if _key:sub(1, 2) == _player.prefix then
+          _neutral[_key] = false
+        end
+      end
+      for _i = 1, _ping_frames do
+        table.insert(ping_delay_buffer, _neutral)
+      end
+    end
     local _snapshot = {}
     for _key, _val in pairs(_input) do
       if _key:sub(1, 2) == _player.prefix then
