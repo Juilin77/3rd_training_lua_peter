@@ -11,6 +11,7 @@ frame_table_colors = {
   blocked    = 0x00E5FFFF, -- blockstun (attack was blocked, not parried)
   parry      = 0xCC33FFFF, -- parry validity window (input-acceptance opportunity), not just a successful parry
   invincible = 0xFFFFFFFF, -- invincible
+  superfreeze = 0x12161FFF, -- shared Super Art activation freeze/flash, before any hit/block/parry has resolved for this player
   -- SA Only: all 3 validity-window types share one color — some SAs require
   -- alternating forward/down parries mid-sequence, and distinct per-type
   -- colors there just read as visual noise rather than useful information
@@ -22,8 +23,8 @@ frame_table_colors = {
 -- each player has its own independent capture: p1 and p2 arm/fill/freeze separately,
 -- so a long sequence on one side doesn't restart the other side's display
 frame_table_players = {
-  p1 = { buffer = {}, run_lengths = {}, armed = false, count = 0, start_frame = 0, prev_buffer = nil, prev_run_lengths = nil, prev_start_frame = nil },
-  p2 = { buffer = {}, run_lengths = {}, armed = false, count = 0, start_frame = 0, prev_buffer = nil, prev_run_lengths = nil, prev_start_frame = nil },
+  p1 = { buffer = {}, run_lengths = {}, armed = false, count = 0, start_frame = 0, prev_buffer = nil, prev_run_lengths = nil, prev_start_frame = nil, has_real_content = false },
+  p2 = { buffer = {}, run_lengths = {}, armed = false, count = 0, start_frame = 0, prev_buffer = nil, prev_run_lengths = nil, prev_start_frame = nil, has_real_content = false },
 }
 frame_table_stats = { p1 = nil, p2 = nil }
 frame_table_has_been_active = { p1 = false, p2 = false }
@@ -78,10 +79,26 @@ frame_table_sa_episode_frozen = false
 -- (e.g. a combo's "active"/"hitstun" run lasting longer than FRAME_TABLE_LENGTH)
 frame_table_run_length = { p1 = 0, p2 = 0 }
 frame_table_prev_state = { p1 = nil, p2 = nil }
-frame_table_pending_adv = { p1 = nil, p2 = nil }
--- each entry: { attacker_neutral_abs = N, expires = frame_N } or nil
-frame_table_pending_stats = { p1 = nil, p2 = nil }
--- each entry: { startup=N, attacker_start_frame=N, active_end_abs=N, defender_key="p1"/"p2", defender_start_frame=N, expires=N } or nil
+-- rising-edge tracker for the parry-triggered episode case below (parry's
+-- validity window is a multi-frame level condition, not a single-frame pulse
+-- like has_just_attacked, so episode creation needs its own edge detector
+-- instead of reacting every frame of the window)
+frame_table_prev_parry_state = { p1 = false, p2 = false }
+-- Step 2 (2026-10-17): event-driven per-player Start/Total/Advantage
+-- tracking, fully decoupled from the display buffer's (frame_table_players)
+-- own arm/re-arm lifecycle. Episode start is strictly the attack/parry's own
+-- rising edge (has_just_attacked below / "parry" state), matching Display
+-- Frame Advantage's (frame_advantage.lua move_advantage) existing
+-- definition — NOT the display buffer's arm point, which can predate this by
+-- an entire jump when a capture was armed earlier by movement and only later
+-- threw a hit. Reviewed with 9527 (`frame-table-episode-design` task,
+-- 2026-10-17); Peter confirmed this is the semantics he already relies on
+-- via Display Frame Advantage, so Frame Table's numbers now match it.
+-- each entry while open: { defender_key, start_frame, creation_deadline,
+-- active_start_frame, active_last_frame, active_closed, attacker_deadline,
+-- attacker_neutral_frame, attacker_timed_out, defender_neutral_frame,
+-- defender_timed_out } or nil
+frame_table_episode = { p1 = nil, p2 = nil }
 frame_table_prev_animation = { p1 = nil, p2 = nil }
 frame_table_prev_action = { p1 = nil, p2 = nil }
 frame_table_just_cancelled = { p1 = false, p2 = false }
@@ -123,15 +140,6 @@ local function frame_table_dim_color(_color)
   local _g = math.floor(_color / 65536) % 256
   local _r = math.floor(_color / 16777216) % 256
   return math.floor(_r / 2) * 16777216 + math.floor(_g / 2) * 65536 + math.floor(_b / 2) * 256 + _a
-end
-
-local function find_first(_buffer, _value, _from)
-  for i = _from, #_buffer do
-    if _buffer[i] == _value then
-      return i
-    end
-  end
-  return nil
 end
 
 -- same "move just started" trigger as frame_advantage.lua, used to arm the
@@ -284,7 +292,7 @@ function frame_table_classify(_player_obj, _player_key)
     or (player_objects[2] and player_objects[2].superfreeze_decount > 0)
   if _in_superfreeze and _player_obj.remaining_freeze_frames > 0
     and not frame_table_has_been_active[_player_key] and not frame_table_in_hitstun[_player_key] then
-    return "neutral"
+    return "superfreeze"
   end
 
   -- blockstun is its own distinct outcome (didn't parry, but chip-blocked rather
@@ -300,6 +308,25 @@ function frame_table_classify(_player_obj, _player_key)
   -- (also covers hitstop freeze frames right after being hit, before has_just_been_hit/is_wakingup fire)
   local _is_hitstun_event = _player_obj.has_just_been_hit or _player_obj.is_being_thrown or _player_obj.is_wakingup or _player_obj.is_fast_wakingup
     or (_player_obj.remaining_freeze_frames > 0 and not frame_table_has_been_active[_player_key])
+
+  -- a genuine new attack unambiguously ends any lingering hitstun
+  -- classification — frame_table_in_hitstun otherwise has no reset hook for
+  -- "recovered and immediately acted" (a reversal, which by definition skips
+  -- the idle frame that would normally clear it), so without this it stays
+  -- stuck true through the whole reversal's startup/active, masking them as
+  -- hitstun (yellow) instead (found via Peter's reversal test, 2026-10-17).
+  -- Uses has_just_attacked (the single-frame commit pulse), NOT is_attacking
+  -- (2026-10-17, corrected after Peter's trade retest still showed green
+  -- instead of yellow) — is_attacking stays true for several frames after
+  -- also being hit in a trade (the game doesn't interrupt it instantly), so
+  -- gating on it wiped the hitstun stickiness on later frames even once the
+  -- concurrent-hit frame itself had already passed. has_just_attacked only
+  -- pulses on this player's OWN new attack commit, which can't coincide
+  -- with mid-hitstun frames of an attack they already threw earlier.
+  if has_just_attacked(_player_obj) then
+    frame_table_in_hitstun[_player_key] = false
+  end
+
   if _is_hitstun_event or frame_table_in_hitstun[_player_key] then
     frame_table_in_hitstun[_player_key] = true
     return "hitstun"
@@ -344,83 +371,16 @@ function frame_table_classify(_player_obj, _player_key)
   return "startup"
 end
 
--- update Start/Total/Adv stats using the just-finished capture of _attacker_key
--- (only if that capture actually contains an attack; cross-references the other
--- player's independently-running buffer via absolute frame numbers)
-local function find_first_active(_buffer, _from)
-  for i = _from, #_buffer do
-    if _buffer[i] == "active" or _buffer[i] == "projectile" then
-      return i
-    end
-  end
-  return nil
-end
-
-function frame_table_update_stats(_attacker_key)
-  local _attacker = frame_table_players[_attacker_key]
-  local _defender_key = (_attacker_key == "p1") and "p2" or "p1"
-  local _defender = frame_table_players[_defender_key]
-
-  local _active_start = find_first_active(_attacker.buffer, 1)
-  if not _active_start then
-    return -- this capture wasn't an attack, leave existing stats alone
-  end
-
-  local _active_end = _active_start
-  for i = _active_start, #_attacker.buffer do
-    if _attacker.buffer[i] == "active" or _attacker.buffer[i] == "projectile" then
-      _active_end = i
-    else
-      break
-    end
-  end
-
-  local _attacker_neutral_idx = find_first(_attacker.buffer, "neutral", _active_end + 1)
-  local _total = nil
-  local _advantage = nil
-
-  if _attacker_neutral_idx then
-    _total = _attacker_neutral_idx - 1
-
-    local _attacker_neutral_abs = _attacker.start_frame + _attacker_neutral_idx - 1
-    local _search_from_abs = _attacker.start_frame + _active_end
-    local _from_idx = _search_from_abs - _defender.start_frame + 1
-    if _from_idx < 1 then _from_idx = 1 end
-
-    local _defender_neutral_idx = find_first(_defender.buffer, "neutral", _from_idx)
-    if _defender_neutral_idx then
-      local _defender_neutral_abs = _defender.start_frame + _defender_neutral_idx - 1
-      _advantage = _defender_neutral_abs - _attacker_neutral_abs
-    else
-      frame_table_pending_adv[_attacker_key] = {
-        attacker_neutral_abs = _attacker_neutral_abs,
-        expires = frame_number + 90,
-      }
-    end
-  else
-    frame_table_pending_stats[_attacker_key] = {
-      startup              = _active_start - 1,
-      attacker_start_frame = _attacker.start_frame,
-      active_end_abs       = _attacker.start_frame + _active_end - 1,
-      defender_key         = _defender_key,
-      defender_start_frame = _defender.start_frame,
-      expires              = frame_number + 150,
-    }
-  end
-
-  frame_table_stats[_attacker_key] = {
-    startup   = _active_start - 1,
-    total     = _total,
-    advantage = _advantage,
-  }
-end
-
-local function frame_table_arm(_key, _preserve_as_dimmed, _clear_stats)
+local function frame_table_arm(_key, _preserve_as_dimmed)
   local _p = frame_table_players[_key]
-  -- if this is a continuation re-arm (the previous capture filled the whole
-  -- table while the action was still going), keep it as a dimmed overlay for
-  -- the columns the new capture hasn't reached yet (1.17). a fresh-action
-  -- re-arm discards it, since the dimmed data wouldn't relate to the new action.
+  -- keep whatever the previous capture recorded as a dimmed overlay for the
+  -- columns the new capture hasn't reached yet (1.17). Callers only ever pass
+  -- true for a genuine continuation (the same still-ongoing action spilling
+  -- past the 90-frame cap, where count is always exactly FRAME_TABLE_LENGTH
+  -- at this point) — a fresh/unrelated trigger always passes false and wipes
+  -- the row clean instead (2026-10-17, reverted per Peter's explicit request:
+  -- he repeats the same action over and over and wants each fresh rep to
+  -- start on a completely clean row, not layered over the last one).
   if _preserve_as_dimmed and _p.count >= FRAME_TABLE_LENGTH then
     _p.prev_buffer = _p.buffer
     _p.prev_run_lengths = _p.run_lengths
@@ -432,14 +392,14 @@ local function frame_table_arm(_key, _preserve_as_dimmed, _clear_stats)
   end
   _p.armed = true
   _p.count = 0
+  _p.has_real_content = false
   _p.buffer = {}
   _p.run_lengths = {}
   _p.start_frame = frame_number
-  if _clear_stats ~= false then
-    frame_table_stats[_key] = nil
-    frame_table_pending_adv[_key] = nil
-    frame_table_pending_stats[_key] = nil
-  end
+  -- frame_table_stats is no longer touched here (Step 2, 2026-10-17) — it's
+  -- owned exclusively by the episode-trigger loop below, which clears it on
+  -- its own has_animation_just_changed check, independent of when the
+  -- display buffer itself gets (re-)armed
 end
 
 function frame_table_update(_player1_obj, _player2_obj)
@@ -460,6 +420,20 @@ function frame_table_update(_player1_obj, _player2_obj)
     end
     frame_table_prev_animation[_key] = _objs[_key].animation
     frame_table_prev_action[_key] = _objs[_key].action
+  end
+
+  -- pre-classify own_trigger fix (2026-10-17) — has_just_attacked is a raw
+  -- player-object flag available before classify() runs, so updating
+  -- own_trigger here (instead of only later in this function, after _states
+  -- is already computed) eliminates the 1-frame classify lag that otherwise
+  -- shows on a player's very first attack since this flag was last false
+  -- (found via Peter's "first HP after entering a match" test). The
+  -- parry-rising-edge case below still needs classify()'s own output and
+  -- keeps that 1-frame lag — it's a much rarer, lower-stakes path.
+  for _, _key in ipairs({ "p1", "p2" }) do
+    if has_just_attacked(_objs[_key]) then
+      frame_table_own_trigger[_key] = true
+    end
   end
 
   local _states = {
@@ -502,11 +476,13 @@ function frame_table_update(_player1_obj, _player2_obj)
     for _, _key in ipairs({ "p1", "p2" }) do
       local _p = frame_table_players[_key]
       if _just_moved[_key] and _p.armed and frame_table_armed_by_movement[_key] then
-        frame_table_arm(_key, false, false)
+        -- a new movement trigger overriding a stray blip is a fresh/unrelated
+        -- start, not a continuation — never dimmed
+        frame_table_arm(_key, false)
         frame_table_own_trigger[_key] = true
         local _other_key = (_key == "p1") and "p2" or "p1"
         if not frame_table_players[_other_key].armed then
-          frame_table_arm(_other_key, false, false)
+          frame_table_arm(_other_key, false)
           frame_table_own_trigger[_other_key] = false
           frame_table_armed_by_movement[_other_key] = false
         end
@@ -526,57 +502,125 @@ function frame_table_update(_player1_obj, _player2_obj)
     frame_table_prev_state[_key] = _state
   end
 
-  -- deferred total/adv: when attacker animation lasts >90F (e.g. Ken LP+LK, command grabs),
-  -- keep watching until attacker goes neutral or the search window expires
+  -- Step 2: event-driven Start/Total/Advantage (see frame_table_episode
+  -- declaration above for full rationale). A new attack/parry only starts a
+  -- fresh episode when this key has no open episode already — a cancel into
+  -- a second move before the first one's Total/Advantage resolved does NOT
+  -- restart the origin, matching both the legacy buffer-scan behavior and
+  -- move_advantage's own "only arm when not already armed" pattern (a true
+  -- cancel never actually passes through "neutral", so the neutral search
+  -- below naturally keeps waiting through the whole chain regardless).
+  -- frame_table_stats is only blanked when the trigger is ALSO a genuinely
+  -- new animation, so mashing the same move doesn't flicker the display
+  -- between reps.
+  local _attack_trigger_this_frame = { p1 = false, p2 = false }
   for _, _key in ipairs({ "p1", "p2" }) do
-    local _ps = frame_table_pending_stats[_key]
-    if _ps then
-      if frame_number > _ps.expires then
-        frame_table_pending_stats[_key] = nil
-      elseif _states[_key] == "neutral" then
-        local _total = frame_number - _ps.attacker_start_frame
-        local _attacker_neutral_abs = frame_number
+    local _obj = _objs[_key]
+    local _state = _states[_key]
+    local _parry_rising_edge = _state == "parry" and not frame_table_prev_parry_state[_key]
+    local _attack_trigger = _parry_rising_edge or has_just_attacked(_obj)
+    _attack_trigger_this_frame[_key] = _attack_trigger
 
-        local _defender = frame_table_players[_ps.defender_key]
-        local _from_idx = _ps.active_end_abs - _ps.defender_start_frame + 1
-        if _from_idx < 1 then _from_idx = 1 end
+    -- 1.27 fix: a player who was passively armed (the OTHER player's action
+    -- started this capture) and then throws their OWN attack/parry while
+    -- still mid-capture never gets a re-arm (the main arm loop below only
+    -- runs when not already armed), so frame_table_own_trigger never flips
+    -- true for them — classify()'s "passively-armed, nothing classifiable
+    -- yet" fallback then swallows their own startup as "neutral" instead of
+    -- "startup" (found via Peter's dummy counter-attack test, 2026-10-17).
+    -- Checked independently of arm state, same as the episode trigger below.
+    -- _attack_trigger_this_frame is also handed to the main arm loop below,
+    -- so a genuinely simultaneous mutual trade (both players attacking on
+    -- the exact same frame) doesn't let P1's "arm P2 passively" branch stomp
+    -- this back to false for a P2 that is ALSO attacking this same frame
+    -- (found via Peter's simultaneous-trade test, 2026-10-17).
+    if _attack_trigger then
+      frame_table_own_trigger[_key] = true
+    end
 
-        local _defender_neutral_idx = find_first(_defender.buffer, "neutral", _from_idx)
-        local _advantage = nil
-        if _defender_neutral_idx then
-          local _defender_neutral_abs = _ps.defender_start_frame + _defender_neutral_idx - 1
-          _advantage = _defender_neutral_abs - _attacker_neutral_abs
-        else
-          frame_table_pending_adv[_key] = {
-            attacker_neutral_abs = _attacker_neutral_abs,
-            expires = frame_number + 90,
-          }
+    if not frame_table_episode[_key] then
+      if _attack_trigger then
+        if _obj.has_animation_just_changed then
+          frame_table_stats[_key] = nil
         end
-
-        if frame_table_stats[_key] then
-          frame_table_stats[_key].total     = _total
-          frame_table_stats[_key].advantage = _advantage
-        end
-        frame_table_pending_stats[_key] = nil
+        frame_table_episode[_key] = {
+          defender_key = (_key == "p1") and "p2" or "p1",
+          start_frame = frame_number,
+          -- creation-time safety valve, independent of active_closed — a
+          -- pure parry (no counter-attack) or any malformed/no-hitbox trigger
+          -- never produces a single active/projectile frame, so active_closed
+          -- would otherwise never become true and this slot would stay
+          -- permanently occupied, locking out every later attack/parry for
+          -- this key (found via 9527 golden-case trace, frame-table-episode-verify)
+          creation_deadline = frame_number + 150,
+          active_start_frame = nil,
+          active_last_frame = nil,
+          active_closed = false,
+        }
       end
     end
+    frame_table_prev_parry_state[_key] = (_state == "parry")
   end
 
-  -- deferred advantage: when buffer filled before defender reached neutral (e.g. throws),
-  -- keep watching until defender goes neutral or the search window expires
   for _, _key in ipairs({ "p1", "p2" }) do
-    local _pending = frame_table_pending_adv[_key]
-    if _pending then
-      if frame_number > _pending.expires then
-        frame_table_pending_adv[_key] = nil
-      else
-        local _other_key = (_key == "p1") and "p2" or "p1"
-        if _states[_other_key] == "neutral" then
-          local _advantage = frame_number - _pending.attacker_neutral_abs
-          if frame_table_stats[_key] then
-            frame_table_stats[_key].advantage = _advantage
+    local _episode = frame_table_episode[_key]
+    if _episode then
+      local _state = _states[_key]
+      local _defender_state = _states[_episode.defender_key]
+
+      -- only the first contiguous active/projectile run counts (matches the
+      -- legacy buffer scan's break-on-first-gap semantics) — a later active
+      -- run from a cancelled-into move is never re-opened
+      if not _episode.active_closed then
+        if _state == "active" or _state == "projectile" then
+          if not _episode.active_start_frame then
+            _episode.active_start_frame = frame_number
+            frame_table_stats[_key] = { startup = frame_number - _episode.start_frame, total = nil, advantage = nil }
           end
-          frame_table_pending_adv[_key] = nil
+          _episode.active_last_frame = frame_number
+        elseif _episode.active_start_frame then
+          _episode.active_closed = true
+          _episode.attacker_deadline = frame_number + 150
+        elseif frame_number > _episode.creation_deadline then
+          -- never produced a single active/projectile frame (pure parry with
+          -- no counter, or a malformed trigger) — this was never going to
+          -- have Start/Total/Advantage anyway (matches legacy's "not an
+          -- attack, leave existing stats alone"); just free the slot
+          frame_table_episode[_key] = nil
+        end
+      end
+
+      if _episode.active_closed then
+        -- attacker and defender neutral are searched independently and in
+        -- parallel from the same point (right after active closes), same as
+        -- the legacy absolute-frame search window — this allows a negative
+        -- advantage (defender recovers before attacker) to resolve correctly
+        if not _episode.attacker_neutral_frame and not _episode.attacker_timed_out then
+          if _state == "neutral" then
+            _episode.attacker_neutral_frame = frame_number
+            frame_table_stats[_key].total = frame_number - _episode.start_frame
+            if _episode.defender_neutral_frame then
+              frame_table_stats[_key].advantage = _episode.defender_neutral_frame - _episode.attacker_neutral_frame
+            end
+          elseif frame_number > _episode.attacker_deadline then
+            _episode.attacker_timed_out = true -- total stays nil, matches legacy's silent pending_stats drop
+          end
+        end
+
+        if not _episode.defender_neutral_frame and not _episode.defender_timed_out then
+          if _defender_state == "neutral" then
+            _episode.defender_neutral_frame = frame_number
+            if _episode.attacker_neutral_frame then
+              frame_table_stats[_key].advantage = frame_number - _episode.attacker_neutral_frame
+            end
+          elseif _episode.attacker_neutral_frame and frame_number > _episode.attacker_neutral_frame + 90 then
+            _episode.defender_timed_out = true -- advantage stays nil, matches legacy's silent pending_adv drop
+          end
+        end
+
+        if _episode.attacker_timed_out
+          or (_episode.attacker_neutral_frame and (_episode.defender_neutral_frame or _episode.defender_timed_out)) then
+          frame_table_episode[_key] = nil
         end
       end
     end
@@ -604,10 +648,10 @@ function frame_table_update(_player1_obj, _player2_obj)
       if frame_table_prev_superfreeze_strip[_key] > 0 and _freeze_now == 0 then
         frame_table_sa_episode_active = true
         frame_table_sa_episode_frozen = false
-        frame_table_arm(_key, false, false)
+        frame_table_arm(_key, false)
         frame_table_own_trigger[_key] = true
         local _other_key = (_key == "p1") and "p2" or "p1"
-        frame_table_arm(_other_key, false, false)
+        frame_table_arm(_other_key, false)
         frame_table_own_trigger[_other_key] = false
       end
       frame_table_prev_superfreeze_strip[_key] = _freeze_now
@@ -649,12 +693,7 @@ function frame_table_update(_player1_obj, _player2_obj)
       else
         _fresh_trigger = _attack_fresh_trigger or _just_moved[_key]
       end
-      local _continuation_trigger = _state == "startup" or _state == "active" or _state == "projectile" or _state == "hitstun"
-      -- a true continuation means the just-frozen buffer's last slot was already
-      -- in this same state (the action carried straight through frame 90);
-      -- otherwise this is a brand-new action (e.g. a jump starting right after
-      -- an unrelated capture froze) and shouldn't inherit its dimmed overlay
-      local _is_true_continuation = _continuation_trigger and _p.buffer[FRAME_TABLE_LENGTH] == _state
+      local _continuation_trigger = _state ~= "neutral"
 
       if training_settings.frame_table_sa_only then
         -- gate continuation on still being within the current SA episode (see
@@ -664,14 +703,17 @@ function frame_table_update(_player1_obj, _player2_obj)
         -- also gate on not being frozen from a failure — once a miss lands,
         -- stop re-arming entirely until the next SA's rising edge clears it
         _continuation_trigger = frame_table_sa_episode_active and not frame_table_sa_episode_frozen
-        -- same episode-based gating for the dimmed-overlay decision: a long SA
-        -- crossing the 90-frame boundary must keep its previous capture visible
-        -- even if the buffer's last slot doesn't literally match the current state
-        _is_true_continuation = _continuation_trigger
       end
 
       if _fresh_trigger or _continuation_trigger then
-        frame_table_arm(_key, _is_true_continuation and not _fresh_trigger, _fresh_trigger and _objs[_key].has_animation_just_changed)
+        -- only a TRUE continuation (the same still-ongoing action spilling
+        -- past the 90-frame cap) keeps a dimmed overlay — it exists purely to
+        -- help review a combo that outgrew the display width, not to show
+        -- the previous, unrelated rep (2026-10-17, reverted from the earlier
+        -- "preserve on every re-arm" version per Peter's explicit request —
+        -- he repeats the same action over and over and wants each fresh rep
+        -- to start on a completely clean row, not layered over the last one)
+        frame_table_arm(_key, _continuation_trigger and not _fresh_trigger)
         -- only a pure movement trigger (no attack/parry involved) marks this
         -- capture as movement-owned — lets a later movement trigger force a
         -- fresh re-arm over it without ever doing that to an attack capture
@@ -681,8 +723,16 @@ function frame_table_update(_player1_obj, _player2_obj)
           frame_table_own_trigger[_key] = true
           local _other_key = (_key == "p1") and "p2" or "p1"
           if not frame_table_players[_other_key].armed then
-            frame_table_arm(_other_key, false, false)
-            frame_table_own_trigger[_other_key] = false
+            -- always a fresh/unrelated start for the passively-armed side too
+            frame_table_arm(_other_key, false)
+            -- don't stomp own_trigger back to false for a genuinely
+            -- simultaneous mutual trade — if _other_key is ALSO attacking/
+            -- parrying on this exact same frame, it already correctly set
+            -- its own own_trigger=true earlier this frame (see
+            -- _attack_trigger_this_frame above) and this isn't really a
+            -- passive arm for it at all (found via Peter's simultaneous-
+            -- trade test, 2026-10-17)
+            frame_table_own_trigger[_other_key] = _attack_trigger_this_frame[_other_key]
             frame_table_armed_by_movement[_other_key] = false
           end
         end
@@ -698,6 +748,9 @@ function frame_table_update(_player1_obj, _player2_obj)
       table.insert(_p.buffer, _state)
       table.insert(_p.run_lengths, frame_table_run_length[_key])
       _p.count = _p.count + 1
+      if _state ~= "neutral" then
+        _p.has_real_content = true
+      end
 
       -- retroactive cancel gap fix: the 1-frame gap between hitbox disappearing and
       -- animation updating shows as recovery; relabel only that single frame to startup
@@ -711,7 +764,6 @@ function frame_table_update(_player1_obj, _player2_obj)
 
       if _p.count >= FRAME_TABLE_LENGTH then
         _p.armed = false
-        frame_table_update_stats(_key)
         -- SA Only: hitting the natural 90-frame cap while both sides already
         -- happen to be idle (regardless of how long — this is a one-time check
         -- right at the cap, not a general shortcut for the 20-frame settle
@@ -726,6 +778,24 @@ function frame_table_update(_player1_obj, _player2_obj)
           frame_table_players.p1.armed = false
           frame_table_players.p2.armed = false
         end
+      -- Regular mode only: once this player's own capture has recorded real
+      -- content and then genuinely settles back to idle (same 20-frame
+      -- threshold SA Only already uses), freeze right there instead of
+      -- padding on with neutral frames all the way to the 90-frame cap. SA
+      -- Only keeps its own episode-based settle check above instead of this
+      -- one. Excludes movement-only captures (plain jumps/dashes, no attack
+      -- involved) — is_idle can read true while just floating in the air
+      -- with no input, so a jump sitting mid-air past the 20-frame threshold
+      -- would otherwise freeze and get wiped by the next unrelated action's
+      -- fresh arm (e.g. an air Super Art, whose charge/motion input often
+      -- takes longer than 20 frames to come out) instead of staying armed
+      -- through it. Movement-only captures never trigger Step 2's episode
+      -- (has_just_attacked never fires for them), so this is purely a
+      -- display-buffer freeze with no stats implication any more.
+      elseif not training_settings.frame_table_sa_only and _p.has_real_content
+        and not frame_table_armed_by_movement[_key]
+        and _objs[_key].is_idle and (_objs[_key].idle_time or 0) > 20 then
+        _p.armed = false
       end
     else
       frame_table_just_cancelled[_key] = false
@@ -734,8 +804,8 @@ function frame_table_update(_player1_obj, _player2_obj)
 end
 
 function frame_table_reset()
-  frame_table_players.p1 = { buffer = {}, run_lengths = {}, armed = false, count = 0, start_frame = 0, prev_buffer = nil, prev_run_lengths = nil, prev_start_frame = nil }
-  frame_table_players.p2 = { buffer = {}, run_lengths = {}, armed = false, count = 0, start_frame = 0, prev_buffer = nil, prev_run_lengths = nil, prev_start_frame = nil }
+  frame_table_players.p1 = { buffer = {}, run_lengths = {}, armed = false, count = 0, start_frame = 0, prev_buffer = nil, prev_run_lengths = nil, prev_start_frame = nil, has_real_content = false }
+  frame_table_players.p2 = { buffer = {}, run_lengths = {}, armed = false, count = 0, start_frame = 0, prev_buffer = nil, prev_run_lengths = nil, prev_start_frame = nil, has_real_content = false }
   frame_table_stats = { p1 = nil, p2 = nil }
   frame_table_has_been_active = { p1 = false, p2 = false }
   frame_table_in_hitstun = { p1 = false, p2 = false }
@@ -750,8 +820,8 @@ function frame_table_reset()
   frame_table_sa_episode_frozen = false
   frame_table_run_length = { p1 = 0, p2 = 0 }
   frame_table_prev_state = { p1 = nil, p2 = nil }
-  frame_table_pending_adv = { p1 = nil, p2 = nil }
-  frame_table_pending_stats = { p1 = nil, p2 = nil }
+  frame_table_prev_parry_state = { p1 = false, p2 = false }
+  frame_table_episode = { p1 = nil, p2 = nil }
   frame_table_prev_animation = { p1 = nil, p2 = nil }
   frame_table_prev_action = { p1 = nil, p2 = nil }
   frame_table_just_cancelled = { p1 = false, p2 = false }
@@ -1116,13 +1186,13 @@ function frame_table_draw_parry_history(_key, _x, _y)
   end
 end
 
-frame_table_legend_order = { "neutral", "startup", "movement", "active", "recovery", "hitstun", "blocked", "projectile", "parry", "invincible" }
+frame_table_legend_order = { "neutral", "startup", "movement", "active", "recovery", "hitstun", "blocked", "projectile", "parry", "invincible", "superfreeze" }
 -- only one entry needed here even though classify() still tracks 3 distinct
 -- parry_forward/down/air states internally — they all share one color now.
 -- startup/active/recovery/projectile restored (2026-09-15) so melee-type SAs
 -- (which show as those states, not just projectile-type SAs) aren't missing
 -- from the legend
-frame_table_legend_order_sa_only = { "neutral", "parry_forward", "startup", "active", "recovery", "projectile", "blocked", "hitstun" }
+frame_table_legend_order_sa_only = { "neutral", "parry_forward", "startup", "active", "recovery", "projectile", "blocked", "hitstun", "superfreeze" }
 frame_table_legend_labels = {
   neutral    = "Neutral",
   startup    = "Startup",
@@ -1135,6 +1205,7 @@ frame_table_legend_labels = {
   parry      = "Parry",
   invincible = "Invincible",
   parry_forward = "Parry",
+  superfreeze = "SA Freeze",
 }
 
 function frame_table_legend_display(_x, _y)

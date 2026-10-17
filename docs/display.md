@@ -67,7 +67,7 @@ After each hit or block, shows the move's **Startup**, **Active**, and **Duratio
 
 ![Frame Table](../screenshots/frame_table.png)
 
-The Frame Table shows a real-time per-frame state bar for both P1 (top) and P2 (bottom). Each colored block represents one game frame. The header line shows **Start / Total / Adv** stats after each move.
+The Frame Table shows a real-time per-frame state bar for both P1 (top) and P2 (bottom). Each colored block represents one game frame. The header line shows **Start / Total / Adv** stats after each move, computed from the attack or parry's own rising edge rather than the display timeline — a jump's own prep and airtime before an air attack's windup are not counted toward Start, matching Display Frame Advantage's definition.
 
 | Color | State | Meaning |
 |-------|-------|---------|
@@ -81,6 +81,9 @@ The Frame Table shows a real-time per-frame state bar for both P1 (top) and P2 (
 | 🟫 Brown | Projectile | Frames where a projectile hitbox is active |
 | 🟪 Purple | Parry | Frames where the parry input is being accepted, the validity window itself rather than only a successful parry, shown only while the opponent has an active hitbox or projectile |
 | ⬜ White | Invincible | Frames where the character has no vulnerability box |
+| 🖤 Near-black | SA Freeze | Shared Super Art activation freeze/flash, before any hit, block, or parry has resolved for this player |
+
+Older, unrelated columns stay on screen dimmed instead of disappearing, but only when the same ongoing action spills past the 90-frame width — a fresh, unrelated action always starts on a fully clean row.
 
 A white-bordered marker on the timeline is a successful parry, a yellow-bordered marker is a miss (early or late).
 
@@ -104,6 +107,7 @@ The legend is reduced to 8 states, with all three parry validity windows (forwar
 | 🟫 Brown | Projectile | Frames where a projectile hitbox is active |
 | 🔵 Cyan | Blocked | Frames the defender is in blockstun after chip-blocking, not parried |
 | 🟨 Yellow | Hitstun | Frames the defender cannot act after being hit, thrown, or knocked down |
+| 🖤 Near-black | SA Freeze | Shared Super Art activation freeze/flash, before any hit, block, or parry has resolved for this player |
 
 - The capture only arms on a real Super Art, so normal moves no longer start or reset it
 - A Super Art capture stays continuous across the 90-frame boundary instead of being cut off
