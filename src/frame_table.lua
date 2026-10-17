@@ -150,6 +150,22 @@ local function has_just_attacked(_player_obj)
 end
 
 function frame_table_classify(_player_obj, _player_key)
+  -- latch has_just_been_hit into the sticky in_hitstun flag THE INSTANT it
+  -- pulses, before any other branch below gets a chance to intercept and
+  -- return something else this same frame — in a real trade, this player's
+  -- own "active" branch further down (has_been_active and
+  -- remaining_freeze_frames>0, meant to show red through this player's own
+  -- post-connect hitstop) wins every frame of that freeze countdown even
+  -- though has_just_been_hit already pulsed true during it, so the pulse
+  -- was getting lost entirely by the time freeze reaches 0 — falling
+  -- straight through to "recovery" (blue) instead of "hitstun" (yellow)
+  -- once the shared red/active window ends (confirmed via [FT_DBG7],
+  -- 2026-10-17, TODO 1.28). Latching here means once that active window
+  -- ends, the hitstun check further down finds in_hitstun already true.
+  if _player_obj.has_just_been_hit then
+    frame_table_in_hitstun[_player_key] = true
+  end
+
   -- parry and hitbox-active can land on the same frame as is_idle == true,
   -- so check them before the early-out neutral return
   if training_settings.frame_table_sa_only then
@@ -280,8 +296,20 @@ function frame_table_classify(_player_obj, _player_key)
   end
 
   if _player_obj.is_idle then
-    frame_table_has_been_active[_player_key] = false
-    frame_table_in_hitstun[_player_key] = false
+    -- only trust is_idle enough to reset these once it's held for a second
+    -- consecutive frame (idle_time > 1, not just "currently true") — is_idle
+    -- is a composite of many fields (busy_flag, recovery_time vs
+    -- previous_recovery_time, remaining_freeze_frames, ...) that can all
+    -- momentarily agree for exactly one frame right at the active→recovery
+    -- boundary before the real recovery state takes over, which wrongly wipes
+    -- has_been_active and misclassifies the rest of recovery (or hitstun, if
+    -- a hit lands immediately after) as startup instead (found via Peter's
+    -- trade test + [FT_DBG4], 2026-10-17, TODO 1.28). Returning "neutral" for
+    -- that one glitch frame is harmless either way — only the reset is gated.
+    if (_player_obj.idle_time or 0) > 1 then
+      frame_table_has_been_active[_player_key] = false
+      frame_table_in_hitstun[_player_key] = false
+    end
     return "neutral"
   end
 
@@ -408,13 +436,23 @@ function frame_table_update(_player1_obj, _player2_obj)
 
   -- reset has_been_active only when animation AND action both change (new move started):
   -- same-move phase changes (e.g. active→recovery of a special) keep action constant,
-  -- so they no longer incorrectly clear has_been_active and show green.
+  -- so they no longer incorrectly clear has_been_active and show green. Also require
+  -- has_just_attacked/has_just_thrown — an opponent's hit interrupting this player's
+  -- recovery ALSO changes both animation and action (confirmed via [FT_DBG5],
+  -- 2026-10-17: both players' action went 262150->65558 on the same frame they
+  -- got hit, with has_just_been_hit still reading false that exact frame — it
+  -- lags behind the animation/action change, so it can't be used to exclude this
+  -- case directly), and was wrongly treated as a self-cancel, wiping
+  -- has_been_active and misclassifying the rest of hitstun as startup (TODO 1.28).
+  -- A genuine cancel is the player committing a NEW move themselves, which
+  -- has_just_attacked captures regardless of that timing lag.
   -- when a cancel is confirmed, also retroactively fix any gap recovery frame to startup.
   for _, _key in ipairs({ "p1", "p2" }) do
     if _objs[_key].animation ~= (frame_table_prev_animation[_key] or "")
        and frame_table_has_been_active[_key]
        and frame_table_prev_action[_key] ~= nil
-       and _objs[_key].action ~= frame_table_prev_action[_key] then
+       and _objs[_key].action ~= frame_table_prev_action[_key]
+       and has_just_attacked(_objs[_key]) then
       frame_table_has_been_active[_key] = false
       frame_table_just_cancelled[_key] = true
     end
