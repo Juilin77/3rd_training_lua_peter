@@ -166,6 +166,18 @@ function frame_table_classify(_player_obj, _player_key)
     frame_table_in_hitstun[_player_key] = true
   end
 
+  -- own SA activation freeze (this player's OWN superfreeze_decount, not the
+  -- opponent's) takes priority over active/projectile/parry below — same
+  -- per-player field already relied on by src/control/blocking.lua's Layer 0
+  -- rising-edge anchor and frame_advantage.lua's attacker check. A real SA
+  -- activation can't be confused with a continuing multi-hit normal or a
+  -- stale has_been_active from an on-hit cancel (decount only pulses once,
+  -- at activation), so this needs no has_been_active reset or other state
+  -- change, just a display-priority check (2026-10-18, SA-cancel freeze color).
+  if _player_obj.superfreeze_decount > 0 then
+    return "superfreeze"
+  end
+
   -- parry and hitbox-active can land on the same frame as is_idle == true,
   -- so check them before the early-out neutral return
   if training_settings.frame_table_sa_only then
