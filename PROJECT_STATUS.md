@@ -37,12 +37,13 @@ PROJECT_STATUS.md` for that (`status_source_commit`).
 - Fixed a missing letter (W) in the profile/filename text editor's character set
 
 ## Verification
-The SA freeze display fix was verified in-game by the maintainer. The recording persistence fix
-was verified for the ordinary save/load/playback path after a real in-game issue surfaced it;
-the specific retry, pending-table, and conflict-diagnostic code paths were reviewed but not
-separately exercised in-game. The Guard Type feature, profile management additions, and the
-public-only menu crash fix and menu indentation/capitalization changes were reviewed but not yet
-confirmed in-game by the maintainer.
+The SA freeze display fix, the Guard Type feature (All/Stand Only/Crouch Only, all three
+tested), and the menu indentation/Title Case changes were verified in-game by the maintainer.
+The recording persistence fix was verified for the ordinary save/load/playback path after a
+real in-game issue surfaced it; its specific retry, pending-table, and conflict-diagnostic code
+paths were reviewed but not separately exercised in-game. The profile management additions
+(Clear Profile, Clear All Profiles) and the public-only-install menu crash fix were reviewed but
+not yet confirmed in-game by the maintainer.
 
 ## Open work
 - Dummy Blocking: Makoto SA2 (command grab) and SA3 (power-up mode) not yet verified
