@@ -6,31 +6,43 @@ meant for quick machine- or human-readable status checks without needing to dig 
 history.
 
 ## Last verified
-2026-10-17
+2026-10-19
 
 ## Version / branch
-v0.30, branch `master`
+v0.31, branch `master`
 
 ## verified_code_commit
-`dbd54d7` — the code state the "Completed since last update" and "Verification" sections
+`1de5c88` — the code state the "Completed since last update" and "Verification" sections
 below actually describe. Updating this file is itself a commit after this one, so don't treat
 this file's own latest commit as equal to `verified_code_commit`; run `git log -1 --
 PROJECT_STATUS.md` for that (`status_source_commit`).
 
 ## Completed since last update
-- Frame Table's Start/Total/Advantage are now computed from the attack or parry's own startup
-  instead of the display timeline, matching Display Frame Advantage's definition
-- Frame Table's dimmed residual only shows for a true 90-frame continuation, not every new
-  action, so repeated reps start on a clean row
-- Frame Table correctly shows startup/active for a counterattack or reversal, and correctly
-  shows hitstun instead of startup/recovery when both players trade hits at the same time
-- Ping Delay no longer stretches the first real input to extra output frames on buffer creation
+- Frame Table now gives a player's own Super Art activation freeze display priority over
+  active/projectile/parry, so canceling a hit-confirmed normal into an SA shows the correct
+  freeze color instead of red
+- Added a Guard Type sub-option under Dummy's Blocking Mode (Always only): All, Stand Only, or
+  Crouch Only
+- Fixed a Missions-menu crash on a public-only install (no private pattern-scan tool) when
+  Analyze Raw Mission for Bookmarks is enabled
+- Recording a Raw Mission now keeps its target slot fixed for the whole recording, and
+  Clear Raw Slot/Clear All Raw Slots can no longer delete an actively-recording slot
+- Per-character recordings no longer risk being saved under, or overwriting, a different
+  character's file after a disk read issue; they also retry loading before giving up, keep
+  unsaved edits intact across a character switch, and stop repeating the same console warning
+- Added Clear Profile (via the renamed Manage Profiles) and Clear All Profiles; the default
+  profile name now starts with PROFILE_<CHARACTER>_ with a longer allowed length
+- Consistent indentation and Title Case for several menu sub-options (see README changelog for
+  the full list)
+- Fixed a missing letter (W) in the profile/filename text editor's character set
 
 ## Verification
-All v0.30 changes were verified in-game by the maintainer across multiple scenarios (parry
-lockout recovery, jump-to-air-attack timing, movement/mash/cancel-chain display behavior,
-reversal timing, simultaneous trades, knockdown/wakeup, SA Only mode), not just reviewed as
-code.
+The SA freeze display fix was verified in-game by the maintainer. The recording persistence fix
+was verified for the ordinary save/load/playback path after a real in-game issue surfaced it;
+the specific retry, pending-table, and conflict-diagnostic code paths were reviewed but not
+separately exercised in-game. The Guard Type feature, profile management additions, and the
+public-only menu crash fix and menu indentation/capitalization changes were reviewed but not yet
+confirmed in-game by the maintainer.
 
 ## Open work
 - Dummy Blocking: Makoto SA2 (command grab) and SA3 (power-up mode) not yet verified
