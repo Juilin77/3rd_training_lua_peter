@@ -1,6 +1,6 @@
 require("src/startup")
 
--- v0.30
+-- v0.31
 
 print("-----------------------------")
 print("  3rd_training.lua - "..script_version.."")
@@ -248,6 +248,17 @@ blocking_mode =
   "Frame Trap",
 }
 
+-- only effective for Blocking Style = Block + Blocking Mode = Always (see
+-- update_blocking() in src/control/blocking.lua) — overrides the automatic
+-- high/low guard so Peter can test setups where the dummy deliberately stays
+-- in the wrong stance (e.g. practicing overhead/low starters)
+blocking_guard_type =
+{
+  "All",
+  "Stand Only",
+  "Crouch Only",
+}
+
 frame_trap_after_mode =
 {
   "Block",
@@ -263,23 +274,23 @@ hit_type =
 
 life_mode =
 {
-  "no refill",
-  "refill",
-  "infinite"
+  "No Refill",
+  "Refill",
+  "Infinite"
 }
 
 meter_mode =
 {
-  "no refill",
-  "refill",
-  "infinite"
+  "No Refill",
+  "Refill",
+  "Infinite"
 }
 
 stun_mode =
 {
-  "normal",
-  "no stun",
-  "delayed reset"
+  "Normal",
+  "No Stun",
+  "Delayed Reset"
 }
 
 standing_state =
@@ -342,12 +353,12 @@ rot720_disp = {
 }
 
 slot_replay_mode = {
-  "normal",
-  "random",
-  "ordered",
-  "repeat",
-  "repeat random",
-  "repeat ordered",
+  "Normal",
+  "Random",
+  "Ordered",
+  "Repeat",
+  "Repeat Random",
+  "Repeat Ordered",
 }
 
 pattern_replay_mode_options = {
@@ -385,6 +396,7 @@ training_settings = {
   pose = 1,
   blocking_style = 1,
   blocking_mode = 1, -- "Always" (index shifted down after removing "Never", 2026-10-11)
+  blocking_guard_type = 1, -- "All" (default preserves existing automatic high/low guard)
   frame_trap_hit_count = 1,
   frame_trap_after_mode = 1,
   tech_throws_on = false,
@@ -445,6 +457,7 @@ training_settings = {
   clear_bookmark_mode_on = false,
   clear_chara_all_bookmark_slot_on = false,
   clear_all_bookmark_slot_on = false,
+  clear_all_profiles_on = false,
   pattern_replay_on = false,
   pattern_replay_mode = 1, -- normal
 
@@ -845,6 +858,12 @@ function on_gui()
       if is_menu_open then
         menu_stack_push(main_menu)
         mission_replay_active = false
+        -- never show pre-armed on menu open: toggling Yes mid-session already
+        -- auto-saves via the on_toggle_entry->save_training_data() hook below,
+        -- so this is the one reliable point (including a fresh script/game
+        -- load where the saved file already had it true) that guarantees the
+        -- checkbox reads No before the user can press LP again
+        training_settings.clear_all_profiles_on = false
       else
         menu_stack_clear()
         if not training_settings.recording_mission_mode and training_settings.mission_replay_on then

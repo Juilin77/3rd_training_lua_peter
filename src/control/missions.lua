@@ -87,12 +87,23 @@ end
 function clear_mission_slot()
   local _slot_index = training_settings.current_clear_mission_slot - 1
   if _slot_index < 1 then return end
+  if mission_recording_active and _slot_index == mission_recording_slot_index then
+    -- deleting this slot's .fs now would leave the in-progress recording's
+    -- metadata (written at stop, hotkey5()) pointing at a savestate file
+    -- that no longer exists
+    print(string.format("[missions] Refusing to clear slot %d: a recording is currently in progress for this slot.", _slot_index))
+    return
+  end
   delete_mission_slot_files(_slot_index)
   mission_slots[_slot_index] = make_mission_slot()
   refresh_mission_recording_slots_names()
 end
 
 function clear_all_mission_slots()
+  if mission_recording_active then
+    print("[missions] Refusing to clear all slots: a recording is currently in progress.")
+    return
+  end
   for _i = 1, #mission_slots do
     delete_mission_slot_files(_i)
     mission_slots[_i] = make_mission_slot()
@@ -191,14 +202,22 @@ function hotkey5()
     mission_recording_inputs = {p1 = {}, p2 = {}}
     mission_recording_state = {p1 = {}, p2 = {}}
     mission_recording_start_frame = frame_number
-    local _slot_index = training_settings.current_mission_slot
-    mission_recording_savestate_path = string.format("%smission_slot_%d.fs", saved_missions_path, _slot_index)
+    -- pin the slot for this recording's whole start->stop lifetime (and the
+    -- HUD below) instead of re-reading training_settings.current_mission_slot
+    -- at each point separately. The slot selector's is_disabled only checks
+    -- recording_mission_mode, not mission_recording_active, so the user can
+    -- freely change it while a recording is in progress — re-reading at stop
+    -- would then save the just-recorded inputs/state under a DIFFERENT slot
+    -- than the savestate just written below, pairing slot N's inputs with
+    -- slot M's savestate file.
+    mission_recording_slot_index = training_settings.current_mission_slot
+    mission_recording_savestate_path = string.format("%smission_slot_%d.fs", saved_missions_path, mission_recording_slot_index)
     savestate.save(savestate.create(mission_recording_savestate_path))
   else
     mission_recording_active = false
     local _end_frame = frame_number
     local _name = string.format("mission_raw_%s_%s_%d-%d", player_objects[1].char_str, player_objects[2].char_str, mission_recording_start_frame, _end_frame)
-    local _slot_index = training_settings.current_mission_slot
+    local _slot_index = mission_recording_slot_index
     mission_slots[_slot_index].name = _name
     mission_slots[_slot_index].inputs = mission_recording_inputs
     mission_slots[_slot_index].state = mission_recording_state
@@ -212,13 +231,14 @@ function hotkey5()
         break
       end
     end
+    mission_recording_slot_index = nil
   end
 end
 
 function mission_hud_draw()
   if mission_recording_active then
     local _frame_count = #mission_recording_inputs.p1
-    local _slot_index = training_settings.current_mission_slot
+    local _slot_index = mission_recording_slot_index
     local _text = string.format("Mission REC [slot %d] (%d)", _slot_index, _frame_count)
     gui.text(306, 8, _text, 0xFF4444FF, text_default_border_color)
   end

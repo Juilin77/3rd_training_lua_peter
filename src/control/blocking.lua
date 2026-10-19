@@ -1156,6 +1156,29 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
         elseif _hit_type == 3 then
           _input[_dummy.prefix..' Down'] = false
         end
+
+        -- Guard Type sub-option, Blocking Mode "Always" only (menu-gated the
+        -- same way, but the stored value isn't reset when the menu hides it,
+        -- so re-check _mode here too) — overrides the automatic high/low
+        -- guard above so Peter can deliberately leave the dummy in the wrong
+        -- stance: Stand Only never crouches (lows connect for real), Crouch
+        -- Only never stands (overheads connect for real). Runs after and on
+        -- top of the hit_type branch above rather than replacing it, so "All"
+        -- (the default) is untouched and behaves exactly as before.
+        if _style == 2 and _mode == 1 then
+          -- _style (the original parameter) not _blocking_style (the local
+          -- above, lines 1064-1080) — under Red Parry (_style==4), ordinary
+          -- non-parry hits reassign _blocking_style to 2 and fall through to
+          -- this exact branch, so checking only the local would leak a
+          -- stale stored Guard Type into Red Parry even though the menu
+          -- hides the control there (blocking_style_item/is_disabled hides
+          -- it, but doesn't reset the stored value)
+          if training_settings.blocking_guard_type == 2 then -- Stand Only
+            _input[_dummy.prefix..' Down'] = false
+          elseif training_settings.blocking_guard_type == 3 then -- Crouch Only
+            _input[_dummy.prefix..' Down'] = true
+          end
+        end
       end
     elseif _blocking_style == 3 then
       _input[_dummy.prefix..' Right'] = false

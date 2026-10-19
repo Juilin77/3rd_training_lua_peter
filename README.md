@@ -75,6 +75,16 @@ A: Check video settings, you must use "Basic" blitter option with no scanlines i
 A: Install prerequires from [here](https://github.com/TASVideos/BizHawk-Prereqs/releases/latest/)
 
 ## Changelog
+### v0.31 (10/19/2026)
+- [Fix] Frame Table now gives a player's own Super Art activation freeze display priority over active/projectile/parry, so canceling a hit-confirmed normal into an SA shows the correct freeze color instead of red (contribution of @Juilin77)
+- [Feature] Add a Guard Type sub-option under Dummy's Blocking Mode (Always only): All, Stand Only, or Crouch Only, for deliberately leaving the dummy in the wrong stance to practice overhead/low starters (contribution of @Juilin77)
+- [Fix] A public-only install without the private pattern-scan tool no longer crashes the Missions menu when Analyze Raw Mission for Bookmarks is enabled (contribution of @Juilin77)
+- [Fix] Recording a Raw Mission now keeps its target slot fixed for the whole recording even if the slot selection is changed mid-recording, and Clear Raw Slot/Clear All Raw Slots can no longer delete a slot that's actively recording (contribution of @Juilin77)
+- [Fix] Per-character recordings no longer risk being saved under, or overwriting, a different character's file after a disk read issue; they also retry loading from disk before giving up, keep unsaved edits intact across a character switch instead of discarding them, and no longer repeat the same console warning on every save (contribution of @Juilin77)
+- [Feature] Add a way to delete saved training profiles: Manage Profiles (renamed from Load Profile) now also offers Clear for the selected file, and a new Clear All Profiles removes every saved profile at once; the default profile name now starts with PROFILE_<CHARACTER>_ and allows a longer name (contribution of @Juilin77)
+- [Improvement] Consistent indentation for several menu sub-options (Display Distances, Life Refill Delay, Stun Mode, Meter Refill Mode, Special Training Mode) and Title Case for Life/Meter Refill Mode, Stun Mode, and Recording's Replay Mode labels (contribution of @Juilin77)
+- [Fix] The profile/filename text editor was missing the letter W (contribution of @Juilin77)
+
 ### v0.30 (10/17/2026)
 - [Improvement] Frame Table's Start/Total/Advantage are now computed from the attack or parry's own startup instead of the display timeline, so a jump's prep and airtime no longer inflate Start, matching Display Frame Advantage (contribution of @Juilin77)
 - [Fix] Frame Table's dimmed residual only shows when the same action spills past the 90-frame width, instead of every new action, so repeated reps start on a clean row (contribution of @Juilin77)

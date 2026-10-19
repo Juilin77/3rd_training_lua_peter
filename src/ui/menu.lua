@@ -24,7 +24,12 @@ function create_main_menu()
   save_profile_name = ""
   save_profile_popup = make_menu(71, 61, 312, 122, -- screen size 383,223
   {
-    textfield_menu_item("Profile Name", _G, "save_profile_name", ""),
+    -- max_length 28 instead of the default 16: the "PROFILE_" prefix plus the
+    -- longest character name ("CHUNLI"/"MAKOTO", 6 chars) plus "_" already
+    -- takes 15, which would leave almost no room for an actual purpose suffix
+    -- at the default length. Still comfortably fits this popup's 241px width
+    -- at 4px/char. Only this field is extended, not the shared textfield default.
+    textfield_menu_item("Profile Name", _G, "save_profile_name", "", 28),
     button_menu_item("Save", save_profile_to_file),
     button_menu_item("Cancel", function() menu_stack_pop(save_profile_popup) end),
   })
@@ -35,6 +40,7 @@ function create_main_menu()
   {
     list_menu_item("File", _G, "load_profile_file_index", load_profile_file_list),
     button_menu_item("Load", load_profile_from_file),
+    button_menu_item("Clear", clear_profile_file),
     button_menu_item("Cancel", function() menu_stack_pop(load_profile_popup) end),
   })
 
@@ -58,31 +64,38 @@ function create_main_menu()
   end
 
   -- ── widget definitions ────────────────────────────────────────
-  life_refill_delay_item = integer_menu_item("Life refill delay", training_settings, "life_refill_delay", 1, 100, false, 20)
+  life_refill_delay_item = integer_menu_item("Life Refill Delay", training_settings, "life_refill_delay", 1, 100, false, 20)
   life_refill_delay_item.is_disabled = function()
     return training_settings.life_mode ~= 2
   end
+  life_refill_delay_item.indent = true
 
-  p1_stun_reset_value_gauge_item = gauge_menu_item("P1 Stun reset value", training_settings, "p1_stun_reset_value", 64, 0xFF0000FF)
-  p2_stun_reset_value_gauge_item = gauge_menu_item("P2 Stun reset value", training_settings, "p2_stun_reset_value", 64, 0xFF0000FF)
+  p1_stun_reset_value_gauge_item = gauge_menu_item("P1 Stun Reset Value", training_settings, "p1_stun_reset_value", 64, 0xFF0000FF)
+  p2_stun_reset_value_gauge_item = gauge_menu_item("P2 Stun Reset Value", training_settings, "p2_stun_reset_value", 64, 0xFF0000FF)
   p1_stun_reset_value_gauge_item.unit = 1
   p2_stun_reset_value_gauge_item.unit = 1
-  stun_reset_delay_item = integer_menu_item("Stun reset delay", training_settings, "stun_reset_delay", 1, 100, false, 20)
+  stun_reset_delay_item = integer_menu_item("Stun Reset Delay", training_settings, "stun_reset_delay", 1, 100, false, 20)
   p1_stun_reset_value_gauge_item.is_disabled = function()
     return training_settings.stun_mode ~= 3
   end
   p2_stun_reset_value_gauge_item.is_disabled = p1_stun_reset_value_gauge_item.is_disabled
   stun_reset_delay_item.is_disabled = p1_stun_reset_value_gauge_item.is_disabled
+  p1_stun_reset_value_gauge_item.indent = true
+  p2_stun_reset_value_gauge_item.indent = true
+  stun_reset_delay_item.indent = true
 
   p1_meter_gauge_item = gauge_menu_item("P1 Meter", training_settings, "p1_meter", 2, 0x0000FFFF)
   p2_meter_gauge_item = gauge_menu_item("P2 Meter", training_settings, "p2_meter", 2, 0x0000FFFF)
-  meter_refill_delay_item = integer_menu_item("Meter refill delay", training_settings, "meter_refill_delay", 1, 100, false, 20)
+  meter_refill_delay_item = integer_menu_item("Meter Refill Delay", training_settings, "meter_refill_delay", 1, 100, false, 20)
 
   p1_meter_gauge_item.is_disabled = function()
     return training_settings.meter_mode ~= 2
   end
   p2_meter_gauge_item.is_disabled = p1_meter_gauge_item.is_disabled
   meter_refill_delay_item.is_disabled = p1_meter_gauge_item.is_disabled
+  p1_meter_gauge_item.indent = true
+  p2_meter_gauge_item.indent = true
+  meter_refill_delay_item.indent = true
 
   slot_weight_item = integer_menu_item("Weight", nil, "weight", 0, 100, false, 1)
   counter_attack_delay_item = integer_menu_item("Counter-attack delay", nil, "delay", -40, 40, false, 0)
@@ -90,15 +103,20 @@ function create_main_menu()
 
   parry_forward_on_item = checkbox_menu_item("Forward Parry Helper", training_settings, "special_training_parry_forward_on")
   parry_forward_on_item.is_disabled = function() return training_settings.special_training_current_mode ~= 2 end
+  parry_forward_on_item.indent = true
   parry_down_on_item = checkbox_menu_item("Down Parry Helper", training_settings, "special_training_parry_down_on")
   parry_down_on_item.is_disabled = parry_forward_on_item.is_disabled
+  parry_down_on_item.indent = true
   parry_air_on_item = checkbox_menu_item("Air Parry Helper", training_settings, "special_training_parry_air_on")
   parry_air_on_item.is_disabled = parry_forward_on_item.is_disabled
+  parry_air_on_item.indent = true
   parry_antiair_on_item = checkbox_menu_item("Anti-Air Parry Helper", training_settings, "special_training_parry_antiair_on")
   parry_antiair_on_item.is_disabled = parry_forward_on_item.is_disabled
+  parry_antiair_on_item.indent = true
 
   parry_rhythm_sa_on_item = checkbox_menu_item("Parry Rhythm - SA", training_settings, "display_parry_rhythm_sa")
   parry_rhythm_sa_on_item.is_disabled = parry_forward_on_item.is_disabled
+  parry_rhythm_sa_on_item.indent = true
 
   -- Parry Rhythm - SA is mutually exclusive with the 4 Parry Helpers as a
   -- group (the helpers aren't exclusive with each other): whichever one was
@@ -130,6 +148,7 @@ function create_main_menu()
 
   charge_overcharge_on_item = checkbox_menu_item("Display Overcharge", training_settings, "special_training_charge_overcharge_on")
   charge_overcharge_on_item.is_disabled = function() return training_settings.special_training_current_mode ~= 3 end
+  charge_overcharge_on_item.indent = true
 
   hits_before_red_parry_item = integer_menu_item("Hits before Red Parry", training_settings, "red_parry_hit_count", 1, 20, true)
   hits_before_red_parry_item.is_disabled = function()
@@ -142,6 +161,15 @@ function create_main_menu()
     return training_settings.blocking_style ~= 2
   end
   blocking_mode_item.indent = true
+
+  blocking_guard_type_item = list_menu_item("Guard Type", training_settings, "blocking_guard_type", blocking_guard_type)
+  blocking_guard_type_item.is_disabled = function()
+    -- must match blocking_mode_item's own is_disabled (blocking_style ~= 2) too, same
+    -- orphan-avoidance reasoning as frame_trap_hit_count_item below, just for mode==1
+    -- ("Always") instead of ==4
+    return training_settings.blocking_style ~= 2 or training_settings.blocking_mode ~= 1
+  end
+  blocking_guard_type_item.indent = true
 
   frame_trap_hit_count_item = integer_menu_item("Frame Trap Hits", training_settings, "frame_trap_hit_count", 1, 5, true)
   frame_trap_hit_count_item.is_disabled = function()
@@ -214,15 +242,18 @@ function create_main_menu()
   p1_distances_reference_point_item.is_disabled = function()
     return not training_settings.display_distances
   end
+  p1_distances_reference_point_item.indent = true
 
   p2_distances_reference_point_item = list_menu_item("P2 Distance Reference Point", training_settings, "p2_distances_reference_point", distance_display_reference_point)
   p2_distances_reference_point_item.is_disabled = function()
     return not training_settings.display_distances
   end
+  p2_distances_reference_point_item.indent = true
   mid_distance_height_item = integer_menu_item("Mid Distance Height", training_settings, "mid_distance_height", 0, 200, false, 10)
   mid_distance_height_item.is_disabled = function()
     return not training_settings.display_distances
   end
+  mid_distance_height_item.indent = true
 
   -- ── main menu construction ─────────────────────────────────────
   main_menu = make_multitab_menu(
@@ -234,6 +265,7 @@ function create_main_menu()
           list_menu_item("Pose", training_settings, "pose", pose),
           list_menu_item("Blocking Style", training_settings, "blocking_style", blocking_style),
           blocking_mode_item,
+          blocking_guard_type_item,
           frame_trap_hit_count_item,
           frame_trap_after_mode_item,
           hits_before_red_parry_item,
@@ -358,6 +390,19 @@ function create_main_menu()
             return _item
           end)(),
           (function()
+            -- scan_pattern_analyzer_mode_names only exists if the private
+            -- ../replay-pattern-trainer/lua/bookmark_scan.lua loaded (pcall'd
+            -- dofile in 3rd_training.lua, silently a no-op without it) — on a
+            -- public-only install the global stays nil, and list_menu_item's
+            -- draw() indexes it unconditionally with no nil guard, crashing
+            -- the whole menu as soon as this item becomes enabled (Analyze
+            -- Raw Mission on). Same fallback-default idiom already used for
+            -- bookmark_clear_char_names (pattern_replay.lua:16, public) so
+            -- the widget always gets a real list regardless of which build
+            -- this is; the actual scan trigger below already has its own
+            -- run_scan_pattern_analyzer guard, so this is purely a display
+            -- fallback, not a functional one.
+            scan_pattern_analyzer_mode_names = scan_pattern_analyzer_mode_names or {"N/A (private scan tool not installed)"}
             local _item = list_menu_item("Scan Pattern for Character", training_settings, "scan_pattern_analyzer_mode", scan_pattern_analyzer_mode_names)
             _item.is_disabled = function()
               return not training_settings.analyze_raw_mission_on
@@ -589,8 +634,26 @@ function create_main_menu()
             return _item
           end)(),
           (function()
-            local _item = button_menu_item("Load Profile", open_load_profile_popup)
-            _item.legend = function() return "LP: Validate | Loads a saved Dummy+Rules+Recording profile" end
+            -- single entry point for the popup below, which already offers
+            -- both Load and Clear on the same file list (2026-10-19 Peter:
+            -- a separate top-level "Clear Profile" button opening the exact
+            -- same popup was redundant once that popup had its own Clear)
+            local _item = button_menu_item("Manage Profiles", open_load_profile_popup)
+            _item.legend = function() return "LP: Validate | Load or clear the selected saved profile" end
+            return _item
+          end)(),
+          (function()
+            -- Yes/No is checkbox_menu_item's own default labels (no override
+            -- needed); validate only runs on LP (not on toggling Yes/No with
+            -- left/right), matching Clear All Slots/Raw Slots/Bookmark Slot's
+            -- existing arm-then-execute split
+            local _item = checkbox_menu_item("Clear All Profiles", training_settings, "clear_all_profiles_on")
+            _item.validate = function(self)
+              if training_settings.clear_all_profiles_on then
+                clear_all_profiles()
+              end
+            end
+            _item.legend = function() return "LP: Clear All" end
             return _item
           end)(),
         }
@@ -605,6 +668,7 @@ function create_main_menu()
               local _m = training_settings.special_training_current_mode
               return _m == 1 or special_training_mode[_m] == "Juggle" or special_training_mode[_m] == "Tech Throw"
             end
+            _item.indent = true
             return _item
           end)(),
           parry_forward_on_item,

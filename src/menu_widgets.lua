@@ -90,6 +90,7 @@ available_characters = {
   "T",
   "U",
   "V",
+  "W",
   "X",
   "Y",
   "Z",
