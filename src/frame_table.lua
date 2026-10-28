@@ -3,7 +3,7 @@ FRAME_TABLE_LENGTH = 90 -- ~1.5s at 60fps
 frame_table_colors = {
   neutral    = 0x444444FF, -- idle / empty
   startup    = 0x00FF00FF, -- startup (windup before hitbox)
-  movement   = 0x88AA55FF, -- dash/jump/landing — not idle yet, but not a real attack windup either
+  movement   = 0x88AA55FF, -- dash — not idle yet, but not a real attack windup either
   active     = 0xFF4040FF, -- active (hitbox active)
   projectile = 0xCC7722FF, -- projectile active (hitbox on projectile object)
   recovery   = 0x4080FFFF, -- recovery (busy after active)
@@ -49,19 +49,26 @@ frame_table_own_trigger = { p1 = false, p2 = false }
 -- separate from frame_table_prev_superfreeze (the parry-history reset tracker)
 -- so the two independent checks don't consume each other's edge
 frame_table_prev_superfreeze_strip = { p1 = 0, p2 = 0 }
--- regular mode only: rising-edge tracker for is_in_jump_startup, used to arm a
--- fresh capture on jump start the same way an attack does
-frame_table_prev_jump_startup = { p1 = false, p2 = false }
 -- regular mode only: rising-edge tracker for walk/dash (movement_type2 2/3/4
 -- while movement_type==0), used to arm a fresh capture the same way an
 -- attack does. Values confirmed empirically 2026-09-14: 2=walk forward,
 -- 3=walk backward, 4=dash
 frame_table_prev_ground_movement = { p1 = false, p2 = false }
 -- true only when the row's current capture was armed by a movement trigger
--- (walk/dash/jump start) rather than an attack/parry — lets a later movement
--- trigger force a fresh re-arm over a stray movement capture (e.g. a 1-frame
--- walk blip) without ever cutting short a real attack capture in progress
+-- (dash start) rather than an attack/parry — lets a later movement trigger
+-- force a fresh re-arm over a stray movement capture (e.g. a 1-frame walk
+-- blip) without ever cutting short a real attack capture in progress
 frame_table_armed_by_movement = { p1 = false, p2 = false }
+-- which kind of trigger ("ground" for dash, "attack" for attack/parry) armed
+-- the row's current capture, set whenever a fresh trigger (re-)arms it —
+-- lets the forced re-arm below, and the natural-90-cap-boundary check
+-- further down, tell "a different kind of trigger taking over" (should
+-- still force a fresh re-arm / clean start) apart from "the same kind of
+-- trigger repeating with no real pause" (e.g. mashing the same move, or
+-- repeated dashes — should just keep filling/extending the same capture,
+-- not wipe it every rep). Jump deliberately excluded (2026-10-29, Peter's
+-- decision) — see classify()'s comments.
+frame_table_movement_trigger_kind = { p1 = nil, p2 = nil }
 -- Parry SA Only: true from an SA's rising edge until both players have
 -- genuinely settled back to neutral; gates continuation re-arming so a long
 -- SA's buffer-boundary crossings don't get mistaken for the sequence ending
@@ -279,31 +286,27 @@ function frame_table_classify(_player_obj, _player_key)
     return "active"
   end
 
-  -- dash/big-jump/plain-airborne don't set busy_flag/is_attacking/etc, so
-  -- is_idle stays true throughout them (confirmed via [FT_MOVE_DBG],
-  -- 2026-09-14) — without this check they'd fall straight into the is_idle
-  -- branch below and always read as neutral instead of movement.
-  -- movement_type2 is only this "basic engine movement" sub-state while
-  -- movement_type==0 (same mode is_in_jump_startup already relies on) —
-  -- during an actual move/hitstun movement_type becomes 1 and movement_type2
-  -- turns into a move-specific ID, so gating on movement_type==0 keeps this
-  -- from colliding with those.
-  -- 4=forward dash, 5=back dash, 13=big jump startup, 14/15/16=airborne
-  -- normal jump (forward/neutral/back), 20/21/22=airborne big jump
-  -- (forward/neutral/back). plain walk (2=forward, 3=backward) deliberately
-  -- excluded: dash is executed as a quick double-tap, so its own trigger is
-  -- always preceded by a sliver of walk state — coloring that sliver made
-  -- every dash look like it wiped out and restarted a preceding walk capture
-  -- instead of just starting cleanly. the plain jump-startup phase itself is
-  -- 12, already handled by is_in_jump_startup reaching the not-on-ground
-  -- fallback further down once is_idle is bypassed
+  -- dash doesn't set busy_flag/is_attacking/etc, so is_idle stays true
+  -- throughout it (confirmed via [FT_MOVE_DBG], 2026-09-14) — without this
+  -- check it'd fall straight into the is_idle branch below and always read
+  -- as neutral instead of movement. movement_type2 is only this "basic
+  -- engine movement" sub-state while movement_type==0 — during an actual
+  -- move/hitstun movement_type becomes 1 and movement_type2 turns into a
+  -- move-specific ID, so gating on movement_type==0 keeps this from
+  -- colliding with those.
+  -- 4=forward dash, 5=back dash. plain walk (2=forward, 3=backward)
+  -- deliberately excluded: dash is executed as a quick double-tap, so its
+  -- own trigger is always preceded by a sliver of walk state — coloring
+  -- that sliver made every dash look like it wiped out and restarted a
+  -- preceding walk capture instead of just starting cleanly.
+  -- jump (plain 12, big-jump startup 13, airborne 14/15/16/20/21/22)
+  -- deliberately excluded (2026-10-29, Peter's decision) — these fall
+  -- through to the "not on ground" fallback further down instead, which now
+  -- hides them (returns "neutral") rather than showing "movement": jump's
+  -- unbounded/repeatable duration doesn't fit this display model the way
+  -- dash's short, bounded burst does.
   if not training_settings.frame_table_sa_only and _player_obj.movement_type == 0
-    and (_player_obj.movement_type2 == 4 or _player_obj.movement_type2 == 5
-      or _player_obj.movement_type2 == 13
-      or _player_obj.movement_type2 == 14 or _player_obj.movement_type2 == 15
-      or _player_obj.movement_type2 == 16
-      or _player_obj.movement_type2 == 20 or _player_obj.movement_type2 == 21
-      or _player_obj.movement_type2 == 22) then
+    and (_player_obj.movement_type2 == 4 or _player_obj.movement_type2 == 5) then
     return "movement"
   end
 
@@ -395,17 +398,19 @@ function frame_table_classify(_player_obj, _player_key)
     return "startup"
   end
 
-  -- regular mode only: not simply standing/crouching still (dash, jump, walk,
-  -- landing recovery), no hitbox yet — could be genuine attack startup, or
-  -- could just be movement that never produces a hitbox at all. Can't tell
-  -- which in advance, so treat anything that isn't plain grounded stillness
-  -- as movement rather than defaulting it to startup; has_just_landed is
-  -- checked separately since a player can already read as "on the ground"
+  -- regular mode only: airborne (jump, or landing recovery) with no hitbox
+  -- yet — this used to return "movement" here (showing jump as a color
+  -- block), but Peter decided (2026-10-29) to hide jump entirely and only
+  -- show dash: jump's unbounded/repeatable duration kept hitting edge cases
+  -- dash never did (own_trigger gate timing, repeated-rep resets, the
+  -- 90-frame display cap boundary). has_just_landed is checked alongside
+  -- is_state_on_ground since a player can already read as "on the ground"
   -- for standing_state purposes during the single-frame landing-recovery
-  -- blip is_idle catches, which is_state_on_ground alone would miss.
+  -- blip is_idle catches, which is_state_on_ground alone would miss — still
+  -- needs to fall into neutral here, not the "startup" default below.
   if not training_settings.frame_table_sa_only
     and (not is_state_on_ground(_player_obj.standing_state, _player_obj) or _player_obj.has_just_landed) then
-    return "movement"
+    return "neutral"
   end
 
   return "startup"
@@ -486,73 +491,55 @@ function frame_table_update(_player1_obj, _player2_obj)
     end
   end
 
-  -- pre-classify own_trigger fix for movement triggers (2026-10-29) — mirrors
-  -- the has_just_attacked fix above: a plain jump's own_trigger gate in
-  -- classify() needs own_trigger already true THIS frame to reach the "not
-  -- on ground" movement fallback, but the jump rising-edge check further
-  -- below only runs after _states is computed, so a plain jump's very first
-  -- frame misclassified as "neutral" instead of "movement" (found via
-  -- Peter's "first jump after entering a match" test). Dash and big-jump
-  -- startup aren't affected by this gate (classify() returns "movement" for
-  -- them earlier, unconditionally), but checking them here too is harmless.
-  if not training_settings.frame_table_sa_only then
-    for _, _key in ipairs({ "p1", "p2" }) do
-      local _obj = _objs[_key]
-      local _is_ground_movement = _obj.movement_type == 0
-        and (_obj.movement_type2 == 4 or _obj.movement_type2 == 5)
-      local _is_jump_startup = _obj.is_in_jump_startup
-        or (_obj.movement_type == 0 and _obj.movement_type2 == 13)
-      if (_is_jump_startup and not frame_table_prev_jump_startup[_key])
-        or (_is_ground_movement and not frame_table_prev_ground_movement[_key]) then
-        frame_table_own_trigger[_key] = true
-      end
-    end
-  end
-
   local _states = {
     p1 = frame_table_classify(_player1_obj, "p1"),
     p2 = frame_table_classify(_player2_obj, "p2"),
   }
 
-  -- regular mode only: walk-start, dash-start (movement_type2 rising edge
-  -- into 4/5 while movement_type==0, walk excluded — see the classify()
-  -- comment on why) and jump-start (is_in_jump_startup rising edge) each arm
-  -- a fresh capture the same way an attack does, so these movement-only
-  -- actions get their own frame-table entry instead of only ever showing up
-  -- incidentally during an attack-triggered capture
+  -- regular mode only: dash-start (movement_type2 rising edge into 4/5 while
+  -- movement_type==0, walk excluded — see the classify() comment on why)
+  -- arms a fresh capture the same way an attack does, so dash gets its own
+  -- frame-table entry instead of only ever showing up incidentally during an
+  -- attack-triggered capture. Jump deliberately excluded (2026-10-29, Peter's
+  -- decision) — jump's unbounded/repeatable duration doesn't fit this
+  -- "discrete move" display model the way dash's short, bounded burst does,
+  -- and was the source of this session's bugs (own_trigger gate timing,
+  -- repeated-rep resets, 90-frame cap boundary resets); see classify()'s
+  -- "not on ground" fallback, which now hides plain jump instead of showing it.
   local _just_moved = { p1 = false, p2 = false }
+  local _movement_kind = { p1 = nil, p2 = nil }
   if not training_settings.frame_table_sa_only then
     for _, _key in ipairs({ "p1", "p2" }) do
       local _obj = _objs[_key]
       local _is_ground_movement = _obj.movement_type == 0
         and (_obj.movement_type2 == 4 or _obj.movement_type2 == 5)
-      -- big jump's startup is movement_type2==13 rather than the plain
-      -- jump's 12 (is_in_jump_startup), but is otherwise the same rising-edge
-      -- shape — treat both as "jump started" for arming purposes
-      local _is_jump_startup = _obj.is_in_jump_startup
-        or (_obj.movement_type == 0 and _obj.movement_type2 == 13)
-      local _just_jumped = _is_jump_startup and not frame_table_prev_jump_startup[_key]
-      _just_moved[_key] = _just_jumped or (_is_ground_movement and not frame_table_prev_ground_movement[_key])
+      _just_moved[_key] = _is_ground_movement and not frame_table_prev_ground_movement[_key]
+      _movement_kind[_key] = _is_ground_movement and "ground" or nil
       frame_table_prev_ground_movement[_key] = _is_ground_movement
-      frame_table_prev_jump_startup[_key] = _is_jump_startup
     end
 
     -- a genuine movement trigger forces a fresh re-arm even when the row is
     -- already armed and mid-fill, but only when that in-progress capture was
     -- ITSELF movement-triggered (e.g. a stray 1-frame walk blip between reps)
-    -- — otherwise the real action (e.g. a big jump right after the blip)
-    -- silently gets folded into the earlier, unrelated capture instead of
-    -- starting its own, since the normal "if not armed" re-arm path below
-    -- never runs while the row is still armed. Never overrides an
-    -- attack/parry-triggered capture in progress, which would cut short real
-    -- frame data.
+    -- AND this new trigger is a DIFFERENT kind of movement (2026-10-29: kind
+    -- check added, though with jump now excluded above there's only one
+    -- movement kind — "ground"/dash — left here; the check still guards
+    -- against a dash capture being force-wiped by another dash rep with no
+    -- real gap, same as the generalized 90-frame-cap check further below)
+    -- — otherwise the real dash right after a stray walk blip silently gets
+    -- folded into the earlier, unrelated capture instead of starting its
+    -- own, since the normal "if not armed" re-arm path below never runs
+    -- while the row is still armed. Never overrides an attack/parry-
+    -- triggered capture in progress, which would cut short real frame data.
     for _, _key in ipairs({ "p1", "p2" }) do
       local _p = frame_table_players[_key]
-      if _just_moved[_key] and _p.armed and frame_table_armed_by_movement[_key] then
+      if _just_moved[_key] and _p.armed and frame_table_armed_by_movement[_key]
+        and _movement_kind[_key] ~= frame_table_movement_trigger_kind[_key] then
         -- a new movement trigger overriding a stray blip is a fresh/unrelated
         -- start, not a continuation — never dimmed
         frame_table_arm(_key, false)
         frame_table_own_trigger[_key] = true
+        frame_table_movement_trigger_kind[_key] = _movement_kind[_key]
         local _other_key = (_key == "p1") and "p2" or "p1"
         if not frame_table_players[_other_key].armed then
           frame_table_arm(_other_key, false)
@@ -778,19 +765,58 @@ function frame_table_update(_player1_obj, _player2_obj)
         _continuation_trigger = frame_table_sa_episode_active and not frame_table_sa_episode_frozen
       end
 
+      -- (2026-10-29) a fresh trigger landing within a few frames of the row
+      -- NATURALLY hitting the 90-frame cap (as opposed to a real idle-driven
+      -- early unarm) is the same repeated action continuing, not a separate
+      -- rep — e.g. repeated dashing, or mashing the same move with no real
+      -- gap — so it also keeps a dimmed overlay like a true continuation
+      -- would, instead of wiping clean. This was originally found via
+      -- continuous jumping resetting the table every ~90-110 frames, but
+      -- jump was later excluded from the display entirely (same date,
+      -- Peter's decision) — the mechanism itself stayed, since the same
+      -- 90-frame-cap race applies to any repeated discrete trigger (dash,
+      -- mashed attacks) with no real gap. A genuinely DIFFERENT kind of
+      -- trigger taking over right at the cap (e.g. an attack interrupting
+      -- a dash), or one that follows a real idle gap, still gets 10/17's
+      -- clean-start behavior below — this only widens the exception already
+      -- made for "same kind, no real gap", it doesn't touch 10/17's actual
+      -- case (reps with a genuine pause in between, which settle/freeze
+      -- long before ever reaching the 90-frame cap in the first place).
+      local _same_kind_cap_continuation = false
+      if not training_settings.frame_table_sa_only then
+        -- the cap frame itself is start_frame + FRAME_TABLE_LENGTH - 1 (count
+        -- reaches FRAME_TABLE_LENGTH on the 90th frame counting from
+        -- start_frame as frame 1, not the 91st) — using the un-adjusted
+        -- start_frame + FRAME_TABLE_LENGTH made this window 1 frame
+        -- narrower than intended, found via Peter's "resets right at 110F"
+        -- report landing exactly 1 frame outside the original 20F window
+        local _just_hit_cap = _p.count >= FRAME_TABLE_LENGTH
+          and (frame_number - (_p.start_frame + FRAME_TABLE_LENGTH - 1)) <= 30
+        local _this_trigger_kind = _movement_kind[_key] or (_attack_fresh_trigger and "attack" or nil)
+        local _prev_cap_kind = frame_table_armed_by_movement[_key] and frame_table_movement_trigger_kind[_key] or "attack"
+        _same_kind_cap_continuation = _fresh_trigger and _just_hit_cap
+          and _this_trigger_kind ~= nil and _this_trigger_kind == _prev_cap_kind
+      end
+
       if _fresh_trigger or _continuation_trigger then
         -- only a TRUE continuation (the same still-ongoing action spilling
-        -- past the 90-frame cap) keeps a dimmed overlay — it exists purely to
-        -- help review a combo that outgrew the display width, not to show
-        -- the previous, unrelated rep (2026-10-17, reverted from the earlier
-        -- "preserve on every re-arm" version per Peter's explicit request —
-        -- he repeats the same action over and over and wants each fresh rep
-        -- to start on a completely clean row, not layered over the last one)
-        frame_table_arm(_key, _continuation_trigger and not _fresh_trigger)
+        -- past the 90-frame cap) or the same-kind-no-real-gap case above
+        -- keeps a dimmed overlay — it exists purely to help review a combo
+        -- (or a continuous rep sequence) that outgrew the display width, not
+        -- to show the previous, unrelated rep (2026-10-17, reverted from the
+        -- earlier "preserve on every re-arm" version per Peter's explicit
+        -- request — he repeats the same action over and over and wants each
+        -- fresh rep to start on a completely clean row, not layered over
+        -- the last one; 2026-10-29 widened to also cover a same-kind rep
+        -- that happens to land exactly on the 90-frame cap with no real gap)
+        frame_table_arm(_key, (_continuation_trigger and not _fresh_trigger) or _same_kind_cap_continuation)
         -- only a pure movement trigger (no attack/parry involved) marks this
         -- capture as movement-owned — lets a later movement trigger force a
         -- fresh re-arm over it without ever doing that to an attack capture
         frame_table_armed_by_movement[_key] = _fresh_trigger and not _attack_fresh_trigger
+        if frame_table_armed_by_movement[_key] then
+          frame_table_movement_trigger_kind[_key] = _movement_kind[_key]
+        end
 
         if _fresh_trigger then
           frame_table_own_trigger[_key] = true
@@ -856,13 +882,12 @@ function frame_table_update(_player1_obj, _player2_obj)
       -- threshold SA Only already uses), freeze right there instead of
       -- padding on with neutral frames all the way to the 90-frame cap. SA
       -- Only keeps its own episode-based settle check above instead of this
-      -- one. Excludes movement-only captures (plain jumps/dashes, no attack
-      -- involved) — is_idle can read true while just floating in the air
-      -- with no input, so a jump sitting mid-air past the 20-frame threshold
-      -- would otherwise freeze and get wiped by the next unrelated action's
-      -- fresh arm (e.g. an air Super Art, whose charge/motion input often
-      -- takes longer than 20 frames to come out) instead of staying armed
-      -- through it. Movement-only captures never trigger Step 2's episode
+      -- one. Excludes movement-only captures (dash, no attack involved) —
+      -- is_idle can read true throughout a dash with no real input for a
+      -- moment, so this guards against an unrelated later fresh arm (e.g. a
+      -- charge move whose motion input takes longer than 20 frames to come
+      -- out) wiping a dash capture that's still technically current.
+      -- Movement-only captures never trigger Step 2's episode
       -- (has_just_attacked never fires for them), so this is purely a
       -- display-buffer freeze with no stats implication any more.
       elseif not training_settings.frame_table_sa_only and _p.has_real_content
@@ -886,9 +911,9 @@ function frame_table_reset()
   frame_table_sa_parry_freeze_until = { p1 = nil, p2 = nil }
   frame_table_own_trigger = { p1 = false, p2 = false }
   frame_table_prev_superfreeze_strip = { p1 = 0, p2 = 0 }
-  frame_table_prev_jump_startup = { p1 = false, p2 = false }
   frame_table_prev_ground_movement = { p1 = false, p2 = false }
   frame_table_armed_by_movement = { p1 = false, p2 = false }
+  frame_table_movement_trigger_kind = { p1 = nil, p2 = nil }
   frame_table_sa_episode_active = false
   frame_table_sa_episode_frozen = false
   frame_table_run_length = { p1 = 0, p2 = 0 }
