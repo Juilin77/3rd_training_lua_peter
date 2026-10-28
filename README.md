@@ -75,6 +75,11 @@ A: Check video settings, you must use "Basic" blitter option with no scanlines i
 A: Install prerequires from [here](https://github.com/TASVideos/BizHawk-Prereqs/releases/latest/)
 
 ## Changelog
+### v0.32 (10/29/2026)
+- [Fix] Frame Table now resets its internal state on savestate load, so the first captured frame after reloading mid-match classifies correctly instead of showing the wrong color (contribution of @Juilin77)
+- [Fix] Frame Table now lets a repeated same-kind trigger (dash, or mashing the same move) continue across the 90-frame display cap instead of resetting the row (contribution of @Juilin77)
+- [Improvement] Frame Table no longer shows a color block for jumping; dash remains shown (contribution of @Juilin77)
+
 ### v0.31 (10/19/2026)
 - [Fix] Frame Table now gives a player's own Super Art activation freeze display priority over active/projectile/parry, so canceling a hit-confirmed normal into an SA shows the correct freeze color instead of red (contribution of @Juilin77)
 - [Feature] Add a Guard Type sub-option under Dummy's Blocking Mode (Always only): All, Stand Only, or Crouch Only, for deliberately leaving the dummy in the wrong stance to practice overhead/low starters (contribution of @Juilin77)
