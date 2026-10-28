@@ -486,6 +486,29 @@ function frame_table_update(_player1_obj, _player2_obj)
     end
   end
 
+  -- pre-classify own_trigger fix for movement triggers (2026-10-29) — mirrors
+  -- the has_just_attacked fix above: a plain jump's own_trigger gate in
+  -- classify() needs own_trigger already true THIS frame to reach the "not
+  -- on ground" movement fallback, but the jump rising-edge check further
+  -- below only runs after _states is computed, so a plain jump's very first
+  -- frame misclassified as "neutral" instead of "movement" (found via
+  -- Peter's "first jump after entering a match" test). Dash and big-jump
+  -- startup aren't affected by this gate (classify() returns "movement" for
+  -- them earlier, unconditionally), but checking them here too is harmless.
+  if not training_settings.frame_table_sa_only then
+    for _, _key in ipairs({ "p1", "p2" }) do
+      local _obj = _objs[_key]
+      local _is_ground_movement = _obj.movement_type == 0
+        and (_obj.movement_type2 == 4 or _obj.movement_type2 == 5)
+      local _is_jump_startup = _obj.is_in_jump_startup
+        or (_obj.movement_type == 0 and _obj.movement_type2 == 13)
+      if (_is_jump_startup and not frame_table_prev_jump_startup[_key])
+        or (_is_ground_movement and not frame_table_prev_ground_movement[_key]) then
+        frame_table_own_trigger[_key] = true
+      end
+    end
+  end
+
   local _states = {
     p1 = frame_table_classify(_player1_obj, "p1"),
     p2 = frame_table_classify(_player2_obj, "p2"),

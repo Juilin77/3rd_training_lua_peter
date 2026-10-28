@@ -521,6 +521,7 @@ function on_load_state()
   end
   attack_data_reset()
   frame_advantage_reset()
+  frame_table_reset()
 
   gamestate_read()
 
