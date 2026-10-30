@@ -75,6 +75,9 @@ A: Check video settings, you must use "Basic" blitter option with no scanlines i
 A: Install prerequires from [here](https://github.com/TASVideos/BizHawk-Prereqs/releases/latest/)
 
 ## Changelog
+### v0.33 (10/31/2026)
+- [Fix] Red Parry now blocks the first N hits then parries every hit after, instead of stopping after a single designated hit, and no longer loses track of that count mid-attack (contribution of @Juilin77)
+
 ### v0.32 (10/29/2026)
 - [Fix] Frame Table now resets its internal state on savestate load, so the first captured frame after reloading mid-match classifies correctly instead of showing the wrong color (contribution of @Juilin77)
 - [Fix] Frame Table now lets a repeated same-kind trigger (dash, or mashing the same move) continue across the 90-frame display cap instead of resetting the row (contribution of @Juilin77)
