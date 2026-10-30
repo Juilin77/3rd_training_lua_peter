@@ -286,17 +286,17 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
       if not _preserve_should_block then
         _dummy.blocking.should_block = false
         -- Red Parry's hit counter follows the same "new attack vs continuation" call as
-        -- should_block above (win-codex review round 3, PR #9, 2026-10-31): round 1's
-        -- idle-duration threshold and round 2's relevant_animation_start_frame identity
-        -- were both wrong in different ways, and round 3's attempt to reuse
-        -- wait_for_block_string re-arm was wrong too -- it also fires on every successful
-        -- parry while block_string happens to already be false, resetting mid-attack after
-        -- any parry past the first. has_relevant_animation_just_changed only fires between
-        -- distinct moves (never mid-attack for a single continuous animation like Gouki
-        -- SA1's 6 hits), and _preserve_should_block already correctly recognizes a
-        -- force_recording SA's internal animation-ID switch (e.g. Ryu SA2's 894c->8be4) as
-        -- a continuation, not a new attack -- so this resets in exactly the same cases
-        -- should_block's own reset does, and no others.
+        -- should_block above (win-codex review round 4, PR #9, 2026-10-31): rounds 1-3
+        -- (idle-duration threshold, relevant_animation_start_frame identity,
+        -- wait_for_block_string re-arm) were each wrong because they could fire on a
+        -- per-hit defender event (parry/block/idle) mid-attack. has_relevant_animation_just_changed
+        -- fires only on a real animation-ID change or _self_cancel (gamestate.lua ~438-464),
+        -- neither of which is a defender per-hit event, so it can't fire mid-attack that way.
+        -- _preserve_should_block recognizes a force_recording SA's internal animation-ID
+        -- switch (e.g. Ryu SA2's 894c->8be4) as a continuation when _pre_block_string is
+        -- true; it does not also check the carry window, so a switch landing exactly when
+        -- block_string is false but still inside the carry window would still reset here --
+        -- a pre-existing gap should_block's own reset already has too, not new to this line.
         _dummy.blocking.blocked_hit_count = 0
       end
       if _pre_block_string or _in_carry_window then
