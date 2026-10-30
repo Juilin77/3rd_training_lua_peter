@@ -124,7 +124,6 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
 
   -- ensure variables
   _dummy.blocking.blocked_hit_count = _dummy.blocking.blocked_hit_count or 0
-  _dummy.blocking.red_parry_anim_start = _dummy.blocking.red_parry_anim_start or nil
   _dummy.blocking.expected_attack_animation_hit_frame = _dummy.blocking.expected_attack_animation_hit_frame or 0
   _dummy.blocking.expected_attack_hit_id = _dummy.blocking.expected_attack_hit_id or 0
   _dummy.blocking.last_attack_hit_id = _dummy.blocking.last_attack_hit_id or 0
@@ -231,21 +230,8 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
     return
   end
 
-  -- Reset on attack identity, not on idle timing (win-codex review, PR #9, 2026-10-31):
-  -- an idle-duration threshold is wrong in both directions -- a successful parry's brief
-  -- recovery can flip is_idle true for a frame or two mid-attack (false reset), while two
-  -- separate back-to-back attacks can start within any chosen threshold of each other
-  -- (false non-reset). relevant_animation_start_frame only changes when the attacker's
-  -- current move genuinely changes (gamestate.lua: set on has_animation_just_changed, and
-  -- collapsed across a move's own internal sub-animations via the proxy table), so it stays
-  -- constant for the whole duration of one attack -- including through carries, freezes, and
-  -- any defender-side idle flicker -- and reliably differs once a new attack starts.
-  if _player.relevant_animation_start_frame ~= _dummy.blocking.red_parry_anim_start then
-    _dummy.blocking.blocked_hit_count = 0
-    _dummy.blocking.red_parry_anim_start = _player.relevant_animation_start_frame
-  end
-
   local _pre_block_string = _dummy.blocking.block_string  -- snapshot block_string before it may be cleared
+  local _pre_wait_for_block_string = _dummy.blocking.wait_for_block_string  -- snapshot before it may be armed below
 
   -- blockstring detection
   if ((_dummy.blocking.should_block and not _dummy.blocking.randomized_out) or (_dummy.blocking.should_block_projectile and not _dummy.blocking.projectile_randomized_out)) and _dummy.blocking.wait_for_block_string then
@@ -269,6 +255,22 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
       _dummy.blocking.frame_trap_last_hit_frame = nil
       log(_dummy.prefix, "block_string", string.format("wait blockstring (%d, %d, %d)",  _dummy.blocking.expected_attack_hit_id, _dummy.blocking.last_attack_hit_id, _dummy.idle_time))
     end
+  end
+
+  -- Reset Red Parry's hit counter on the SAME event as block_string re-arming, not on a
+  -- separately-derived signal (win-codex review round 2, PR #9, 2026-10-31): neither an
+  -- idle-duration threshold (round 1 fix: wrong in both directions -- a long real gap
+  -- between two hits of one attack can exceed any fixed threshold, while two separate
+  -- attacks can start within it) nor relevant_animation_start_frame identity (round 2 fix:
+  -- broken by the resync path at gamestate.lua ~550, and false for force_recording SA
+  -- animation-ID switches like Ryu SA2's 894c->8be4 which have no proxy link but are still
+  -- the same attack) can tell "same attack" from "new attack" on their own. wait_for_block_string
+  -- arming above already makes exactly that call -- already debounced against idle flicker via
+  -- idle_time > 20, and already held off across force_recording animation-ID switches by the
+  -- carry logic below (block_string/listening stay active, so arming never fires mid-switch) --
+  -- so piggyback on it instead of re-deriving attack identity.
+  if _dummy.blocking.wait_for_block_string and not _pre_wait_for_block_string then
+    _dummy.blocking.blocked_hit_count = 0
   end
 
   if _dummy.blocking.is_bypassing_freeze_frames then
