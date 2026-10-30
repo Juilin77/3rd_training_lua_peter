@@ -230,7 +230,11 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
     return
   end
 
-  if _dummy.is_idle then
+  -- idle_time > 20 (not raw is_idle) matches the blockstring-disengage check below
+  -- (line ~264): a successful parry's brief recovery can flip is_idle true for 1-2
+  -- frames mid-SA, before the attack's next hit arrives — that transient flicker
+  -- must not reset the count while still inside the same multi-hit attack.
+  if _dummy.is_idle and _dummy.idle_time > 20 then
     _dummy.blocking.blocked_hit_count = 0
   end
 
@@ -1059,7 +1063,9 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
     local _blocking_style = _style -- 2 is block, 3 is parry
 
     if _blocking_style == 4 then -- red parry
-      if _dummy.blocking.blocked_hit_count ~= _red_parry_hit_count then
+      -- block the first N hits, parry every hit from the Nth onward (not just one
+      -- designated hit) -- Peter's design call 2026-10-31, see Issue #6 discussion
+      if _dummy.blocking.blocked_hit_count < _red_parry_hit_count then
         _blocking_style = 2
       else
         _blocking_style = 3
@@ -1085,20 +1091,25 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
     end
 
     local _animation_frame_delta = 0
+    local _delta_is_realtime = false
     if _dummy.blocking.sa_mode == "schedule" and _dummy.blocking.should_block and _dummy.blocking.sa_schedule then
       -- Layer 0 schedule: delta counts down to the next scheduled hit (t0 + offset);
       -- the driver only sets should_block inside a window, so delta is always <= threshold here
+      _delta_is_realtime = true
       local _hit = _dummy.blocking.sa_schedule.hits[_dummy.blocking.sa_schedule_index]
       if _hit then
         _animation_frame_delta = (_dummy.blocking.sa_t0 + _hit.offset) - frame_number
       end
     elseif _dummy.blocking.sa_mode == "fallback" and _dummy.blocking.should_block then
       -- Layer 0 fallback: hold block every frame until the attacker recovers
+      _delta_is_realtime = true
       _animation_frame_delta = 0
     elseif _dummy.blocking.should_block_projectile then
+      _delta_is_realtime = true
       _animation_frame_delta = _dummy.blocking.projectile_hit_frame - frame_number
     elseif _dummy.blocking.carry_global_expected then
       -- carry uses global frame timing, unaffected by animation loop resets
+      _delta_is_realtime = true
       _animation_frame_delta = _dummy.blocking.carry_global_expected - frame_number
       -- when carry fires (delta <= 0), switch to short carry mode so subsequent hits are segmented
       if _animation_frame_delta <= 0 then
@@ -1187,7 +1198,7 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
 
       local _parry_low = _hit_type == 2
 
-      if not _dummy.blocking.is_bypassing_freeze_frames then
+      if not _dummy.blocking.is_bypassing_freeze_frames and not _delta_is_realtime then
         _animation_frame_delta = _animation_frame_delta + _player.remaining_freeze_frames
       end
       if (_animation_frame_delta == 1) or (_animation_frame_delta == 2 and _dummy.blocking.has_pre_parried) then
