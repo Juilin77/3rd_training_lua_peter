@@ -124,6 +124,7 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
 
   -- ensure variables
   _dummy.blocking.blocked_hit_count = _dummy.blocking.blocked_hit_count or 0
+  _dummy.blocking.red_parry_anim_start = _dummy.blocking.red_parry_anim_start or nil
   _dummy.blocking.expected_attack_animation_hit_frame = _dummy.blocking.expected_attack_animation_hit_frame or 0
   _dummy.blocking.expected_attack_hit_id = _dummy.blocking.expected_attack_hit_id or 0
   _dummy.blocking.last_attack_hit_id = _dummy.blocking.last_attack_hit_id or 0
@@ -230,12 +231,18 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
     return
   end
 
-  -- idle_time > 20 (not raw is_idle) matches the blockstring-disengage check below
-  -- (line ~264): a successful parry's brief recovery can flip is_idle true for 1-2
-  -- frames mid-SA, before the attack's next hit arrives — that transient flicker
-  -- must not reset the count while still inside the same multi-hit attack.
-  if _dummy.is_idle and _dummy.idle_time > 20 then
+  -- Reset on attack identity, not on idle timing (win-codex review, PR #9, 2026-10-31):
+  -- an idle-duration threshold is wrong in both directions -- a successful parry's brief
+  -- recovery can flip is_idle true for a frame or two mid-attack (false reset), while two
+  -- separate back-to-back attacks can start within any chosen threshold of each other
+  -- (false non-reset). relevant_animation_start_frame only changes when the attacker's
+  -- current move genuinely changes (gamestate.lua: set on has_animation_just_changed, and
+  -- collapsed across a move's own internal sub-animations via the proxy table), so it stays
+  -- constant for the whole duration of one attack -- including through carries, freezes, and
+  -- any defender-side idle flicker -- and reliably differs once a new attack starts.
+  if _player.relevant_animation_start_frame ~= _dummy.blocking.red_parry_anim_start then
     _dummy.blocking.blocked_hit_count = 0
+    _dummy.blocking.red_parry_anim_start = _player.relevant_animation_start_frame
   end
 
   local _pre_block_string = _dummy.blocking.block_string  -- snapshot block_string before it may be cleared
@@ -1063,7 +1070,7 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
     local _blocking_style = _style -- 2 is block, 3 is parry
 
     if _blocking_style == 4 then -- red parry
-      -- block the first N hits, parry every hit from the Nth onward (not just one
+      -- block the first N hits, then parry every hit after that (not just one
       -- designated hit) -- Peter's design call 2026-10-31, see Issue #6 discussion
       if _dummy.blocking.blocked_hit_count < _red_parry_hit_count then
         _blocking_style = 2
