@@ -3,10 +3,10 @@ require("src/startup")
 -- v0.33
 
 print("-----------------------------")
-print("  3rd_training.lua - "..script_version.."")
+print("  sf33rd_training.lua - "..script_version.."")
 print("  Training mode for "..game_name.."")
 print("  Last tested Fightcade version: "..fc_version.."")
-print("  project url: https://github.com/Juilin77/3rd_training_lua_peter")
+print("  project url: https://github.com/Juilin77/sf33rd_training_lua_juilin77")
 print("  Original work by: Grouflon (https://github.com/Grouflon/3rd_training_lua)")
 print("  Modified by: Peter")
 print("  License: MIT")

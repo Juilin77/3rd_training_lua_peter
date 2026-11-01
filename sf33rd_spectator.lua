@@ -1,7 +1,7 @@
 require("src/startup")
 
 print("-----------------------------")
-print("  3rd_spectator.lua - "..script_version.."")
+print("  sf33rd_spectator.lua - "..script_version.."")
 print("  Spectator script for "..game_name.."")
 print("  Last tested Fightcade version: "..fc_version.."")
 print("  project url: https://github.com/Grouflon/3rd_training_lua")
