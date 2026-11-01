@@ -208,7 +208,7 @@ end
 -- mutation). Resets clear_all_profiles_on to false itself -- unlike clear_all_slots()/
 -- clear_all_mission_slots(), which leave their own arming checkbox at Yes after running
 -- (confirmed by reading them) -- so this can't re-trigger just by pressing LP again, and
--- the menu-open reset in 3rd_training.lua covers the remaining case where Yes got
+-- the menu-open reset in sf33rd_training.lua covers the remaining case where Yes got
 -- auto-saved to disk without ever being validated.
 function clear_all_profiles()
   if not refresh_profile_file_list() then

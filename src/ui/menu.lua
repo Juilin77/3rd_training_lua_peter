@@ -50,7 +50,7 @@ function create_main_menu()
   _replay_file_item.indent = true
 
   -- disable Pattern Replay Mode / Pattern Replay until Replay Import: Scan has found at least one pattern
-  -- no_pattern_available() is defined in 3rd_training.lua (after replay_import_files init)
+  -- no_pattern_available() is defined in sf33rd_training.lua (after replay_import_files init)
 
   -- gray out "Pattern" entry when nothing has been scanned yet
   -- (left/right are already no-ops on a single-element list, so this only changes the color)
@@ -392,7 +392,7 @@ function create_main_menu()
           (function()
             -- scan_pattern_analyzer_mode_names only exists if the private
             -- ../replay-pattern-trainer/lua/bookmark_scan.lua loaded (pcall'd
-            -- dofile in 3rd_training.lua, silently a no-op without it) — on a
+            -- dofile in sf33rd_training.lua, silently a no-op without it) — on a
             -- public-only install the global stays nil, and list_menu_item's
             -- draw() indexes it unconditionally with no nil guard, crashing
             -- the whole menu as soon as this item becomes enabled (Analyze
