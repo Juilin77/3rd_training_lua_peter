@@ -190,7 +190,7 @@ function frame_table_classify(_player_obj, _player_key)
   if training_settings.frame_table_sa_only then
     -- SA Only: purple-family states represent the active parry VALIDITY WINDOW
     -- (the input-acceptance opportunity), not the post-hit freeze — the freeze
-    -- length varies by attack type (see _reference/sf33_System_clean.md), so
+    -- length varies by attack type (see C:\Peter-Agent\AI-Workspace\all-shared\sf33rd\reference\sf33_System_clean.md), so
     -- it isn't a reliable fixed-width training reference the way the per-type
     -- validity window (10F forward/down, 7F air) is. Anti-Air Parry excluded,
     -- consistent with the rest of this file's SA-only parry-history feature.
