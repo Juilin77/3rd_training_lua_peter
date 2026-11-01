@@ -60,7 +60,7 @@ end
 -- captures its life baseline. Deliberately not continuous (unlike Rules-tab Infinite
 -- Life/Instant Max Meter) -- a continuous rewrite would zero out pattern_defense's
 -- life-delta damage calc and instantly refill meter spent mid-pattern (e.g. a second
--- SA or a timed-SA move), see community_feature_inspiration.md 2026-10-11 9527 review
+-- SA or a timed-SA move), see C:\Peter-Agent\AI-Workspace\all-shared\sf33rd\reference\community_feature_inspiration.md 2026-10-11 9527 review
 local function direct_play_reset_resources()
   for _, _p in ipairs({player_objects[1], player_objects[2]}) do
     memory.writebyte(_p.base + 0x9F, 160)
@@ -306,7 +306,7 @@ end
 -- Clear Bookmark Slot's "Character" list + file cache: a SINGLE recursive dir scan of
 -- replay_output_path (one io.popen call total, not one per character folder) -- each
 -- io.popen call has several seconds of fixed overhead on this machine (see the SF3 Direct
--- Play auto-select note in community_feature_inspiration.md), so the original one-call-
+-- Play auto-select note in C:\Peter-Agent\AI-Workspace\all-shared\sf33rd\reference\community_feature_inspiration.md), so the original one-call-
 -- per-character version meant turning this on, then picking each Character, both paid
 -- that cost separately, each step waiting several seconds (Peter 2026-10-11). Grouping every file by its
 -- parent folder here means only characters with >=1 pattern end up in the list (same

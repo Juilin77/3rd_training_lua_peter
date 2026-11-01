@@ -1,6 +1,6 @@
 -- src/data/prediction.lua
 -- Ported from effie3rd's prediction.lua for Peter's global-variable architecture
--- effie3rd source: _reference/effie3rd/3rd_training_lua-main/src/data/prediction.lua
+-- effie3rd source: reference/effie3rd/3rd_training_lua-main/src/data/prediction.lua
 
 local prediction = {}
 
