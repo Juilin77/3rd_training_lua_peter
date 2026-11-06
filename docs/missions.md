@@ -8,6 +8,35 @@ Pattern files come from two independent sources: patterns you've curated by hand
 
 **Note:** Bookmark Scan's analysis step depends on a separate private tool that isn't included in this repository. The menu options are there, but without that tool, scanning won't find anything to play back. Everything else on this tab (Raw Mission recording/replay, Pattern Replay, and all the Clear options) works standalone.
 
+## Step by Step
+
+### Record and replay a Raw Mission
+
+Raw Missions capture a full match (both players, every frame) into a slot, savestate included, so you can replay it later exactly as it happened.
+
+1. Open the training menu (**Start**), go to the **Missions** tab.
+2. Turn **Recording Mission Mode** On. (This grays out Dummy, Recording, Rules, and Special Training while active.)
+3. Set **Record Raw Mission in Slot** to the slot you want to record into.
+4. Close the menu and get into position.
+5. Press **Alt+5** to start recording — this is a keyboard hotkey, not a menu option. It also takes a savestate at this instant, so replay always starts from exactly here.
+6. Play out whatever you want captured.
+7. Press **Alt+5** again to stop. The mission saves automatically and the slot selector auto-advances to the next empty slot.
+8. To replay it: open the menu, turn **Recording Mission Mode** Off, turn **Replay Raw Mission for Slot** On, set **Raw Mission Slot** to the one you recorded, set **Play Side** (which side the dummy plays back), then turn **Replay Raw Mission** On and close the menu.
+
+### Play back a pattern (e.g. the included Ken patterns)
+
+`patterns/ken/` ships with 3 ready-made bookmark patterns (a combo into SA3, and two throws) — no scanning or private tooling needed, they're hand-picked `.json` files you can play back right away:
+
+1. Select Ken as P2, with SA3 equipped.
+2. Turn **Analyze Raw Mission for Bookmarks** On. (This also loads the character list patterns/ were found under — same step needed even for hand-placed files like these.)
+3. Set **Pattern Character** to `ken`.
+4. Pick one of the 3 files under **Pattern (P2: KEN)**.
+5. Turn **Pattern Replay** On to play it against your Ken.
+
+For your own curated patterns, drop `.json`/`.inputs.json` files into `patterns/<character>/` and the same steps apply.
+
+## Option Reference
+
 | Option | Description |
 |--------|-------------|
 | Recording Mission Mode | Enable Raw Mission record mode. While on, the Dummy, Recording, Rules, and Special Training tabs are grayed out. |
@@ -30,13 +59,3 @@ Pattern files come from two independent sources: patterns you've curated by hand
 | Bookmark Slot | Select a bookmark pattern file and confirm with LP to delete it. |
 | Clear Chara All Bookmark Slot | Erase every bookmark pattern belonging to the character currently selected above. |
 | Clear All Bookmark Slot | Erase every bookmark pattern for every character, regardless of the Clear Bookmark Slot gate or selected Character. |
-
-## Trying the included Ken patterns
-
-`patterns/ken/` ships with 3 ready-made bookmark patterns (a combo into SA3, and two throws) — no scanning or private tooling needed, they're hand-picked `.json` files you can play back right away:
-
-1. Select Ken as P2, with SA3 equipped.
-2. Turn **Analyze Raw Mission for Bookmarks** On (this also loads the character list patterns/ were found under — same step needed even for hand-placed files like these).
-3. Set **Pattern Character** to `ken`.
-4. Pick one of the 3 files under **Pattern (P2: KEN)**.
-5. Turn **Pattern Replay** On to play it against your Ken.
