@@ -75,6 +75,11 @@ A: Check video settings, you must use "Basic" blitter option with no scanlines i
 A: Install prerequires from [here](https://github.com/TASVideos/BizHawk-Prereqs/releases/latest/)
 
 ## Changelog
+### v0.34 (11/07/2026)
+- [Feature] Add Ryu SA3 Denjin Hadoken charge-level training display (Special Training mode): a cumulative charge gauge plus an independent pure-charge-duration stopwatch, both freeze after release and reset on the next SA activation (contribution of @Juilin77)
+- [Fix] Red Parry's blocked-hit count now also resets when an SA or projectile activation uses an animation not registered in the frame-data table (e.g. Gouki SA1), preventing a stale count from carrying over into the next attack (contribution of @Juilin77)
+- [Chore] Entry script renamed to match the repo rename: `3rd_training.lua` → `sf33rd_training.lua`, `3rd_spectator.lua` → `sf33rd_spectator.lua` — update the filename if you load the script manually in FBNeo (contribution of @Juilin77)
+
 ### v0.33 (10/31/2026)
 - [Fix] Red Parry now blocks the first N hits then parries every hit after, instead of stopping after a single designated hit, and no longer loses track of that count mid-attack (contribution of @Juilin77)
 
