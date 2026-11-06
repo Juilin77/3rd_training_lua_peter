@@ -17,11 +17,12 @@ Raw Missions capture a full match (both players, every frame) into a slot, saves
 1. Open the training menu (**Start**), go to the **Missions** tab.
 2. Turn **Recording Mission Mode** On. (This grays out Dummy, Recording, Rules, and Special Training while active.)
 3. Set **Record Raw Mission in Slot** to the slot you want to record into.
-4. Close the menu and get into position.
-5. Press **Alt+5** to start recording — this is a keyboard hotkey, not a menu option. It also takes a savestate at this instant, so replay always starts from exactly here.
-6. Play out whatever you want captured.
-7. Press **Alt+5** again to stop. The mission saves automatically and the slot selector auto-advances to the next empty slot.
-8. To replay it: open the menu, turn **Recording Mission Mode** Off, turn **Replay Raw Mission for Slot** On, set **Raw Mission Slot** to the one you recorded, set **Play Side** (which side the dummy plays back), then turn **Replay Raw Mission** On and close the menu.
+4. Close the menu.
+5. Go to [fightcade.com/game/sfiii3nr1/replays](https://www.fightcade.com/game/sfiii3nr1/replays) and pick a match, then click **View replay** so FBNeo loads and plays it back with the Lua script still attached.
+6. While the replay is playing, press **Alt+5** to start recording — this is a keyboard hotkey, not a menu option. It also takes a savestate at this instant, so playback always starts from exactly here.
+7. Let the replay play out to capture whatever you want.
+8. Press **Alt+5** again to stop. The mission saves automatically and the slot selector auto-advances to the next empty slot.
+9. To replay it: open the menu, turn **Recording Mission Mode** Off, turn **Replay Raw Mission for Slot** On, set **Raw Mission Slot** to the one you recorded, set **Play Side** (which side the dummy plays back), then turn **Replay Raw Mission** On and close the menu.
 
 ### Play back a pattern (e.g. the included Ken patterns)
 
