@@ -489,6 +489,12 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
     local _sf_rising = _dummy.blocking.prev_superfreeze_decount == 0 and _sf_now > 0
     _dummy.blocking.prev_superfreeze_decount = _sf_now
     if _sf_rising then
+      -- a new SA is unambiguously a new attack boundary regardless of style; reset here
+      -- too because the _style==2 gate below (Layer 0) skips this reset for Parry/Red
+      -- Parry, and an SA whose own pose animation isn't in frame_data_meta.moves (e.g.
+      -- Gouki SA1, projectile-only) never hits the known-animation reset at line ~300
+      -- either -- leaving a stale count from a prior hit to leak into the SA's hits
+      _dummy.blocking.blocked_hit_count = 0
       if SA_OFFSET_CAPTURE then
         -- diagnostic: printed on EVERY super flash, before any dispatch decision,
         -- to expose flashes that never engage Layer 0 (hidden super anim hunting)
@@ -785,6 +791,11 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
   if #_valid_projectiles > 0 then
     if not _dummy.blocking.listening_projectiles then
       log(_dummy.prefix, "blocking", "listening proj 1")
+      -- rising edge = a new projectile attack is unambiguously starting, same reasoning
+      -- as the _sf_rising reset above: a multi-hit projectile (e.g. red fireball) whose
+      -- throw animation isn't a known move never resets this via the animation-change
+      -- path, so a stale count from a prior hit would leak into its first hit
+      _dummy.blocking.blocked_hit_count = 0
     end
     _dummy.blocking.listening_projectiles = true
   else
