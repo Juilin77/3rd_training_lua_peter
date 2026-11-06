@@ -6,7 +6,7 @@ Focused training tools for specific SF3 mechanics. Select a mode from **Special 
 
 | Option | Description |
 |--------|-------------|
-| Mode | Training mode: None / Parry / Charge / Hyakuretsu Kyaku / Juggle / Tech Throw / 720 |
+| Mode | Training mode: None / Parry / Charge / Hyakuretsu Kyaku / Juggle / Tech Throw / 720 / Denjin Hadoken (Ryu) |
 | Follow Character | Gauge follows P1's on-screen position. Grayed out in None, Juggle, Tech Throw, and 720 modes, and forced on while Parry Rhythm - SA is enabled. |
 
 ---
@@ -94,3 +94,15 @@ Detects Hugo's 720° rotation input using SF3's 11-frame window. Shows an input 
 - **Result text** — 720! (green, success) / Too Late / Wrong Button / Incomplete
 - **Orange bar** — 11-frame input window
 - **Input squares** — direction inputs captured during the rotation
+
+---
+
+## Denjin Hadoken Mode (Ryu only)
+
+![Denjin Hadoken Mode](../screenshots/special_training_denjin.png)
+
+Tracks Ryu's SA3 (Denjin Hadoken) charge with two stacked gauges. Red tick marks on the top gauge mark each level transition.
+
+- **Top bar (orange)** — cumulative charge, driven directly by the game's own charge level/time. Shows the level number (1-5) and the raw frame count (0-160). Freezes at its last value after the Denjin Hadoken is released, and resets at the next SA3 activation's superfreeze flash.
+- **Bottom bar (blue)** — an independent stopwatch for pure charge duration only: it excludes the superfreeze flash and any projectile-flight time, matching Frame Table's own frame count for the charge. Also freezes after release and resets on the next activation.
+- **Follow Character** — gauge follows P1's on-screen position.
