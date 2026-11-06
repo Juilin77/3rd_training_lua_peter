@@ -87,6 +87,7 @@ require("src/ui/special_training/hyakuretsu_training")
 require("src/ui/special_training/juggle_training")
 require("src/ui/special_training/tech_throw_training")
 require("src/ui/special_training/720_trainer")
+require("src/ui/special_training/denjin_training")
 require("src/ui/blocking_mode_display")
 require("src/ui/parry_rhythm_sa_display")
 require("src/data/simulation")
@@ -314,9 +315,11 @@ special_training_mode = {
   "Juggle",
   "Tech Throw",
   "720",
+  "Denjin Hadoken (Ryu)",
 }
 
 juggle_disp = { jc = 0, air_time = 0, expired = false, was_airborne = false }
+denjin_disp_reset()
 throw_tech_disp = {
   name = "TECH THROW",
   always_show_ratio_text = true,  -- keep "n/5" instead of switching to a delta number after a result; the cooldown_marker pointer shows timing instead
@@ -522,6 +525,7 @@ function on_load_state()
   attack_data_reset()
   frame_advantage_reset()
   frame_table_reset()
+  denjin_disp_reset()
 
   gamestate_read()
 
@@ -827,6 +831,7 @@ function on_gui()
   special_training_juggle_draw()
   special_training_tech_throw_draw()
   special_training_720_draw()
+  special_training_denjin_draw()
   blocking_mode_display()
   update_parry_rhythm_sa_capture()
   parry_rhythm_sa_display()

@@ -69,6 +69,8 @@ function reset_player_objects()
   P1.stun_bar_addr = P1.stun_max_addr + 0x6
   P1.meter_update_flag = 0x020157C8
   P1.score_addr = 0x020113A2
+  P1.denjin_time_addr = 0x02068D27 -- ported from effie3rd memory_addresses.lua, verified in-game 2026-11-04
+  P1.denjin_level_addr = 0x02068D2D -- level counts up through 3/9/14/19 (I/II/III/IV); time counts down to 0 within each level
   P1.parry_forward_validity_time_addr = 0x02026335
   P1.parry_forward_cooldown_time_addr = 0x02025731
   P1.parry_down_validity_time_addr = 0x02026337
@@ -96,6 +98,8 @@ function reset_player_objects()
   P2.stun_bar_addr = P2.stun_max_addr + 0x6
   P2.meter_update_flag = 0x020157C9
   P2.score_addr = 0x020113AE
+  P2.denjin_time_addr = 0x020691BF -- ported from effie3rd memory_addresses.lua, verified in-game 2026-11-04
+  P2.denjin_level_addr = 0x020691C5 -- level counts up through 3/9/14/19 (I/II/III/IV); time counts down to 0 within each level
   P2.parry_forward_validity_time_addr = P1.parry_forward_validity_time_addr + 0x406
   P2.parry_forward_cooldown_time_addr = P1.parry_forward_cooldown_time_addr + 0x620
   P2.parry_down_validity_time_addr = P1.parry_down_validity_time_addr + 0x406
@@ -335,6 +339,8 @@ function read_player_vars(_player_obj)
 
   _player_obj.meter_gauge = memory.readbyte(_player_obj.gauge_addr)
   _player_obj.meter_count = memory.readbyte(_player_obj.meter_addr[2])
+  _player_obj.denjin_time = memory.readbyte(_player_obj.denjin_time_addr)
+  _player_obj.denjin_level = memory.readbyte(_player_obj.denjin_level_addr)
   if _player_obj.id == 1 then
     _player_obj.max_meter_gauge = memory.readbyte(0x020695B3)
     _player_obj.max_meter_count = memory.readbyte(0x020695BD)
