@@ -20,7 +20,8 @@ Raw Missions capture a full match (both players, every frame) into a slot, saves
 4. Close the menu.
 5. Go to [fightcade.com/game/sfiii3nr1/replays](https://www.fightcade.com/game/sfiii3nr1/replays) and pick a match, then click **View replay** so FBNeo loads and plays it back with the Lua script still attached.
 6. Press **Alt+5** to start recording the segment you're interested in; press **Alt+5** again to stop. The mission saves automatically and the slot selector auto-advances to the next empty slot — there are 10 slots total, so you can capture up to 10 segments this way.
-7. Open the menu again and turn **Recording Mission Mode** Off. The other tabs become usable again.
+7. Close the Fightcade replay and switch back to Practice Mode.
+8. Open the menu again and turn **Recording Mission Mode** Off. The other tabs become usable again.
 
 ### 2. Replay a Raw Mission
 
