@@ -179,7 +179,7 @@ frame_data_meta["gouki"].projectiles["6B"] = { movement = { {-6, 0}, {-6, 0}, {-
 frame_data_meta["gouki"].projectiles["6C"] = { movement = { {-7, 0}} } -- M Fireball
 
 frame_data_meta["gouki"].projectiles["59"] = { movement = { {-7, 0}, {-6, 0}, {-7, 0}, {-7, 0}} } -- L Red Fireball
-frame_data_meta["gouki"].projectiles["5A"] = { movement = { {-6, 0}, {-6, 0}, {-6, 0}, {-6, 0}, {-6, 0}, {-6, 0}, {-5, 0}} } -- M Red Fireball
+frame_data_meta["gouki"].projectiles["5A"] = { movement = { {-6, 0}, {-6, 0}, {-6, 0}, {-6, 0}, {-6, 0}, {-6, 0}, {-5, 0}}, cooldown = 2 } -- M Red Fireball
 frame_data_meta["gouki"].projectiles["5B"] = { movement = { {-5, 0}}, cooldown = 2 } -- H Red Fireball
 
 frame_data_meta["gouki"].projectiles["55"] = { movement = { {-7, 0}} } -- Ground SA1

@@ -1050,17 +1050,17 @@ function read_projectiles()
       local _previous_remaining_freeze_frames = _obj.remaining_freeze_frames or 0
       _obj.remaining_freeze_frames = memory.readbyte(_obj.base + 0x45)
 
-      -- Issue #8: Gouki 5B-only cooldown/hold tracking, per-real-frame-persistent fields
+      -- Issue #8/#26: Gouki 5A/5B cooldown/hold tracking, per-real-frame-persistent fields
       -- mirroring remaining_freeze_frames (reset only on a fresh contact; decremented every
       -- subsequent real frame thereafter). blocking.lua's admission loop only ever READS these
       -- live values -- it must never reset or re-initialize them itself.
       local _emitter_obj = player_objects[_obj.emitter_id]
-      if _emitter_obj and _emitter_obj.char_str == "gouki" and _obj.projectile_start_type == "5B" then
+      if _emitter_obj and _emitter_obj.char_str == "gouki" and (_obj.projectile_start_type == "5B" or _obj.projectile_start_type == "5A") then
         _obj.cooldown = _obj.cooldown or 0
         _obj.hold_frames_remaining = _obj.hold_frames_remaining or 0
         local _freeze_just_began = _obj.remaining_freeze_frames > 0 and _previous_remaining_freeze_frames == 0
         if _freeze_just_began then
-          local _meta = frame_data_meta["gouki"].projectiles["5B"]
+          local _meta = frame_data_meta["gouki"].projectiles[_obj.projectile_start_type]
           _obj.cooldown = (_meta and _meta.cooldown) or 0
           _obj.hold_frames_remaining = 1
           -- no further decrement this same frame: the fresh value just set above is this
