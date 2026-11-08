@@ -362,12 +362,13 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
   if _dummy.blocking.listening_projectiles and _dummy.blocking.should_block_projectile
   and _dummy.blocking.expected_projectile then
     local _correct_emitter = player_objects[_dummy.blocking.expected_projectile.emitter_id]
-    -- Issue #8/#22: exempt Gouki 5B (new cooldown+hold admission, round 25 READY) AND Gouki SA1
+    -- Issue #8/#22/#26: exempt Gouki 5A/5B (cooldown+hold admission) AND Gouki SA1
     -- (55 -- its own existing admission formula already targets correctly; this block's re-
     -- derivation using the OLD formula is what breaks it, confirmed PRE_IMPLEMENTATION_REVIEW.md
     -- Steps 19-21) from this re-correction. Every other projectile keeps the original behavior.
     local _correct_is_exempt_gouki = _correct_emitter and _correct_emitter.char_str == "gouki"
       and (_dummy.blocking.expected_projectile.projectile_start_type == "5B"
+        or _dummy.blocking.expected_projectile.projectile_start_type == "5A"
         or _dummy.blocking.expected_projectile.projectile_start_type == "55")
     if _correct_emitter and not _correct_is_exempt_gouki then
       local _correct_projectile_obj = _dummy.blocking.expected_projectile
@@ -863,12 +864,13 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
 
   if _dummy.blocking.listening_projectiles and not _dummy.blocking.should_block_projectile then
     local _max_prediction_frames = 3
-    local _max_prediction_frames_5b = 4 -- Issue #8: Gouki 5B only, extended for cooldown+hold admission (win-codex round 25 READY)
+    local _max_prediction_frames_5b = 4 -- Issue #8/#26: Gouki 5A/5B, extended for cooldown+hold admission
     local _box_type_matches = {{{"vulnerability", "ext. vulnerability"}, {"attack"}}}
     for _i = 1, math.max(_max_prediction_frames, _max_prediction_frames_5b) do
       for _j, _projectile_obj in ipairs(_valid_projectiles) do
         local _emitter = player_objects[_projectile_obj.emitter_id]
-        local _is_5b_gouki = _emitter and _emitter.char_str == "gouki" and _projectile_obj.projectile_start_type == "5B"
+        local _is_5b_gouki = _emitter and _emitter.char_str == "gouki"
+          and (_projectile_obj.projectile_start_type == "5B" or _projectile_obj.projectile_start_type == "5A")
         if _is_5b_gouki or _i <= _max_prediction_frames then
           local _frame_delta
           local _eligible = true
