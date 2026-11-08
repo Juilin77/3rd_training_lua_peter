@@ -352,6 +352,65 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
     _dummy.blocking.blocked_hit_count = _dummy.blocking.blocked_hit_count + 1
   end
 
+  -- Issue #8 Finding 1 fix: continuous target re-prediction/correction. While a target is
+  -- already locked (should_block_projectile true), re-evaluate the SAME expected_projectile
+  -- every frame using the existing admission formula (_frame_delta > 0, earliest successful
+  -- _i) and update projectile_hit_frame ONLY if that candidate differs from the one already
+  -- locked. Runs before the expiry check below so an about-to-expire target can be rescued.
+  -- Never touches blocked_hit_count, has_pre_parried, randomization, should_block_projectile,
+  -- or expected_projectile -- those stay exactly as the original admission set them.
+  if _dummy.blocking.listening_projectiles and _dummy.blocking.should_block_projectile
+  and _dummy.blocking.expected_projectile then
+    local _correct_emitter = player_objects[_dummy.blocking.expected_projectile.emitter_id]
+    -- Issue #8/#22: exempt Gouki 5B (new cooldown+hold admission, round 25 READY) AND Gouki SA1
+    -- (55 -- its own existing admission formula already targets correctly; this block's re-
+    -- derivation using the OLD formula is what breaks it, confirmed PRE_IMPLEMENTATION_REVIEW.md
+    -- Steps 19-21) from this re-correction. Every other projectile keeps the original behavior.
+    local _correct_is_exempt_gouki = _correct_emitter and _correct_emitter.char_str == "gouki"
+      and (_dummy.blocking.expected_projectile.projectile_start_type == "5B"
+        or _dummy.blocking.expected_projectile.projectile_start_type == "55")
+    if _correct_emitter and not _correct_is_exempt_gouki then
+      local _correct_projectile_obj = _dummy.blocking.expected_projectile
+      local _correct_box_type_matches = {{{"vulnerability", "ext. vulnerability"}, {"attack"}}}
+      local _correct_new_hit_frame = nil
+      for _ci = 1, 3 do
+        if _correct_new_hit_frame == nil then
+          local _correct_frame_delta = _ci - _correct_projectile_obj.remaining_freeze_frames
+          if _correct_frame_delta > 0 then
+            local _correct_defender_pos = predict_object_position(_dummy, _correct_frame_delta)
+
+            local _correct_movement = nil
+            local _correct_lifetime = _correct_projectile_obj.lifetime
+            local _correct_meta = frame_data_meta[_player.char_str] and frame_data_meta[_player.char_str].projectiles and frame_data_meta[_player.char_str].projectiles[_correct_projectile_obj.projectile_start_type] or nil
+            if _correct_meta ~= nil then
+              _correct_movement = _correct_meta.movement
+            end
+            local _correct_projectile_pos = predict_object_position(_correct_projectile_obj, _correct_frame_delta, _correct_movement, _correct_lifetime)
+
+            local _correct_projectile_boxes = _correct_projectile_obj.boxes
+            local _correct_projectile_frame_data = frame_data[_player.char_str][_correct_projectile_obj.projectile_start_type]
+            if _correct_projectile_frame_data ~= nil and _correct_projectile_obj.lifetime < _correct_projectile_frame_data.start_lifetime then
+              if (_correct_projectile_obj.lifetime + _correct_frame_delta) >= _correct_projectile_frame_data.start_lifetime then
+                _correct_projectile_boxes = _correct_projectile_frame_data.boxes
+              end
+            end
+
+            local _correct_defender_boxes = predict_hurtboxes(_dummy, _correct_frame_delta)
+
+            if test_collision(_correct_defender_pos[1], _correct_defender_pos[2], _dummy.flip_x, _correct_defender_boxes,
+            _correct_projectile_pos[1], _correct_projectile_pos[2], _correct_projectile_obj.flip_x, _correct_projectile_boxes,
+            _correct_box_type_matches,
+            0, 0, 0, 0) then
+              _correct_new_hit_frame = frame_number + _ci
+            end
+          end
+        end
+      end
+      if _correct_new_hit_frame ~= nil and _correct_new_hit_frame ~= _dummy.blocking.projectile_hit_frame then
+        _dummy.blocking.projectile_hit_frame = _correct_new_hit_frame
+      end
+    end
+  end
 
   -- check if the hit we are expecting has expired or not
   local _hit_expired = false
@@ -804,70 +863,96 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
 
   if _dummy.blocking.listening_projectiles and not _dummy.blocking.should_block_projectile then
     local _max_prediction_frames = 3
+    local _max_prediction_frames_5b = 4 -- Issue #8: Gouki 5B only, extended for cooldown+hold admission (win-codex round 25 READY)
     local _box_type_matches = {{{"vulnerability", "ext. vulnerability"}, {"attack"}}}
-    for _i = 1, _max_prediction_frames do
+    for _i = 1, math.max(_max_prediction_frames, _max_prediction_frames_5b) do
       for _j, _projectile_obj in ipairs(_valid_projectiles) do
-        local _frame_delta = _i - _projectile_obj.remaining_freeze_frames
-        if _frame_delta >= 0 then
-          local _next_defender_pos = predict_object_position(_dummy, _frame_delta)
-
-          local _movement = nil
-          local _lifetime = _projectile_obj.lifetime
-          local _projectile_meta_data = frame_data_meta[_player.char_str] and frame_data_meta[_player.char_str].projectiles and frame_data_meta[_player.char_str].projectiles[_projectile_obj.projectile_start_type] or nil
-          if _projectile_meta_data ~= nil then
-            _movement = _projectile_meta_data.movement
-          end
-          local _next_projectile_pos = predict_object_position(_projectile_obj, _frame_delta, _movement, _lifetime)
-
-          local _projectile_boxes = _projectile_obj.boxes
-          -- Look into the frame data for the first frame hitboxes
-          local _projectile_frame_data = frame_data[_player.char_str][_projectile_obj.projectile_start_type]
-          if _projectile_frame_data ~= nil and _projectile_obj.lifetime < _projectile_frame_data.start_lifetime then
-            if (_projectile_obj.lifetime + _frame_delta) >= _projectile_frame_data.start_lifetime then
-              _projectile_boxes = _projectile_frame_data.boxes
+        local _emitter = player_objects[_projectile_obj.emitter_id]
+        local _is_5b_gouki = _emitter and _emitter.char_str == "gouki" and _projectile_obj.projectile_start_type == "5B"
+        if _is_5b_gouki or _i <= _max_prediction_frames then
+          local _frame_delta
+          local _eligible = true
+          if _is_5b_gouki then
+            local _freeze_initial = _projectile_obj.remaining_freeze_frames
+            local _hold_initial = _projectile_obj.hold_frames_remaining or 0
+            local _sim_freeze = _freeze_initial
+            local _sim_cooldown = _projectile_obj.cooldown or 0
+            for _s = 1, _i do
+              if _s == 1 and _hold_initial > 0 then
+                -- hold: _sim_freeze stays at _freeze_initial this step
+              else
+                _sim_freeze = math.max(_sim_freeze - 1, 0)
+              end
+              if _sim_freeze == 0 then
+                _sim_cooldown = math.max(_sim_cooldown - 1, 0)
+              end
             end
+            _eligible = (_sim_freeze == 0 and _sim_cooldown == 0)
+            _frame_delta = _i - _freeze_initial - _hold_initial
+          else
+            _frame_delta = _i - _projectile_obj.remaining_freeze_frames
           end
+          if _eligible and _frame_delta > 0 then
+            local _next_defender_pos = predict_object_position(_dummy, _frame_delta)
 
-          local _defender_boxes = predict_hurtboxes(_dummy, _frame_delta)
+            local _movement = nil
+            local _lifetime = _projectile_obj.lifetime
+            local _projectile_meta_data = frame_data_meta[_player.char_str] and frame_data_meta[_player.char_str].projectiles and frame_data_meta[_player.char_str].projectiles[_projectile_obj.projectile_start_type] or nil
+            if _projectile_meta_data ~= nil then
+              _movement = _projectile_meta_data.movement
+            end
+            local _next_projectile_pos = predict_object_position(_projectile_obj, _frame_delta, _movement, _lifetime)
 
-          if test_collision(_next_defender_pos[1], _next_defender_pos[2], _dummy.flip_x, _defender_boxes,
-          _next_projectile_pos[1] , _next_projectile_pos[2], _projectile_obj.flip_x, _projectile_boxes,
-          _box_type_matches,
-          0, -- defender hitbox dilation
-          0, -- defender hitbox dilation
-          0,
-          0) then
-            _dummy.blocking.should_block_projectile = true
-            _dummy.blocking.projectile_randomized_out = false
-            _dummy.blocking.has_pre_parried = false
-            _dummy.blocking.projectile_hit_frame = frame_number + _i
-            _dummy.blocking.expected_projectile = _projectile_obj
-            _dummy.blocking.is_precise_timing = _movement ~= nil
-            log(_dummy.prefix, "blocking", string.format("block proj %s in %d", _projectile_obj.id, _i))
-
-            -- Block-style-only refinements, see the identical comment above (2026-10-11 Peter)
-            if _style == 2 then
-              if _mode == 2 then -- combo only: let the very first hit of a fresh engagement through
-                -- see the identical fix/comment above: wait_for_block_string==true, not negated
-                if _dummy.blocking.wait_for_block_string then
-                  _dummy.blocking.should_block_projectile = false
-                end
-              elseif _mode == 3 then -- random
-                if not _dummy.blocking.block_string then
-                  local _r = math.random()
-                  if _r > 0.5 then
-                    _dummy.blocking.projectile_randomized_out = true
-                    if _debug then
-                      print(string.format(" %d: next hit randomized out", frame_number))
-                    end
-                  end
-                end
-              elseif _mode == 4 then -- frame trap: first N hits always connect, then Block or Random
-                apply_frame_trap_mode("should_block_projectile", "projectile_randomized_out")
+            local _projectile_boxes = _projectile_obj.boxes
+            -- Look into the frame data for the first frame hitboxes
+            local _projectile_frame_data = frame_data[_player.char_str][_projectile_obj.projectile_start_type]
+            if _projectile_frame_data ~= nil and _projectile_obj.lifetime < _projectile_frame_data.start_lifetime then
+              if (_projectile_obj.lifetime + _frame_delta) >= _projectile_frame_data.start_lifetime then
+                _projectile_boxes = _projectile_frame_data.boxes
               end
             end
 
-            break
+            local _defender_boxes = predict_hurtboxes(_dummy, _frame_delta)
+
+            if test_collision(_next_defender_pos[1], _next_defender_pos[2], _dummy.flip_x, _defender_boxes,
+            _next_projectile_pos[1] , _next_projectile_pos[2], _projectile_obj.flip_x, _projectile_boxes,
+            _box_type_matches,
+            0, -- defender hitbox dilation
+            0, -- defender hitbox dilation
+            0,
+            0) then
+              _dummy.blocking.should_block_projectile = true
+              _dummy.blocking.projectile_randomized_out = false
+              _dummy.blocking.has_pre_parried = false
+              _dummy.blocking.projectile_hit_frame = frame_number + _i
+              _dummy.blocking.expected_projectile = _projectile_obj
+              _dummy.blocking.is_precise_timing = _movement ~= nil
+              log(_dummy.prefix, "blocking", string.format("block proj %s in %d", _projectile_obj.id, _i))
+
+              -- Block-style-only refinements, see the identical comment above (2026-10-11 Peter)
+              if _style == 2 then
+                if _mode == 2 then -- combo only: let the very first hit of a fresh engagement through
+                  -- see the identical fix/comment above: wait_for_block_string==true, not negated
+                  if _dummy.blocking.wait_for_block_string then
+                    _dummy.blocking.should_block_projectile = false
+                  end
+                elseif _mode == 3 then -- random
+                  if not _dummy.blocking.block_string then
+                    local _r = math.random()
+                    if _r > 0.5 then
+                      _dummy.blocking.projectile_randomized_out = true
+                      if _debug then
+                        print(string.format(" %d: next hit randomized out", frame_number))
+                      end
+                    end
+                  end
+                elseif _mode == 4 then -- frame trap: first N hits always connect, then Block or Random
+                  apply_frame_trap_mode("should_block_projectile", "projectile_randomized_out")
+                end
+              end
+
+              break
+            end
           end
         end
       end
@@ -1235,6 +1320,7 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
       end
     end
   end
+
 end
 
 -- 2026-10-11 Peter: simplified from a 3-way Never/Always/Random mode to a plain on/off
