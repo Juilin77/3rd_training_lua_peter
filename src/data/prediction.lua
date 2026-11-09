@@ -2,6 +2,8 @@
 -- Ported from effie3rd's prediction.lua for Peter's global-variable architecture
 -- effie3rd source: reference/effie3rd/3rd_training_lua-main/src/data/prediction.lua
 
+require("src/data/tools_compat") -- defines the tools/Pools/copytable globals this file assumes exist
+
 local prediction = {}
 
 -- ── Stubs for missing effie3rd modules ──────────────────────────────────────
@@ -34,6 +36,17 @@ local _stage_boundaries = { left = -27648, right = 27648 }
 
 -- debug stub
 local _debug_on = false
+
+-- next_animation: effie3rd populates this every simulated frame via update_before/update_after
+-- (dummy_control.lua), which read real per-frame input to predict the defender's own upcoming
+-- block/parry/crouch transitions. Those two functions exist in this file (update_before/
+-- update_after) but are never called -- wiring up the full lifecycle needs a real input source
+-- and call-isolation design, not done yet (win-codex PRE-review #28, round 7). Deliberate
+-- simplification for now: default both slots to NONE (no predicted animation change) so
+-- predict_hits doesn't crash on this undeclared global and the simulation falls back to just
+-- using the defender's actual current animation -- reasonable for the short (<=3 frame) lookahead
+-- our callers use, but means defender animation-transition prediction itself isn't ported yet.
+next_animation = next_animation or { 1, 1 }
 
 -- ── Peter's globals used directly ───────────────────────────────────────────
 -- frame_data, frame_data_meta, character_specific, next_animation,
@@ -977,10 +990,13 @@ end
 
 -- ── Batch 7: _box_type_matches, check_collisions ───────────────────────────────
 
-local _box_type_match_attack = { { { "vulnerability", "ext_vulnerability" }, { "attack" } } }
+-- box type string must match our real RAM reader's convention (gamestate.lua read_box),
+-- which uses "ext. vulnerability" (period+space), not effie3rd's own "ext_vulnerability"
+-- (win-codex PRE-review #28, round 7)
+local _box_type_match_attack = { { { "vulnerability", "ext. vulnerability" }, { "attack" } } }
 local _box_type_match_attack_and_throw =
-   { { { "vulnerability", "ext_vulnerability" }, { "attack" } }, { { "throwable" }, { "throw" } } }
-local _box_type_match_tengu = { { { "vulnerability", "ext_vulnerability", "push" }, { "attack" } } }
+   { { { "vulnerability", "ext. vulnerability" }, { "attack" } }, { { "throwable" }, { "throw" } } }
+local _box_type_match_tengu = { { { "vulnerability", "ext. vulnerability", "push" }, { "attack" } } }
 
 -- EX Aegis and Ibuki SA1
 local _first_hit_frame_exceptions = {
@@ -1008,13 +1024,41 @@ local function check_collisions(_gs)
                and tools.has_boxes(_frames[_frame_to_check].boxes, tools.BOXES.ATTACK_AND_THROW)
             then
                local _should_test = false
-               local _current_hit_id = _player._current_hit_id
+               -- must start at 1 (matching blocking.lua's predict_hitboxes), not the consumed
+               -- seed -- starting from the seed left _current_hit_id stuck below 1 for every
+               -- frame inside hit1's own window, so "_current_hit_id > _player._current_hit_id"
+               -- (1 > 0+) never passed and hit1 could never be admitted this way (win-codex
+               -- PRE-review #28, round 9, confirmed bug). The seed is only used for the final
+               -- comparison below, never as the scan's starting point.
+               local _current_hit_id = 1
 
+               -- hit_frame can be a scalar frame (open-ended threshold, not a single-frame
+               -- window), a {min=,max=} table (our recorder's real format, data/*/framedata/
+               -- *.json), or effie3rd's own [1]/[2] array -- mirrors blocking.lua's own
+               -- predict_hitboxes hit_id loop exactly (full scan, no break, scalar treated as
+               -- ">= threshold" not "== this one frame") rather than a range-containment check,
+               -- since a scalar genuinely means "from here on, until the next entry" in this
+               -- codebase's convention (win-codex PRE-review #28, round 8: my earlier
+               -- range-containment version mishandled scalars)
                for _i, hit_frame in ipairs(_fdata.hit_frames) do
-                  if _player.animation_frame >= hit_frame[1] and _player.animation_frame <= hit_frame[2] then
-                     _current_hit_id = _i
-                     break
+                  if type(hit_frame) == "number" then
+                     if _player.animation_frame >= hit_frame then
+                        _current_hit_id = _i
+                     end
+                  else
+                     local _hf_max = hit_frame.max or hit_frame[2]
+                     if _player.animation_frame > _hf_max then
+                        _current_hit_id = _i + 1
+                     end
                   end
+               end
+               -- reject a candidate that's run off the end of the recorded hit list (matching
+               -- predict_hitboxes's "_next_hit_id > #hit_frames -> return empty" guard) -- without
+               -- this, a frame past the final hit's max would compute hit_id = #hit_frames + 1 and
+               -- could admit a phantom extra hit if attack boxes are still present that frame
+               -- (win-codex PRE-review #28, round 9, confirmed bug)
+               if _current_hit_id > #_fdata.hit_frames then
+                  _current_hit_id = _player._current_hit_id
                end
 
                if _fdata.infinite_loop then
@@ -1707,19 +1751,29 @@ end
 -- ── Gamestate adapter ────────────────────────────────────────────────────────
 
 local function make_player_gs(_p)
+  -- move_players (this file) applies velocity/acceleration as facing-relative magnitudes
+  -- (multiplied by a sign derived from flip_x), but our real gamestate.lua computes velocity_x/
+  -- acceleration_x as already-signed WORLD-SPACE deltas (position differences). Convert to the
+  -- facing-relative space the simulation expects (win-codex PRE-review #28, round 8, confirmed
+  -- bug: "velocity in the wrong coordinate space").
+  local _sign = tools.flip_to_sign(_p.flip_x)
   return {
+    type = "player",
     pos_x = _p.pos_x,
     pos_y = _p.pos_y,
     flip_x = _p.flip_x,
-    velocity_x = _p.velocity_x or 0,
+    velocity_x = (_p.velocity_x or 0) * _sign,
     velocity_y = _p.velocity_y or 0,
-    acceleration_x = _p.acceleration_x or 0,
+    acceleration_x = (_p.acceleration_x or 0) * _sign,
     acceleration_y = _p.acceleration_y or 0,
-    animation = _p.animation,
-    animation_frame = _p.animation_frame,
+    -- use the relevant_* triple together (animation/frame/frame_data), not raw animation --
+    -- proxy animations and resync can make raw/relevant diverge (win-codex PRE-review #28, round 7)
+    animation = _p.relevant_animation,
+    animation_frame = _p.relevant_animation_frame,
     animation_frame_hash = _p.animation_frame_hash,
-    _animation_frame_data = _p.animation_frame_data,
+    _animation_frame_data = _p.relevant_animation_frame_data,
     remaining_freeze_frames = _p.remaining_freeze_frames or 0,
+    animation_freeze_frames = _p.relevant_animation_freeze_frames or 0,
     freeze_just_began = false,
     freeze_just_ended = false,
     char_str = _p.char_str,
@@ -1729,10 +1783,16 @@ local function make_player_gs(_p)
     _boxes = _p.boxes,
     posture = _p.posture,
     posture_ext = _p.posture_ext,
+    character_state_byte = _p.character_state_byte,
+    -- "not 1-or-2" undercounts: some characters have extra character-specific ground states
+    -- (character_specific[char].additional_standing_states -- e.g. Oro 3, Dudley 6, Makoto 7,
+    -- Necro 13, per framedata.lua) that is_state_on_ground already accounts for. Use the real
+    -- function instead of reinventing the check (win-codex PRE-review #28, round 9, confirmed
+    -- bug -- move_players applies velocity differently when is_airborne is true)
     standing_state = _p.standing_state,
     is_standing = (_p.standing_state == 1),
     is_crouching = (_p.standing_state == 2),
-    is_airborne = (_p.standing_state == 4),
+    is_airborne = not is_state_on_ground(_p.standing_state, _p),
     is_blocking = _p.is_blocking or false,
     movement_type = _p.movement_type,
     movement_type2 = _p.movement_type2,
@@ -1743,15 +1803,22 @@ local function make_player_gs(_p)
     remaining_wakeup_time = _p.remaining_wakeup_time or 0,
     _recovery_time = _p.recovery_time or 0,
     selected_sa = _p.selected_sa or 1,
-    -- effie3rd-specific fields defaulted
+    -- real field exists (gamestate.lua) -- map it instead of silently forcing false
     is_in_pushback = false,
     pushback_start_frame = 0,
-    is_in_air_recovery = false,
+    is_in_air_recovery = _p.is_in_air_recovery or false,
+    -- is_in_air_reel: no equivalent concept exists anywhere in our gamestate (confirmed via
+    -- repo-wide search) -- genuinely unmappable, not an oversight; leave false (win-codex
+    -- PRE-review #28, round 8)
     is_in_air_reel = false,
     _current_hit_id = 0,
     connected_action_count = 0,
     has_just_connected = false,
     animation_connection_count = 0,
+    -- only read by the _fdata.infinite_loop branch (no current roster move has this flag per
+    -- win-codex PRE-review #28, round 8 -- but was missing entirely, would nil-arithmetic-crash
+    -- the moment a future character does)
+    animation_miss_count = 0,
     has_animation_just_changed = _p.has_animation_just_changed or false,
     additional_recovery_time = 0,
     ends_recovery_next_frame = false,
@@ -1760,7 +1827,7 @@ local function make_player_gs(_p)
   }
 end
 
-local function make_gs(player1, player2)
+local function make_gs(player1, player2, _last_hit_id)
   local _gs = {}
   _gs.frame_number = frame_number
   _gs.screen_x = screen_x or 0
@@ -1772,19 +1839,42 @@ local function make_gs(player1, player2)
   local _p2 = make_player_gs(player2)
   _p1._id = 1
   _p2._id = 2
+  -- _prefix must be the simulation-local slot key ("P1"/"P2"), not whichever real controller
+  -- prefix the attacker happens to carry -- when the real attacker is P2, make_player_gs would
+  -- otherwise copy "_prefix=P2" onto slot 1, so _gs["P2"] and _gs.P1 (slot-based) would both
+  -- point at the attacker while _gs["P1"] silently got the defender, breaking every _gs[_prefix]
+  -- lookup elsewhere in this file (win-codex PRE-review #28, round 8, confirmed bug)
+  _p1._prefix = "P1"
+  _p2._prefix = "P2"
+  -- player1 is always the attacker (src/prediction.lua always calls predict_hits(attacker,
+  -- defender, ...)) -- seed its consumed-hit progress from the real admission state instead of
+  -- the make_player_gs default of 0, so the detection loop (:1013-1033) doesn't re-offer an
+  -- already-consumed hit window as if this were a fresh animation (win-codex PRE-review #28,
+  -- round 6: "the only problem is the seed")
+  _p1._current_hit_id = _last_hit_id or 0
+  -- _side is otherwise only set later by update_sides on each simulated frame -- the initial
+  -- snapshot never had it, so tools.is_pressing_forward/back would silently misread it as nil
+  -- (defaulting to the side==1 branch) on the very first frame (win-codex PRE-review #28, round 7)
+  _p1._side = get_side_local(_p1.pos_x, _p2.pos_x)
+  _p2._side = get_side_local(_p2.pos_x, _p1.pos_x)
   _gs.player_objects = {_p1, _p2}
   _gs.P1 = _p1
   _gs.P2 = _p2
   if _p1._prefix then _gs[_p1._prefix] = _p1 end
   if _p2._prefix then _gs[_p2._prefix] = _p2 end
+  -- copy_gamestate links .other for every later simulated frame (:1547-1548) but the initial
+  -- snapshot never did -- anything reading player.other before the first copy_gamestate call
+  -- would nil-index (win-codex PRE-review #28, round 6)
+  _p1.other = _p2
+  _p2.other = _p1
 
   return _gs
 end
 
 -- ── Public API ───────────────────────────────────────────────────────────────
 
-function prediction.predict_hits(_player1, _player2, _frames_prediction)
-  local _gs = make_gs(_player1, _player2)
+function prediction.predict_hits(_player1, _player2, _frames_prediction, _last_hit_id)
+  local _gs = make_gs(_player1, _player2, _last_hit_id)
   return predict_hits(_gs, nil, _frames_prediction or 3)
 end
 
