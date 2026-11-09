@@ -662,6 +662,11 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
     -- sa_mode set -> Layer 0 owns this SA: skip prediction / proxy_hits / sub-frame fallback entirely
     if (_dummy.blocking.expected_attack_hit_id == 0 and not _dummy.blocking.should_block and not _dummy.blocking.sa_mode) then
       local _max_prediction_frames = 3
+      -- true once the primary loop finds frame data for the next candidate hit and test_collision
+      -- explicitly rejects it (e.g. a rotating-hitbox slot that never reaches the defender) --
+      -- distinguishes that from "no frame data found at all", which is the sub-frame fallback's
+      -- actual intended case (Issue #29)
+      local _geometric_reject = false
       for i = 1, _max_prediction_frames do
         local predicted_frame_id = i + _dummy.blocking.bypassed_freeze_frames
         local _predicted_hit = predict_hitboxes(_player, predicted_frame_id)
@@ -685,56 +690,63 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
 
           local _defender_boxes = predict_hurtboxes(_dummy, _frame_delta)
 
-          if _predicted_hit.hit_id > _dummy.blocking.last_attack_hit_id and test_collision(
-            _next_defender_pos[1], _next_defender_pos[2], _dummy.flip_x, _defender_boxes, -- defender
-            _predicted_hit.pos_x, _predicted_hit.pos_y, _player.flip_x, _predicted_hit.frame_data.boxes, -- attacker
-            _box_type_matches,
-            0, -- defender hitbox dilation x
-            4, -- defender hitbox dilation y
-            _attacker_box_dilation, -- x
-            _attacker_box_dilation -- y
-          ) then
-            _dummy.blocking.expected_attack_animation_hit_frame = _predicted_hit.frame
-            _dummy.blocking.expected_attack_hit_id = _predicted_hit.hit_id
-            _dummy.blocking.should_block = true
-            _dummy.blocking.randomized_out = false
-            _dummy.blocking.has_pre_parried = false
-            _dummy.blocking.is_precise_timing = false
-            log(_dummy.prefix, "blocking", string.format("block in %d", _dummy.blocking.expected_attack_animation_hit_frame - _player_relevant_animation_frame))
+          if _predicted_hit.hit_id > _dummy.blocking.last_attack_hit_id then
+            local _collided = test_collision(
+              _next_defender_pos[1], _next_defender_pos[2], _dummy.flip_x, _defender_boxes, -- defender
+              _predicted_hit.pos_x, _predicted_hit.pos_y, _player.flip_x, _predicted_hit.frame_data.boxes, -- attacker
+              _box_type_matches,
+              0, -- defender hitbox dilation x
+              4, -- defender hitbox dilation y
+              _attacker_box_dilation, -- x
+              _attacker_box_dilation -- y
+            )
+            if _collided then
+              _dummy.blocking.expected_attack_animation_hit_frame = _predicted_hit.frame
+              _dummy.blocking.expected_attack_hit_id = _predicted_hit.hit_id
+              _dummy.blocking.should_block = true
+              _dummy.blocking.randomized_out = false
+              _dummy.blocking.has_pre_parried = false
+              _dummy.blocking.is_precise_timing = false
+              log(_dummy.prefix, "blocking", string.format("block in %d", _dummy.blocking.expected_attack_animation_hit_frame - _player_relevant_animation_frame))
 
-            -- Combo Only, Random, Frame Trap are Block-style-only refinements (see docs/dummy.md) --
-            -- Parry/Red Parry always attempt every predicted hit, same as Blocking Mode "Always"
-            -- (2026-10-11 Peter: found these leaking into Parry/Red Parry when blocking_mode was
-            -- left at 2/3/4 from a previous Block-style session)
-            if _style == 2 then
-              if _mode == 2 then -- combo only: let the very first hit of a fresh engagement through
-                -- wait_for_block_string==true IS the "freshly armed, about to see the first hit"
-                -- moment -- checking "not wait_for_block_string" here was backwards and blocked
-                -- that exact first hit instead of letting it through (2026-10-11 Peter: found via
-                -- in-game testing, Combo Only was blocking the first hit instead of passing it)
-                if _dummy.blocking.wait_for_block_string then
-                  _dummy.blocking.should_block = false
-                end
-              elseif _mode == 3 then -- random
-                if not _dummy.blocking.block_string then
-                  local _r = math.random()
-                  if _r > 0.5 then
-                    _dummy.blocking.randomized_out = true
-                    if _debug then
-                      print(string.format(" %d: next hit randomized out", frame_number))
+              -- Combo Only, Random, Frame Trap are Block-style-only refinements (see docs/dummy.md) --
+              -- Parry/Red Parry always attempt every predicted hit, same as Blocking Mode "Always"
+              -- (2026-10-11 Peter: found these leaking into Parry/Red Parry when blocking_mode was
+              -- left at 2/3/4 from a previous Block-style session)
+              if _style == 2 then
+                if _mode == 2 then -- combo only: let the very first hit of a fresh engagement through
+                  -- wait_for_block_string==true IS the "freshly armed, about to see the first hit"
+                  -- moment -- checking "not wait_for_block_string" here was backwards and blocked
+                  -- that exact first hit instead of letting it through (2026-10-11 Peter: found via
+                  -- in-game testing, Combo Only was blocking the first hit instead of passing it)
+                  if _dummy.blocking.wait_for_block_string then
+                    _dummy.blocking.should_block = false
+                  end
+                elseif _mode == 3 then -- random
+                  if not _dummy.blocking.block_string then
+                    local _r = math.random()
+                    if _r > 0.5 then
+                      _dummy.blocking.randomized_out = true
+                      if _debug then
+                        print(string.format(" %d: next hit randomized out", frame_number))
+                      end
                     end
                   end
+                elseif _mode == 4 then -- frame trap: first N hits always connect, then Block or Random
+                  apply_frame_trap_mode("should_block", "randomized_out")
                 end
-              elseif _mode == 4 then -- frame trap: first N hits always connect, then Block or Random
-                apply_frame_trap_mode("should_block", "randomized_out")
               end
-            end
 
-            if _debug then
-              print(string.format(" %d: next hit %d at frame %d (%d), last hit %d", frame_number, _dummy.blocking.expected_attack_hit_id, _predicted_hit.frame, _dummy.blocking.expected_attack_animation_hit_frame, _dummy.blocking.last_attack_hit_id))
-            end
+              if _debug then
+                print(string.format(" %d: next hit %d at frame %d (%d), last hit %d", frame_number, _dummy.blocking.expected_attack_hit_id, _predicted_hit.frame, _dummy.blocking.expected_attack_animation_hit_frame, _dummy.blocking.last_attack_hit_id))
+              end
 
-            break
+              break
+            else
+              -- geometric rejection (e.g. rotating-hitbox phantom slot, Issue #29) -- must not fall
+              -- through to the blind sub-frame fallback below as if no frame data existed at all
+              _geometric_reject = true
+            end
           end
         end
         -- proxy_hits: SA sub-frame distance-based prediction (requires sa_preblock primed + proxy_hits in framedata_meta)
@@ -764,9 +776,13 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
         end
       end
 
-      -- Sub-frame fallback: all frame data lookups failed (animation is sub-frame, invisible to Lua)
-      -- use physics simulation to collision-test against attacker's current RAM boxes
-      if not _dummy.blocking.should_block and _dummy.blocking.listening then
+      -- Sub-frame fallback: the primary loop above never found frame data for the next hit within
+      -- the lookahead window (truly sub-frame/invisible to Lua, or just not reached yet) -- use
+      -- physics simulation to collision-test against attacker's current RAM boxes.
+      -- Skipped when _geometric_reject is true: the primary loop DID find frame data for the next
+      -- hit and test_collision correctly determined it doesn't connect (Issue #29) -- that is a
+      -- real rejection, not "no data available", and must not be re-admitted here.
+      if not _dummy.blocking.should_block and _dummy.blocking.listening and not _geometric_reject then
         local _sim_hits = predict_hits_simulation(_player, _dummy, _max_prediction_frames, _dummy.blocking.last_attack_hit_id)
         local _sh = nil
         for _d = 1, _max_prediction_frames do if _sim_hits[_d] then _sh = _sim_hits[_d]; break end end
