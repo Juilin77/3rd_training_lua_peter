@@ -1,6 +1,6 @@
 require("src/startup")
 
--- v0.34
+-- v0.35
 
 print("-----------------------------")
 print("  sf33rd_training.lua - "..script_version.."")
@@ -749,6 +749,8 @@ function on_gui()
   end
 
   draw_character_select()
+
+  draw_debug_toast()
 
   if is_in_match then
 

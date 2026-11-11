@@ -75,6 +75,14 @@ A: Check video settings, you must use "Basic" blitter option with no scanlines i
 A: Install prerequires from [here](https://github.com/TASVideos/BizHawk-Prereqs/releases/latest/)
 
 ## Changelog
+### v0.35 (11/11/2026)
+- [Fix] Gouki SA2 (8c28)'s activation hit was categorically unparryable under Parry/Red Parry — fixed via a memory-write cheat ported from effie3rd, plus a separate double-fire bug in the parry dispatch logic that held the forward press for 2 frames instead of 1 (contribution of @Juilin77)
+- [Fix] Restore melee admission physics engine, correcting deep multi-hit combo parry failures (contribution of @Juilin77)
+- [Fix] Extend Gouki 5B's cooldown admission fix to 5A, removing hardcoded 5B-only lookups (contribution of @Juilin77)
+- [Fix] Gouki 5B and SA1 projectile admission false-early-prediction (contribution of @Juilin77)
+- [Fix] Correct ~34 wrong/typo'd move-name comments across 12 characters (contribution of @Juilin77)
+- [Docs] Add step-by-step Raw Mission and Pattern Replay walkthroughs, Bookmark Scan/Clear steps, and a Denjin Hadoken Mode section to the docs (contribution of @Juilin77)
+
 ### v0.34 (11/07/2026)
 - [Feature] Add Ryu SA3 Denjin Hadoken charge-level training display (Special Training mode): a cumulative charge gauge plus an independent pure-charge-duration stopwatch, both freeze after release and reset on the next SA activation (contribution of @Juilin77)
 - [Fix] Red Parry's blocked-hit count now also resets when an SA or projectile activation uses an animation not registered in the frame-data table (e.g. Gouki SA1), preventing a stale count from carrying over into the next attack (contribution of @Juilin77)

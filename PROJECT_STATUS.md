@@ -6,13 +6,13 @@ meant for quick machine- or human-readable status checks without needing to dig 
 history.
 
 ## Last verified
-2026-11-07
+2026-11-11
 
 ## Version / branch
-v0.34, branch `master`
+v0.35, branch `master`
 
 ## verified_code_commit
-`7be076c` — the code state the "Completed since last update" and "Verification" sections
+`d5d6d3e` — the code state the "Completed since last update" and "Verification" sections
 below actually describe. Updating this file is itself a commit after this one, so don't treat
 this file's own latest commit as equal to `verified_code_commit`; run `git log -1 --
 PROJECT_STATUS.md` for that (`status_source_commit`).
@@ -32,6 +32,16 @@ PROJECT_STATUS.md` for that (`status_source_commit`).
   hit-count reset to also cover SA/projectile activations using an animation not registered in
   the frame-data table (e.g. Gouki SA1); renamed the entry scripts to match the repo rename
   (`3rd_training.lua` → `sf33rd_training.lua`, `3rd_spectator.lua` → `sf33rd_spectator.lua`)
+- v0.35: bundles several fixes that had already been merged to `master` but not yet released,
+  plus this session's new work. Gouki SA2 (8c28)'s activation hit was categorically unparryable
+  under Parry/Red Parry — fixed via a memory-write cheat ported from effie3rd, plus a separate
+  dispatch double-fire bug that held the forward press for 2 frames instead of 1 (Issue #34,
+  closed; also resolves the Parry/Red Parry half of Issue #30, see Open work below). Also
+  restored the melee admission physics engine for deep multi-hit combo parry failures
+  (Issue #28); extended Gouki 5B's cooldown+hold admission fix to 5A (Issue #26); fixed Gouki
+  5B/SA1 projectile false-early-prediction (Issue #8); corrected ~34 wrong/typo'd move-name
+  comments across 12 characters; added Raw Mission/Pattern Replay walkthroughs and Denjin
+  Hadoken docs
 
 ## Verification
 v0.32's three Frame Table fixes and the jump-removal decision were all verified in-game by the
@@ -43,13 +53,22 @@ rounds (stale-value flash, fill direction, tick positions, off-by-one frame coun
 through superfreeze/projectile flight, savestate-reload staleness). The blocked_hit_count reset
 fix's SA-activation half is a reviewed, low-risk addition; its projectile-listening half has a
 known residual risk (see Open work / Issue #15) accepted as-is by the maintainer, not separately
-verified in-game yet.
+verified in-game yet. v0.35's Issue #34 fix was tested extensively in-game by the maintainer
+(hit1, hits 2-7, sides swapped, Red Parry N=1/N=2, nonzero residual cooldown, a whiff, and an
+ordinary non-super attack as a regression check) and independently code-reviewed by win-codex
+(APPROVED after one revision round). The other fixes bundled into v0.35 (Issues #8, #26, #28)
+were each verified and reviewed at the time of their own merge, prior to this release pass — see
+their respective PR history for that record, not repeated here.
 
 ## Open work
 - GitHub Issue #7 (open): Makoto SA2 (force_recording carry) — Parry never triggers, all hits
   land as a block instead
-- GitHub Issue #8 (open): Gouki red fireball (5B/HP) — the live projectile predictor registers
-  a false hit, wasting the parry before the real hit lands
+- GitHub Issue #30 (open): Gouki SA2 (8c28) completely unblockable. Originally filed against all
+  three dummy styles; v0.35's Issue #34 fix addresses the Parry/Red Parry case specifically (now
+  confirmed working end to end), which per the issue's own root-cause note was the only broken
+  path — Block style already engaged via `sa_offsets.lua`'s schedule. Left open pending Peter's
+  explicit confirmation to close, since v0.35 shipped a different approach (memory-write cheat)
+  than the one #30/#34 originally planned (prediction-engine routing)
 - GitHub Issue #15 (open): the blocked_hit_count reset's projectile-listening rising edge isn't
   a fully reliable new-attack boundary for multi-hit projectiles with hitbox gaps between hits;
   needs redesigning to key off attack identity/lifecycle instead
