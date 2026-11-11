@@ -81,11 +81,15 @@ function input_history_draw(_history, _x, _y, _is_right)
     local _controller_offset = 14 * _sign
     draw_controller_small(_entry, _x + _controller_offset, _current_y, _is_right)
 
-    local _next_frame = frame_number
+    -- a completed entry's duration is next_frame - entry.frame (the entry was already over
+    -- by next_frame, when the following entry started); only the still-ongoing last entry
+    -- needs +1 to count the current frame inclusively, since it hasn't ended yet
+    local _frame_diff
     if _i < #_history then
-      _next_frame = _history[_i + 1].frame
+      _frame_diff = _history[_i + 1].frame - _entry.frame
+    else
+      _frame_diff = frame_number - _entry.frame + 1
     end
-    local _frame_diff = _next_frame - _entry.frame + 1
     local _text = "-"
     if (_frame_diff < 999) then
       _text = string.format("%d", _frame_diff)

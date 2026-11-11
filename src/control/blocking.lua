@@ -590,6 +590,7 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
         _dummy.blocking.sa_preblock_triggered = true -- suppress Phase 1/2 (re-armed at Layer 0 exit)
         _dummy.blocking.randomized_out = false
         _dummy.blocking.has_pre_parried = false
+        _dummy.blocking.last_parry_fire_hit_id = nil
         _dummy.blocking.is_precise_timing = false
         -- clear any stale carry state so the carry timer cannot re-raise should_block between windows
         _dummy.blocking.carry_global_expected = nil
@@ -706,6 +707,7 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
               _dummy.blocking.should_block = true
               _dummy.blocking.randomized_out = false
               _dummy.blocking.has_pre_parried = false
+              _dummy.blocking.last_parry_fire_hit_id = nil
               _dummy.blocking.is_precise_timing = false
               log(_dummy.prefix, "blocking", string.format("block in %d", _dummy.blocking.expected_attack_animation_hit_frame - _player_relevant_animation_frame))
 
@@ -767,6 +769,7 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
               _dummy.blocking.should_block = true
               _dummy.blocking.randomized_out = false
               _dummy.blocking.has_pre_parried = false
+              _dummy.blocking.last_parry_fire_hit_id = nil
               _dummy.blocking.is_precise_timing = false
               _dummy.blocking.sa_preblock = false
               log(_dummy.prefix, "blocking", string.format("proxy_hit f:%d dist:%d", predicted_frame_id, math.abs(_player.pos_x - _dummy.pos_x)))
@@ -792,6 +795,7 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
           _dummy.blocking.should_block = true
           _dummy.blocking.randomized_out = false
           _dummy.blocking.has_pre_parried = false
+          _dummy.blocking.last_parry_fire_hit_id = nil
           _dummy.blocking.is_precise_timing = false
           log(_dummy.prefix, "blocking", string.format("sim block in %d (sub-frame fallback)", _sh.delta or 1))
 
@@ -850,6 +854,7 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
       _dummy.blocking.should_block = true
       _dummy.blocking.randomized_out = false
       _dummy.blocking.has_pre_parried = false
+      _dummy.blocking.last_parry_fire_hit_id = nil
       _dummy.blocking.is_precise_timing = false
       log(_dummy.prefix, "blocking", string.format("sim block in %d (no-framedata fallback)", _sh.delta or 1))
     end
@@ -942,6 +947,7 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
               _dummy.blocking.should_block_projectile = true
               _dummy.blocking.projectile_randomized_out = false
               _dummy.blocking.has_pre_parried = false
+              _dummy.blocking.last_parry_fire_hit_id = nil
               _dummy.blocking.projectile_hit_frame = frame_number + _i
               _dummy.blocking.expected_projectile = _projectile_obj
               _dummy.blocking.is_precise_timing = _movement ~= nil
@@ -1041,6 +1047,8 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
         _dummy.blocking.block_string          = true
         _dummy.blocking.last_carry_frame      = frame_number
         _dummy.blocking.expected_attack_hit_id = _dummy.blocking.last_attack_hit_id + 1
+        _dummy.blocking.has_pre_parried = false
+        _dummy.blocking.last_parry_fire_hit_id = nil
         -- first_hit_window: only needs to cover wait time for first hit (carry takes over after, Phase 2 is no longer needed)
         local _expire_window = (_ph_fdm and _ph_fdm.first_hit_window) or 55
         _dummy.blocking.sa_preblock_expire    = frame_number + _expire_window
@@ -1311,16 +1319,50 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
         end
       end
     elseif _blocking_style == 3 then
+      local _parry_low = _hit_type == 2
+
       _input[_dummy.prefix..' Right'] = false
       _input[_dummy.prefix..' Left'] = false
       _input[_dummy.prefix..' Down'] = false
 
-      local _parry_low = _hit_type == 2
-
       if not _dummy.blocking.is_bypassing_freeze_frames and not _delta_is_realtime then
         _animation_frame_delta = _animation_frame_delta + _player.remaining_freeze_frames
       end
-      if (_animation_frame_delta == 1) or (_animation_frame_delta == 2 and _dummy.blocking.has_pre_parried) then
+
+      -- CHEAT, not a real parry (Issue #34): a 0/1-frame-startup SA's activation hit (hit1)
+      -- can't be parried via real input timing -- the engine doesn't sample defender input
+      -- into the parry validity RAM byte during/immediately after the attacker's superfreeze.
+      -- Confirmed against effie3rd's dummy_control.lua, which hit the same wall and documented
+      -- it the same way ("parrying 1f startup supers after screen darkening is impossible...
+      -- so we cheat!"). So we do the same: force validity to max via direct memory write once
+      -- insufficient, gated on the attacker still being in superfreeze and our own delta <= 2.
+      -- Ported from effie3rd (win-codex 2026-11-11 round 4, Peter approved porting this exact
+      -- pattern). This is why hit1's parry gauge/validity jumps straight to max instead of
+      -- rising from real input -- that's the cheat firing, not a normal successful parry.
+      local _relevant_parry = _parry_low and _dummy.parry_down or _dummy.parry_forward
+      local _parry_validity_sufficient
+      if _dummy.is_blocking then
+        _parry_validity_sufficient = _relevant_parry.validity_time == _relevant_parry.max_validity
+      else
+        _parry_validity_sufficient = _relevant_parry.validity_time > _animation_frame_delta
+      end
+
+      if _player.superfreeze_decount > 0 and _animation_frame_delta <= 2 and not _parry_validity_sufficient then
+        memory.writebyte(_dummy.parry_forward_validity_time_addr, 0xA)
+        memory.writebyte(_dummy.parry_down_validity_time_addr, 0xA)
+        memory.writebyte(_dummy.parry_air_validity_time_addr, 0x7)
+        memory.writebyte(_dummy.parry_antiair_validity_time_addr, 0x5)
+      end
+
+      -- Peter 2026-11-11: the inherited delta==2-with-has_pre_parried "grace" branch and the
+      -- primary delta==1 branch both fired on ordinary admissions (delta counts down 1 per
+      -- frame, so it passes through exactly 2 then exactly 1), holding the forward press for
+      -- 2 frames instead of 1. Latch on expected_attack_hit_id so only the first frame that
+      -- satisfies either branch actually presses input for a given hit; the grace still covers
+      -- the case where delta skips past 1 entirely.
+      if _dummy.blocking.last_parry_fire_hit_id == _dummy.blocking.expected_attack_hit_id then
+        -- already fired for this hit this admission cycle, nothing more to do
+      elseif (_animation_frame_delta == 1) or (_animation_frame_delta == 2 and _dummy.blocking.has_pre_parried) then
         log(_dummy.prefix, "blocking", string.format("parry %d", _dummy.blocking.expected_attack_hit_id))
         if _debug then
           print(string.format("%d - %s parrying", frame_number, _dummy.prefix))
@@ -1332,6 +1374,7 @@ function update_blocking(_input, _player, _dummy, _mode, _style, _red_parry_hit_
           _input[_dummy.prefix..' Right'] = _dummy.flip_input
           _input[_dummy.prefix..' Left'] = not _dummy.flip_input
         end
+        _dummy.blocking.last_parry_fire_hit_id = _dummy.blocking.expected_attack_hit_id
       else
         _dummy.blocking.has_pre_parried = true
         log(_dummy.prefix, "blocking", string.format("pre parry %d", _dummy.blocking.expected_attack_hit_id))
