@@ -6,8 +6,8 @@ Focused training tools for specific SF3 mechanics. Select a mode from **Special 
 
 | Option | Description |
 |--------|-------------|
-| Mode | Training mode: None / Parry / Charge / Hyakuretsu Kyaku / Juggle / Tech Throw / 720 / Denjin Hadoken (Ryu) |
-| Follow Character | Gauge follows P1's on-screen position. Grayed out in None, Juggle, Tech Throw, and 720 modes, and forced on while Parry Rhythm - SA is enabled. |
+| Mode | Training mode: None / Parry / Charge / Hyakuretsu Kyaku / Juggle / Tech Throw / 720 / Denjin Hadoken (Ryu) / Air Down K (Gouki) |
+| Follow Character | Gauge follows P1's on-screen position. Grayed out in None, Juggle, Tech Throw, and Air Down K modes, and forced on while Parry Rhythm - SA is enabled. |
 
 ---
 
@@ -106,3 +106,13 @@ Tracks Ryu's SA3 (Denjin Hadoken) charge with two stacked gauges. Red tick marks
 - **Top bar (orange)** — cumulative charge, driven directly by the game's own charge level/time. Shows the level number (1-5) and the raw frame count (0-160). Freezes at its last value after the Denjin Hadoken is released, and resets at the next SA3 activation's superfreeze flash.
 - **Bottom bar (blue)** — an independent stopwatch for pure charge duration only: it excludes the superfreeze flash and any projectile-flight time, matching Frame Table's own frame count for the charge. Also freezes after release and resets on the next activation.
 - **Follow Character** — gauge follows P1's on-screen position.
+
+---
+
+## Air Down K Mode (Gouki only)
+
+Timing trainer for air down+MK (Tenma Kuujinkyaku). Only tracks a normal or big forward jump, detected the instant you take off, and draws that jump's own full timeline right away rather than growing it live.
+
+- **Timeline bar** — pre-drawn full width for the detected jump type, with tick marks for the move's usable window and a traveling pointer that's green while the window is open and red otherwise.
+- **Outcome marker and readout** — a green marker and a `±N y=height` readout once a down+MK press is confirmed, where N is the frame offset from the window opening and 0 is the ideal timing. A red marker instead reads `Too Early` if pressed before the window opens, or `Too Late` if pressed after falling back below the move's usable height on the way down; both always fail outright.
+- **Air Down K Character** — which character to track (currently Gouki only).

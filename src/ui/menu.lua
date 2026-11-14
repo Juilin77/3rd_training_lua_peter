@@ -150,6 +150,10 @@ function create_main_menu()
   charge_overcharge_on_item.is_disabled = function() return training_settings.special_training_current_mode ~= 3 end
   charge_overcharge_on_item.indent = true
 
+  jump_apex_lines_character_item = list_menu_item("Air Down K Character", training_settings, "jump_apex_lines_character", jump_apex_lines_character_names)
+  jump_apex_lines_character_item.is_disabled = function() return special_training_mode[training_settings.special_training_current_mode] ~= "Air Down K" end
+  jump_apex_lines_character_item.indent = true
+
   hits_before_red_parry_item = integer_menu_item("Hits before Red Parry", training_settings, "red_parry_hit_count", 1, 20, true)
   hits_before_red_parry_item.is_disabled = function()
     return training_settings.blocking_style ~= 4
@@ -607,6 +611,7 @@ function create_main_menu()
           mid_distance_height_item,
           p1_distances_reference_point_item,
           p2_distances_reference_point_item,
+          checkbox_menu_item("Air Down K Lines", training_settings, "display_jump_apex_lines"),
         }
       },
       {
@@ -666,7 +671,7 @@ function create_main_menu()
             local _item = checkbox_menu_item("Follow Character", training_settings, "special_training_follow_character")
             _item.is_disabled = function()
               local _m = training_settings.special_training_current_mode
-              return _m == 1 or special_training_mode[_m] == "Juggle" or special_training_mode[_m] == "Tech Throw"
+              return _m == 1 or special_training_mode[_m] == "Juggle" or special_training_mode[_m] == "Tech Throw" or special_training_mode[_m] == "Air Down K"
             end
             _item.indent = true
             return _item
@@ -676,7 +681,8 @@ function create_main_menu()
           parry_air_on_item,
           parry_antiair_on_item,
           parry_rhythm_sa_on_item,
-          charge_overcharge_on_item
+          charge_overcharge_on_item,
+          jump_apex_lines_character_item,
         }
       },
     },
