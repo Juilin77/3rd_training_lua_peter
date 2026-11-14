@@ -137,3 +137,7 @@ The legend is reduced to 8 states, with all three parry validity windows (forwar
 ![Display Distances](../screenshots/display_distance.png)
 
 Shows real-time distance measurements between P1 and P2 as horizontal lines on screen. Three measurements are displayed: ground distance (at feet), mid-body distance (configurable height), and a second reference line. Configure the height and reference point (character origin or hurtbox edge) for each player.
+
+## Air Down K Lines
+
+Draws a horizontal reference line at height 74, Gouki's air down+MK (Tenma Kuujinkyaku) rising-height threshold, plus a live position cross on P1. Available with any character selected, and independent of Special Training's Air Down K mode below.

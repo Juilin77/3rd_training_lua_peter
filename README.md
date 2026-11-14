@@ -26,6 +26,7 @@ The right version of Fightcade can be downloaded [here](https://www.fightcade.co
 **Display**
 - Hit / hurt / throw box overlay
 - Life Loss Indicator above health bars
+- Air Down K Lines (Gouki): usable-height reference line for air down+MK
 
 **Special Training**
 - Parry and Red Parry training, with a red-parry-window reference line (3 frames for normal moves, 2 for Super Arts)
@@ -34,6 +35,8 @@ The right version of Fightcade can be downloaded [here](https://www.fightcade.co
 - Juggle Air Timer (remaining air hitstun gauge)
 - 720 Input Trainer (Hugo)
 - Charge training
+- Denjin Hadoken charge-level training (Ryu)
+- Air Down K jump-apex timing trainer (Gouki): per-jump timeline with a traveling pointer and success / too-early / too-late outcome readout
 
 ## Documentation
 - [How to Use](docs/how_to_use.md)

@@ -88,6 +88,7 @@ require("src/ui/special_training/juggle_training")
 require("src/ui/special_training/tech_throw_training")
 require("src/ui/special_training/720_trainer")
 require("src/ui/special_training/denjin_training")
+require("src/ui/special_training/jump_apex_lines")
 require("src/ui/blocking_mode_display")
 require("src/ui/parry_rhythm_sa_display")
 require("src/data/simulation")
@@ -316,6 +317,7 @@ special_training_mode = {
   "Tech Throw",
   "720",
   "Denjin Hadoken (Ryu)",
+  "Air Down K",
 }
 
 juggle_disp = { jc = 0, air_time = 0, expired = false, was_airborne = false }
@@ -472,6 +474,8 @@ training_settings = {
   special_training_parry_air_on = true,
   special_training_parry_antiair_on = true,
   special_training_charge_overcharge_on = false,
+  jump_apex_lines_character = 1,
+  display_jump_apex_lines = false,
 }
 
 debug_settings = {
@@ -526,6 +530,7 @@ function on_load_state()
   frame_advantage_reset()
   frame_table_reset()
   denjin_disp_reset()
+  jump_apex_reset_current_jump()
 
   gamestate_read()
 
@@ -834,6 +839,7 @@ function on_gui()
   special_training_tech_throw_draw()
   special_training_720_draw()
   special_training_denjin_draw()
+  special_training_jump_apex_draw()
   blocking_mode_display()
   update_parry_rhythm_sa_capture()
   parry_rhythm_sa_display()
