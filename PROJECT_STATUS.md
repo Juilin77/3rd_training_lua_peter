@@ -6,13 +6,13 @@ meant for quick machine- or human-readable status checks without needing to dig 
 history.
 
 ## Last verified
-2026-11-11
+2026-11-14
 
 ## Version / branch
-v0.35, branch `master`
+v0.36, branch `master`
 
 ## verified_code_commit
-`d5d6d3e` — the code state the "Completed since last update" and "Verification" sections
+`1e54da2` — the code state the "Completed since last update" and "Verification" sections
 below actually describe. Updating this file is itself a commit after this one, so don't treat
 this file's own latest commit as equal to `verified_code_commit`; run `git log -1 --
 PROJECT_STATUS.md` for that (`status_source_commit`).
@@ -42,6 +42,14 @@ PROJECT_STATUS.md` for that (`status_source_commit`).
   5B/SA1 projectile false-early-prediction (Issue #8); corrected ~34 wrong/typo'd move-name
   comments across 12 characters; added Raw Mission/Pattern Replay walkthroughs and Denjin
   Hadoken docs
+- v0.36: Added a Gouki Air Down K jump-apex timing trainer (Special Training mode: per-jump
+  pre-drawn timeline, traveling pointer, success / too-early / too-late outcome readout) and a
+  matching Display tab reference line (Issue #37, closed via PR #38). Went through 4 rounds of
+  in-game iteration with the maintainer plus win-codex POST-implementation review (APPROVED after
+  two revision rounds, catching a pointer-color/outcome-logic mismatch and two documentation
+  inaccuracies). Also fixed two small pre-existing documentation gaps found along the way:
+  Denjin Hadoken was missing from README's Main Features, and the Follow Character docs wrongly
+  listed 720 mode as grayed out
 
 ## Verification
 v0.32's three Frame Table fixes and the jump-removal decision were all verified in-game by the
@@ -59,6 +67,14 @@ ordinary non-super attack as a regression check) and independently code-reviewed
 (APPROVED after one revision round). The other fixes bundled into v0.35 (Issues #8, #26, #28)
 were each verified and reviewed at the time of their own merge, prior to this release pass — see
 their respective PR history for that record, not repeated here.
+- v0.36's Air Down K trainer was verified in-game by the maintainer across both jump types
+  (normal and big forward jump): early/late/perfect timing outcomes, the too-early/too-late
+  readout labels, the traveling pointer's color through a full descent, mode/match/player-
+  identity invalidation (switching modes mid-jump, switching character/slot, leaving/re-entering
+  a match, loading a savestate), and that neutral/backward jumps and non-jump airborne specials
+  no longer start the tracker. One known, documented-not-fixed limitation shipped as-is: mashing
+  the input button while an attempt is still unconfirmed could misattribute the outcome to the
+  wrong press (not yet confirmed to actually happen in-game).
 
 ## Open work
 - GitHub Issue #7 (open): Makoto SA2 (force_recording carry) — Parry never triggers, all hits
