@@ -10,6 +10,7 @@ Configure how the CPU-controlled dummy behaves during training. Set its default 
 | Blocking Style | How the dummy defends: block (normal guard), parry (forward parry), or red parry. Enables "Hits before Red Parry" when set to red parry. |
 | Hits before Red Parry | Number of hits received before the dummy performs a red parry. Only active when Blocking Style is set to red parry. |
 | Blocking Mode | When the dummy triggers its blocking behavior, only active when Blocking Style is set to block: always, combo only, randomly, or frame trap. Set Blocking Style to off if you want the dummy to never block at all. See "Blocking Mode" below for details on combo only and frame trap. |
+| Guard Type | Forces the dummy's guard stance while blocking, only active when Blocking Style is block and Blocking Mode is Always: All (normal high/low guard), Stand Only, or Crouch Only — useful for deliberately leaving the dummy in the wrong stance to practice overhead/low starters. |
 | Tech Throws | Whether the dummy attempts to escape throws. |
 | Counter-Attack Move | Stick motion the dummy performs when counter-attacking: QCF, QCB, HCF, HCB, DPF, DPB, HCharge, VCharge, 360, DQCF, 720, forward, back, down, jump, super jump, forward jump, forward super jump, back jump, back super jump, forward dash, back dash, guard jump, Shun Goku Satsu, Kongou Kokuretsu Zan. |
 | Counter-Attack Action | Button the dummy presses for its counter-attack. Set to "recording" to replay a recorded slot instead. |
