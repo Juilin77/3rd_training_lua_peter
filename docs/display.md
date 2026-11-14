@@ -27,7 +27,7 @@ Toggle various on-screen overlays to visualize game data in real time.
 
 ![Display Controllers](../screenshots/display_controllers.png)
 
-Shows a controller icon with live button states above each player's health bar.
+Shows a controller icon with live button states below each player's health bar.
 
 ---
 
@@ -138,6 +138,10 @@ The legend is reduced to 8 states, with all three parry validity windows (forwar
 
 Shows real-time distance measurements between P1 and P2 as horizontal lines on screen. Three measurements are displayed: ground distance (at feet), mid-body distance (configurable height), and a second reference line. Configure the height and reference point (character origin or hurtbox edge) for each player.
 
+---
+
 ## Air Down K Lines
+
+![Air Down K Lines](../screenshots/display_air_down_k_lines.png)
 
 Draws a horizontal reference line at height 74, Gouki's air down+MK (Tenma Kuujinkyaku) rising-height threshold, plus a live position cross on P1. Available with any character selected, and independent of Special Training's Air Down K mode below.

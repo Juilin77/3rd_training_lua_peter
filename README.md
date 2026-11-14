@@ -18,6 +18,11 @@ The right version of Fightcade can be downloaded [here](https://www.fightcade.co
 - Save / load slots to files; curated pattern replay
 - Save / load named training profiles bundling Dummy settings, Rules settings, and recording slots
 
+**Missions**
+- Raw Mission recording / replay: capture and replay full matches (both players, savestate included) across 10 slots
+- Bookmark Scan: auto-extract attack patterns from a recorded Raw Mission
+- Pattern Replay: play curated or scanned attack patterns against the dummy
+
 **Frame Data**
 - Frame Table: startup / active / recovery / cancel frames with projectile and throw support, plus a Parry SA Only mode
 - Damage info and frame advantage popup
@@ -25,13 +30,21 @@ The right version of Fightcade can be downloaded [here](https://www.fightcade.co
 
 **Display**
 - Hit / hurt / throw box overlay
+- Display Controllers: live button-state icon below each player's health bar
+- Display Distances: real-time ground / mid-body / reference distance lines between P1 and P2
 - Life Loss Indicator above health bars
 - Air Down K Lines (Gouki): usable-height reference line for air down+MK
+
+**Rules**
+- Infinite Time, and configurable Life / Meter refill modes (none / refill / infinite)
+- Stun Mode: normal, no stun, or delayed reset to a set value
+- Ping Delay: simulate network input delay (Off, or 1f to 6f) on P1 inputs
 
 **Special Training**
 - Parry and Red Parry training, with a red-parry-window reference line (3 frames for normal moves, 2 for Super Arts)
 - Parry Rhythm - SA (17-frame forward-tap rhythm trainer)
 - Tech Throw training, with a startup reference line for normal throws
+- Hyakuretsu Kyaku Mode (Chun-Li): kick-count tracker with a reset timer bar
 - Juggle Air Timer (remaining air hitstun gauge)
 - 720 Input Trainer (Hugo)
 - Charge training

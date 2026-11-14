@@ -111,6 +111,8 @@ Tracks Ryu's SA3 (Denjin Hadoken) charge with two stacked gauges. Red tick marks
 
 ## Air Down K Mode (Gouki only)
 
+![Air Down K Mode](../screenshots/special_training_air_down_k.png)
+
 Timing trainer for air down+MK (Tenma Kuujinkyaku). Only tracks a normal or big forward jump, detected the instant you take off, and draws that jump's own full timeline right away rather than growing it live.
 
 - **Timeline bar** — pre-drawn full width for the detected jump type, with tick marks for the move's usable window and a traveling pointer that's green while the window is open and red otherwise.
