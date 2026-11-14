@@ -78,6 +78,11 @@ A: Check video settings, you must use "Basic" blitter option with no scanlines i
 A: Install prerequires from [here](https://github.com/TASVideos/BizHawk-Prereqs/releases/latest/)
 
 ## Changelog
+### v0.36 (11/14/2026)
+- [Feature] Add Gouki Air Down K jump-apex timing trainer (Special Training mode): tracks a normal or big forward jump at takeoff and shows a pre-drawn timeline with a traveling pointer, plus a success / too-early / too-late outcome marker and frame-count readout (contribution of @Juilin77)
+- [Feature] Add Air Down K Lines (Display tab): usable-height reference line for Gouki's air down+MK, available with any character selected (contribution of @Juilin77)
+- [Docs] Document the Denjin Hadoken charge training mode in README's Main Features, and fix a stale "720" entry in Special Training docs' Follow Character row (contribution of @Juilin77)
+
 ### v0.35 (11/11/2026)
 - [Fix] Gouki SA2 (8c28)'s activation hit was categorically unparryable under Parry/Red Parry — fixed via a memory-write cheat ported from effie3rd, plus a separate double-fire bug in the parry dispatch logic that held the forward press for 2 frames instead of 1 (contribution of @Juilin77)
 - [Fix] Restore melee admission physics engine, correcting deep multi-hit combo parry failures (contribution of @Juilin77)
